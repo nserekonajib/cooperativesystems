@@ -1,0 +1,488 @@
+Python import report for: C:\Users\Najib\Desktop\sacco system
+Python files scanned: 25
+========================================================================
+
+# File: app.py
+import os
+from flask import Flask, redirect, url_for, render_template, session
+from dotenv import load_dotenv
+from routes.auth.auth import auth_bp
+from routes.institutionSettings.institutionSettings import institution_settings_bp
+from routes.members.members import members_bp
+from routes.savingsAccounts.savingsAccounts import savings_bp
+from routes.fixedAccounts.fixedAccounts import fixed_bp
+from routes.loanProducts.loanProducts import loan_products_bp
+from routes.loanApplications.loanApplications import loan_applications_bp
+from routes.repayments.repayments import repayments_bp
+from routes.loanPortfolio.loanPortfolio import loan_portfolio_bp
+from routes.yearlySubscriptions.yearlySubscriptions import yearly_subscriptions_bp
+from routes.sharesManagement.sharesManagement import shares_bp
+from routes.accounts.accounts import accounts_bp
+from routes.financialReports.financialReports import financial_reports_bp
+from routes.dividendsManagement.dividendsManagement import dividends_bp
+from routes.dashboard.dashboard import dashboard_bp
+from routes.memberAuth.memberAuth import member_auth_bp
+from routes.memberProfile.memberProfile import member_profile_bp
+from routes.memberShares.memberShares import member_shares_bp
+from routes.memberSubscriptions.memberSubscriptions import member_subscriptions_bp
+from routes.memberLoans.memberLoans import member_loans_bp
+from routes.memberAccounts.memberAccounts import member_accounts_bp
+from routes.memberFixed.memberFixed import member_fixed_bp
+from routes.memberDashboard.memberDashboard import member_dashboard_bp
+
+# File: routes\accounts\accounts.py
+import os
+import io
+import csv
+import logging
+from datetime import datetime, timezone, date, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session,
+    redirect, url_for, Response,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.auth.auth import role_required
+
+# File: routes\auth\auth.py
+import os
+import re
+import functools
+from datetime import datetime, timezone
+from flask import (
+    Blueprint, request, jsonify, session,
+    render_template, redirect, url_for, current_app,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+
+# File: routes\dashboard\dashboard.py
+import os
+import logging
+from datetime import datetime, timezone, date, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session, redirect, url_for,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.auth.auth import role_required
+
+# File: routes\dividendsManagement\dividendsManagement.py
+import os
+import io
+import csv
+import logging
+from datetime import datetime, timezone, date
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session,
+    redirect, url_for, Response,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.auth.auth import role_required
+from routes.accounts.accounts import _apply_txn
+from routes.accounts.accounts import _apply_txn
+from routes.accounts.accounts import _apply_txn
+from routes.accounts.accounts import _apply_txn
+from routes.accounts.accounts import _apply_txn as _apply
+from routes.accounts.accounts import _apply_txn
+
+# File: routes\financialReports\financialReports.py
+import os
+import io
+import csv
+import json
+import logging
+from datetime import datetime, timezone, date, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session,
+    redirect, url_for, Response,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.auth.auth import role_required
+
+# File: routes\fixedAccounts\fixedAccounts.py
+import os
+import io
+import csv
+import json
+import secrets
+import logging
+from datetime import datetime, timezone, date, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from pathlib import Path
+from flask import (
+    Blueprint, render_template, request, jsonify, session, redirect, url_for,
+    current_app, Response,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.auth.auth import role_required
+from routes.payments.pawapay import (
+    deposit_mtn_ug,
+    deposit_airtel_ug,
+    verify_deposit,
+)
+from routes.accounts.accounts import record_liability_movement
+from routes.accounts.accounts import record_liability_movement
+from routes.accounts.accounts import (
+                record_liability_movement,
+                record_asset_movement,
+            )
+from routes.accounts.accounts import _apply_txn
+
+# File: routes\institutionSettings\institutionSettings.py
+import os
+import re
+import logging
+from datetime import datetime, timezone
+from flask import (
+    Blueprint, render_template, request, jsonify, session, redirect, url_for,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.auth.auth import role_required
+
+# File: routes\loanApplications\loanApplications.py
+import os
+import secrets
+import logging
+from datetime import datetime, timezone, date, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session, redirect, url_for,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.auth.auth import role_required
+from routes.accounts.accounts import _apply_txn
+
+# File: routes\loanPortfolio\loanPortfolio.py
+import os
+import io
+import csv
+import logging
+from datetime import datetime, timezone, date, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session, redirect, url_for,
+    Response,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.auth.auth import role_required
+from routes.loanProducts.loanProducts import _simulate
+
+# File: routes\loanProducts\loanProducts.py
+import os
+import logging
+from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session, redirect, url_for,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.auth.auth import role_required
+
+# File: routes\memberAccounts\memberAccounts.py
+import os
+import io
+import csv
+import json
+import secrets
+import logging
+from pathlib import Path
+from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session,
+    redirect, url_for, Response, current_app,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.payments.pawapay import (
+    deposit_mtn_ug,
+    deposit_airtel_ug,
+    verify_deposit,
+)
+from routes.savingsAccounts.savingsAccounts import (
+    _apply_deposit,
+    _fetch_savings_account,
+)
+from datetime import timedelta
+
+# File: routes\memberAuth\memberAuth.py
+import os
+import logging
+from datetime import datetime, timezone
+from flask import (
+    Blueprint, render_template, request, jsonify, session,
+    redirect, url_for,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+import re
+
+# File: routes\memberDashboard\memberDashboard.py
+import os
+import logging
+from datetime import datetime, timezone, date, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session, redirect, url_for,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.loanApplications.loanApplications import _eligibility
+from flask import current_app
+
+# File: routes\memberFixed\memberFixed.py
+import os
+import io
+import csv
+import json
+import secrets
+import logging
+from pathlib import Path
+from datetime import datetime, timezone, date
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session,
+    redirect, url_for, Response, current_app,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.payments.pawapay import (
+    deposit_mtn_ug,
+    deposit_airtel_ug,
+    verify_deposit,
+)
+from routes.fixedAccounts.fixedAccounts import (
+    _interest_to_date,
+    _schedule,
+    _matured,
+    _parse_date,
+    _to_decimal as _fd_to_decimal,   # (not always needed, but exported)
+)
+from routes.accounts.accounts import record_liability_movement
+
+# File: routes\memberLoans\memberLoans.py
+import os
+import json
+import secrets
+import logging
+from pathlib import Path
+from datetime import datetime, timezone, date
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session,
+    redirect, url_for, Response, current_app,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.payments.pawapay import (
+    deposit_mtn_ug,
+    deposit_airtel_ug,
+    verify_deposit,
+)
+from routes.loanApplications.loanApplications import (
+    _load_product,
+    _product_snapshot,
+    _fees,
+    _simulate,
+    _eligibility,
+    _log_event,
+    _next_app_number,
+)
+from routes.repayments.repayments import _apply_repayment
+
+# File: routes\memberProfile\memberProfile.py
+import os
+import logging
+from datetime import datetime, timezone
+from flask import (
+    Blueprint, render_template, request, jsonify, session, redirect, url_for,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+import re
+import re
+
+# File: routes\members\members.py
+import os
+import json
+import secrets
+import logging
+from datetime import date, datetime, timezone
+from decimal import Decimal, InvalidOperation
+from pathlib import Path
+from flask import (
+    Blueprint, render_template, request, jsonify, session, redirect, url_for,
+    current_app,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.auth.auth import role_required
+from routes.payments.pawapay import (
+    deposit_mtn_ug,
+    deposit_airtel_ug,
+    verify_deposit,
+)
+from routes.accounts.accounts import record_asset_movement
+
+# File: routes\memberShares\memberShares.py
+import os
+import json
+import secrets
+import logging
+from pathlib import Path
+from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session,
+    redirect, url_for, Response, current_app,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.payments.pawapay import (
+    deposit_mtn_ug,
+    deposit_airtel_ug,
+    verify_deposit,
+)
+from routes.sharesManagement.sharesManagement import (
+    _apply_share_purchase,
+    _render_receipt,
+)
+
+# File: routes\memberSubscriptions\memberSubscriptions.py
+import os
+import json
+import secrets
+import logging
+from pathlib import Path
+from datetime import datetime, timezone, date
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session,
+    redirect, url_for, Response, current_app,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.payments.pawapay import (
+    deposit_mtn_ug,
+    deposit_airtel_ug,
+    verify_deposit,
+)
+from routes.yearlySubscriptions.yearlySubscriptions import (
+    _apply_subscription_payment,
+)
+
+# File: routes\payments\pawapay.py
+import os
+import uuid
+import requests
+from typing import Dict, Any, Optional
+
+# File: routes\repayments\repayments.py
+import os
+import io
+import csv
+import json
+import secrets
+import logging
+from pathlib import Path
+from datetime import datetime, timezone, date, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session,
+    redirect, url_for, Response, current_app,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.auth.auth import role_required
+from routes.payments.pawapay import (
+    deposit_mtn_ug,
+    deposit_airtel_ug,
+    verify_deposit,
+)
+from routes.loanProducts.loanProducts import _simulate
+from routes.accounts.accounts import record_asset_movement
+
+# File: routes\savingsAccounts\savingsAccounts.py
+import os
+import io
+import csv
+import json
+import secrets
+import logging
+from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
+from pathlib import Path
+from flask import (
+    Blueprint, render_template, request, jsonify, session, redirect, url_for,
+    current_app, Response,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.auth.auth import role_required
+from routes.payments.pawapay import (
+    deposit_mtn_ug,
+    deposit_airtel_ug,
+    verify_deposit,
+)
+from routes.accounts.accounts import record_liability_movement
+from routes.accounts.accounts import record_liability_movement
+
+# File: routes\sharesManagement\sharesManagement.py
+import os
+import io
+import csv
+import json
+import secrets
+import logging
+from pathlib import Path
+from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session,
+    redirect, url_for, Response, current_app,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.auth.auth import role_required
+from routes.payments.pawapay import (
+    deposit_mtn_ug,
+    deposit_airtel_ug,
+    verify_deposit,
+)
+from routes.accounts.accounts import record_asset_movement
+
+# File: routes\yearlySubscriptions\yearlySubscriptions.py
+import os
+import io
+import csv
+import json
+import secrets
+import logging
+from pathlib import Path
+from datetime import datetime, timezone, date, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from flask import (
+    Blueprint, render_template, request, jsonify, session,
+    redirect, url_for, Response, current_app,
+)
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from routes.auth.auth import role_required
+from routes.payments.pawapay import (
+    deposit_mtn_ug,
+    deposit_airtel_ug,
+    verify_deposit,
+)
+from routes.accounts.accounts import record_asset_movement
