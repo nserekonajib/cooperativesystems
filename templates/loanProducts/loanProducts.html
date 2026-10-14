@@ -1,0 +1,855 @@
+{% extends "base.html" %}
+{% block title %}Loan Products — SACCO Pro{% endblock %}
+{% block page_title %}Loan Products{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- STAT CARDS                                                    -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Products</p>
+        <p id="statTotal" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+        <i class="fa-solid fa-layer-group"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      <span id="statActive" class="text-success font-semibold">0</span> active ·
+      <span id="statInactive">0</span> inactive
+    </p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Avg Interest</p>
+        <p id="statAvgRate" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+        <i class="fa-solid fa-percent"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Across all products</p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Smallest Loan</p>
+        <p id="statMinAmount" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
+        <i class="fa-solid fa-arrow-down"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Minimum product floor</p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Largest Loan</p>
+        <p id="statMaxAmount" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+        <i class="fa-solid fa-arrow-up"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Maximum product ceiling</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TOOLBAR                                                       -->
+<!-- ============================================================ -->
+<div class="flex flex-wrap items-center gap-3 mb-5">
+  <div class="relative flex-1 min-w-[240px] max-w-md">
+    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft text-sm"></i>
+    <input id="searchInput" placeholder="Search name, code or description…"
+           class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-brand bg-white">
+  </div>
+  <select id="statusFilter" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+    <option value="">All statuses</option>
+    <option value="active">Active</option>
+    <option value="inactive">Inactive</option>
+  </select>
+  <select id="categoryFilter" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+    <option value="">All categories</option>
+    <option value="general">General</option>
+    <option value="emergency">Emergency</option>
+    <option value="education">Education</option>
+    <option value="business">Business</option>
+    <option value="asset">Asset</option>
+    <option value="agriculture">Agriculture</option>
+    <option value="other">Other</option>
+  </select>
+  <button onclick="openCreateModal()"
+          class="ml-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-white text-sm font-semibold shadow-sm transition">
+    <i class="fa-solid fa-plus"></i> New Product
+  </button>
+</div>
+
+<!-- ============================================================ -->
+<!-- TABLE                                                         -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Product</th>
+          <th class="text-left px-5 py-3 font-semibold">Category</th>
+          <th class="text-right px-5 py-3 font-semibold">Amount</th>
+          <th class="text-right px-5 py-3 font-semibold">Term</th>
+          <th class="text-right px-5 py-3 font-semibold">Interest</th>
+          <th class="text-left px-5 py-3 font-semibold">Repayment</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+          <th class="px-5 py-3"></th>
+        </tr>
+      </thead>
+      <tbody id="productsTable" class="divide-y divide-slate-100">
+        <tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+    <span id="pageInfo">—</span>
+    <div class="flex gap-1">
+      <button id="prevBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+      <button id="nextBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PRODUCT EDITOR MODAL (create / edit)                          -->
+<!-- ============================================================ -->
+<div id="editorModal" class="hidden fixed inset-0 z-[75] flex items-start justify-center overflow-y-auto p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mt-8 mb-8">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl z-10">
+      <div>
+        <h3 class="font-bold text-base" id="editorTitle">New Loan Product</h3>
+        <p class="text-xs text-ink-muted mt-0.5" id="editorSubtitle">Define the terms, interest, and eligibility.</p>
+      </div>
+      <button type="button" onclick="closeEditor()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="px-6 border-b border-slate-100 bg-white sticky top-[65px] z-[9]">
+      <div class="flex gap-1">
+        <button data-tab="basics" class="etab px-4 py-3 text-sm font-semibold border-b-2 border-brand text-brand">
+          Basics
+        </button>
+        <button data-tab="interest" class="etab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink">
+          Interest &amp; Repayment
+        </button>
+        <button data-tab="fees" class="etab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink">
+          Fees &amp; Penalties
+        </button>
+        <button data-tab="eligibility" class="etab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink">
+          Eligibility
+        </button>
+        <button data-tab="simulate" class="etab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink">
+          Simulate
+        </button>
+      </div>
+    </div>
+
+    <form id="editorForm" class="p-6 space-y-6">
+      <input type="hidden" name="id" id="edId">
+
+      <!-- BASICS -->
+      <section data-panel="basics" class="epanel space-y-5">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="md:col-span-2">
+            <label class="lbl">Product name *</label>
+            <input name="name" required class="inp" placeholder="e.g. Emergency Loan">
+          </div>
+          <div>
+            <label class="lbl">Code (optional)</label>
+            <input name="code" class="inp" placeholder="e.g. EMRG">
+          </div>
+          <div>
+            <label class="lbl">Category</label>
+            <select name="category" class="inp">
+              <option value="general">General</option>
+              <option value="emergency">Emergency</option>
+              <option value="education">Education</option>
+              <option value="business">Business</option>
+              <option value="asset">Asset</option>
+              <option value="agriculture">Agriculture</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="lbl">Description</label>
+          <textarea name="description" rows="2" class="inp" placeholder="Short description shown to members"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="lbl">Min amount</label>
+            <input name="min_amount" type="number" min="0" step="1" class="inp" placeholder="0">
+          </div>
+          <div>
+            <label class="lbl">Max amount (0 = no cap)</label>
+            <input name="max_amount" type="number" min="0" step="1" class="inp" placeholder="0">
+          </div>
+          <div>
+            <label class="lbl">Amount multiple of</label>
+            <input name="amount_multiple_of" type="number" min="0" step="1" class="inp" placeholder="0 = any">
+          </div>
+          <div>
+            <label class="lbl">Min term (months)</label>
+            <input name="min_term_months" type="number" min="1" max="600" class="inp" placeholder="1">
+          </div>
+          <div>
+            <label class="lbl">Max term (months)</label>
+            <input name="max_term_months" type="number" min="1" max="600" class="inp" placeholder="12">
+          </div>
+          <div>
+            <label class="lbl">Effective from</label>
+            <input name="effective_from" type="date" class="inp">
+          </div>
+          <div>
+            <label class="lbl">Effective to</label>
+            <input name="effective_to" type="date" class="inp">
+          </div>
+        </div>
+      </section>
+
+      <!-- INTEREST -->
+      <section data-panel="interest" class="epanel hidden space-y-5">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="lbl">Interest method *</label>
+            <select name="interest_method" class="inp">
+              <option value="flat">Flat (interest on original principal)</option>
+              <option value="reducing_balance">Reducing balance</option>
+              <option value="compound">Compound</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Rate (% per period) *</label>
+            <input name="interest_rate_percent" type="number" min="0" step="0.001" class="inp" placeholder="e.g. 18">
+          </div>
+          <div>
+            <label class="lbl">Rate period</label>
+            <select name="interest_period" class="inp">
+              <option value="monthly">Per month</option>
+              <option value="quarterly">Per quarter</option>
+              <option value="annually">Per annum</option>
+              <option value="one_time">One-time over term</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Compound frequency</label>
+            <select name="compound_frequency" class="inp">
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="annually">Annually</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Grace periods</label>
+            <input name="grace_periods" type="number" min="0" step="1" class="inp" placeholder="0">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="lbl">Repayment frequency</label>
+            <select name="repayment_frequency" class="inp">
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Bi-weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="lump_sum">Lump sum at end</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Repayment type</label>
+            <select name="repayment_type" class="inp">
+              <option value="amortized">Amortized (equal payments)</option>
+              <option value="equal_principal">Equal principal</option>
+              <option value="interest_only">Interest only</option>
+              <option value="bullet">Bullet (all at end)</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEES -->
+      <section data-panel="fees" class="epanel hidden space-y-5">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="lbl">Processing fee (%)</label>
+            <input name="processing_fee_percent" type="number" min="0" max="100" step="0.001" class="inp">
+          </div>
+          <div>
+            <label class="lbl">Processing fee (flat)</label>
+            <input name="processing_fee_flat" type="number" min="0" step="1" class="inp">
+          </div>
+          <div></div>
+          <div>
+            <label class="lbl">Insurance fee (%)</label>
+            <input name="insurance_fee_percent" type="number" min="0" max="100" step="0.001" class="inp">
+          </div>
+          <div>
+            <label class="lbl">Insurance fee (flat)</label>
+            <input name="insurance_fee_flat" type="number" min="0" step="1" class="inp">
+          </div>
+          <div></div>
+          <div>
+            <label class="lbl">Other fee (flat)</label>
+            <input name="other_fee_flat" type="number" min="0" step="1" class="inp">
+          </div>
+          <div class="md:col-span-2">
+            <label class="lbl">Other fee label</label>
+            <input name="other_fee_label" class="inp" placeholder="e.g. Legal fee">
+          </div>
+          <div>
+            <label class="lbl">Penalty rate (% per day)</label>
+            <input name="penalty_rate_percent" type="number" min="0" max="100" step="0.001" class="inp">
+          </div>
+          <div>
+            <label class="lbl">Penalty grace (days)</label>
+            <input name="penalty_grace_days" type="number" min="0" step="1" class="inp">
+          </div>
+          <div class="flex items-end">
+            <label class="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" name="penalty_compounding" class="w-4 h-4 text-brand">
+              Compound penalty
+            </label>
+          </div>
+          <div>
+            <label class="lbl">Early settle penalty (%)</label>
+            <input name="early_settle_penalty_percent" type="number" min="0" max="100" step="0.001" class="inp">
+          </div>
+          <div class="flex items-end">
+            <label class="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" name="allows_early_settle" checked class="w-4 h-4 text-brand">
+              Allow early settlement
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ELIGIBILITY -->
+      <section data-panel="eligibility" class="epanel hidden space-y-5">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="lbl">Min membership (months)</label>
+            <input name="min_membership_months" type="number" min="0" step="1" class="inp" placeholder="0">
+          </div>
+          <div>
+            <label class="lbl">Min shares (units)</label>
+            <input name="min_shares_units" type="number" min="0" step="0.01" class="inp" placeholder="0">
+          </div>
+          <div>
+            <label class="lbl">Min savings balance</label>
+            <input name="min_savings_balance" type="number" min="0" step="0.01" class="inp" placeholder="0">
+          </div>
+          <div>
+            <label class="lbl">Max concurrent loans</label>
+            <input name="max_loans_per_member" type="number" min="1" step="1" class="inp" placeholder="1">
+          </div>
+          <div class="flex items-end">
+            <label class="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" name="require_guarantors" class="w-4 h-4 text-brand">
+              Require guarantors
+            </label>
+          </div>
+          <div>
+            <label class="lbl">Min guarantors</label>
+            <input name="min_guarantors" type="number" min="0" step="1" class="inp" placeholder="0">
+          </div>
+          <div class="flex items-end">
+            <label class="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" name="requires_collateral" class="w-4 h-4 text-brand">
+              Require collateral
+            </label>
+          </div>
+          <div class="md:col-span-2">
+            <label class="lbl">Collateral note</label>
+            <input name="collateral_note" class="inp" placeholder="e.g. Land title or vehicle logbook">
+          </div>
+          <div class="flex items-end">
+            <label class="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" name="allows_topup" class="w-4 h-4 text-brand">
+              Allow top-ups
+            </label>
+          </div>
+          <div class="flex items-end">
+            <label class="flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" name="is_active" checked class="w-4 h-4 text-brand">
+              Active
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- SIMULATE -->
+      <section data-panel="simulate" class="epanel hidden space-y-5">
+        <div class="rounded-xl bg-brand/5 border border-brand/10 p-4 text-xs text-brand-dark">
+          <i class="fa-solid fa-circle-info mr-1"></i>
+          Preview how a hypothetical loan would look with these terms.
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="lbl">Principal</label>
+            <input id="simPrincipal" type="number" min="1" step="1" class="inp" value="1000000">
+          </div>
+          <div>
+            <label class="lbl">Term (months)</label>
+            <input id="simTerm" type="number" min="1" step="1" class="inp" value="12">
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <button type="button" onclick="runSimulation()" class="btn-primary">
+            <i class="fa-solid fa-play mr-2"></i>Simulate
+          </button>
+        </div>
+
+        <div id="simSummary" class="hidden grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-white rounded-xl border border-slate-100 p-4">
+            <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Interest</p>
+            <p id="simInterest" class="text-xl font-bold mt-1">—</p>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-100 p-4">
+            <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Payable</p>
+            <p id="simPayable" class="text-xl font-bold mt-1">—</p>
+          </div>
+          <div class="bg-white rounded-xl border border-slate-100 p-4">
+            <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Periods</p>
+            <p id="simPeriods" class="text-xl font-bold mt-1">—</p>
+          </div>
+        </div>
+
+        <div id="simScheduleWrap" class="hidden bg-white rounded-xl border border-slate-100 overflow-hidden">
+          <div class="overflow-x-auto max-h-72">
+            <table class="w-full text-xs">
+              <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider sticky top-0">
+                <tr>
+                  <th class="text-left px-4 py-2.5 font-semibold">#</th>
+                  <th class="text-right px-4 py-2.5 font-semibold">Payment</th>
+                  <th class="text-right px-4 py-2.5 font-semibold">Principal</th>
+                  <th class="text-right px-4 py-2.5 font-semibold">Interest</th>
+                  <th class="text-right px-4 py-2.5 font-semibold">Balance</th>
+                </tr>
+              </thead>
+              <tbody id="simSchedule" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+        <p class="text-xs text-ink-muted" id="edStatusHint"></p>
+        <div class="flex items-center gap-3">
+          <button type="button" onclick="closeEditor()" class="btn-ghost">Cancel</button>
+          <button type="submit" id="edSubmit" class="btn-primary">
+            <i class="fa-solid fa-floppy-disk mr-2"></i>Save Product
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; transition:all .15s;
+           font-family:inherit; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   transition:.15s; border:none; cursor:pointer; }
+    .btn-primary:hover { background:#003ECC; }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { display:inline-flex; align-items:center; padding:10px 18px; border-radius:10px;
+                 background:#fff; border:1px solid #E2E8F0;
+                 color:#64748B; font-weight:600; font-size:14px; cursor:pointer; transition:.15s; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .pill-active   { background:#E6F4EA; color:#065F46; }
+    .pill-inactive { background:#E2E8F0; color:#334155; }
+    .cat-pill      { display:inline-flex; align-items:center; font-size:10px; font-weight:600;
+                     padding:2px 8px; border-radius:999px; background:#EFF6FF; color:#003ECC;
+                     text-transform:capitalize; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE                                                        */
+/* ============================================================ */
+const state = {
+    page: 1, per_page: 20, q: '', status: '', category: '', total: 0,
+};
+
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtCompact(n) {
+    n = Number(n || 0);
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return String(n);
+}
+function debounce(fn, ms = 300) {
+    let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        ...opts,
+    });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, status: r.status, body };
+}
+function interestLabel(p) {
+    const m = { flat: 'Flat', reducing_balance: 'Reducing', compound: 'Compound' }[p.interest_method] || p.interest_method;
+    const per = { monthly: 'mo', quarterly: 'qtr', annually: 'yr', one_time: 'once' }[p.interest_period] || p.interest_period;
+    return `${m} · ${p.interest_rate_percent}% / ${per}`;
+}
+
+/* ============================================================ */
+/* STATS                                                        */
+/* ============================================================ */
+async function loadStats() {
+    const { ok, body } = await req('/loan-products/api/stats');
+    if (!ok || !body.ok) return;
+    const s = body.stats;
+    document.getElementById('statTotal').textContent      = fmtCompact(s.total_products);
+    document.getElementById('statActive').textContent     = fmtCompact(s.active_products);
+    document.getElementById('statInactive').textContent   = fmtCompact(s.inactive_products);
+    document.getElementById('statAvgRate').textContent    = s.avg_rate_percent + '%';
+    document.getElementById('statMinAmount').textContent  = fmtCompact(s.min_amount);
+    document.getElementById('statMaxAmount').textContent  = fmtCompact(s.max_amount);
+}
+
+/* ============================================================ */
+/* LIST                                                         */
+/* ============================================================ */
+async function loadProducts() {
+    const tbody = document.getElementById('productsTable');
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const qs = new URLSearchParams({
+        page: state.page, per_page: state.per_page,
+        q: state.q, status: state.status, category: state.category,
+    });
+    const { ok, body } = await req('/loan-products/api/list?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-500 py-10 text-sm">
+            ${escapeHtml(body.error || 'Load failed')}</td></tr>`;
+        return;
+    }
+
+    state.total = body.total;
+
+    if (!body.products.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No loan products yet. Click <strong>New Product</strong> to define one.
+        </td></tr>`;
+    } else {
+        tbody.innerHTML = body.products.map(p => `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3">
+                <div class="font-semibold text-ink">${escapeHtml(p.name)}</div>
+                <div class="text-xs text-ink-muted">${escapeHtml(p.code || p.description || '')}</div>
+              </td>
+              <td class="px-5 py-3"><span class="cat-pill">${escapeHtml(p.category || 'general')}</span></td>
+              <td class="px-5 py-3 text-right text-xs">
+                ${fmtCompact(p.min_amount)} – ${p.max_amount > 0 ? fmtCompact(p.max_amount) : '∞'}
+              </td>
+              <td class="px-5 py-3 text-right text-xs">${p.min_term_months}–${p.max_term_months} mo</td>
+              <td class="px-5 py-3 text-right text-xs">
+                <div class="font-medium">${p.interest_rate_percent}%</div>
+                <div class="text-ink-muted">${escapeHtml(p.interest_method)}</div>
+              </td>
+              <td class="px-5 py-3 text-xs text-ink-muted">${escapeHtml(p.repayment_frequency)} · ${escapeHtml(p.repayment_type)}</td>
+              <td class="px-5 py-3">
+                <span class="pill pill-${p.is_active ? 'active' : 'inactive'}">${p.is_active ? 'active' : 'inactive'}</span>
+              </td>
+              <td class="px-5 py-3 text-right">
+                <div class="flex justify-end gap-1">
+                  <button onclick="editProduct('${p.id}')" title="Edit"
+                          class="w-8 h-8 rounded-lg hover:bg-page text-ink-muted hover:text-brand transition">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                  <button onclick="duplicateProduct('${p.id}')" title="Duplicate"
+                          class="w-8 h-8 rounded-lg hover:bg-page text-ink-muted hover:text-accent transition">
+                    <i class="fa-solid fa-copy"></i>
+                  </button>
+                  <button onclick="toggleProduct('${p.id}', ${p.is_active})"
+                          title="${p.is_active ? 'Deactivate' : 'Activate'}"
+                          class="w-8 h-8 rounded-lg hover:bg-page text-ink-muted ${p.is_active ? 'hover:text-danger' : 'hover:text-success'} transition">
+                    <i class="fa-solid ${p.is_active ? 'fa-circle-pause' : 'fa-circle-play'}"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+        `).join('');
+    }
+
+    const from = state.total ? (state.page - 1) * state.per_page + 1 : 0;
+    const to   = Math.min(state.page * state.per_page, state.total);
+    document.getElementById('pageInfo').textContent =
+        state.total ? `${from}–${to} of ${state.total}` : '0 results';
+    document.getElementById('prevBtn').disabled = state.page <= 1;
+    document.getElementById('nextBtn').disabled = to >= state.total;
+}
+
+document.getElementById('prevBtn').onclick = () => { if (state.page > 1) { state.page--; loadProducts(); } };
+document.getElementById('nextBtn').onclick = () => {
+    if (state.page * state.per_page < state.total) { state.page++; loadProducts(); }
+};
+document.getElementById('searchInput').addEventListener('input', debounce(e => {
+    state.q = e.target.value.trim(); state.page = 1; loadProducts();
+}, 350));
+document.getElementById('statusFilter').addEventListener('change', e => {
+    state.status = e.target.value; state.page = 1; loadProducts();
+});
+document.getElementById('categoryFilter').addEventListener('change', e => {
+    state.category = e.target.value; state.page = 1; loadProducts();
+});
+
+/* ============================================================ */
+/* EDITOR MODAL                                                 */
+/* ============================================================ */
+const editorModal = document.getElementById('editorModal');
+
+document.querySelectorAll('.etab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.etab').forEach(b => {
+            const on = b.dataset.tab === tab;
+            b.classList.toggle('border-brand', on);
+            b.classList.toggle('text-brand', on);
+            b.classList.toggle('border-transparent', !on);
+            b.classList.toggle('text-ink-muted', !on);
+        });
+        document.querySelectorAll('.epanel').forEach(p => {
+            p.classList.toggle('hidden', p.dataset.panel !== tab);
+        });
+    });
+});
+
+function openCreateModal() {
+    document.getElementById('editorTitle').textContent = 'New Loan Product';
+    document.getElementById('editorSubtitle').textContent = 'Define the terms, interest, and eligibility.';
+    document.getElementById('editorForm').reset();
+    document.getElementById('edId').value = '';
+    document.getElementById('edSubmit').innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i>Save Product';
+    document.getElementById('edStatusHint').textContent = '';
+    // set helpful defaults
+    document.getElementById('editorForm').elements['interest_rate_percent'].value = '18';
+    document.getElementById('editorForm').elements['interest_period'].value = 'annually';
+    document.getElementById('editorForm').elements['min_amount'].value = '50000';
+    document.getElementById('editorForm').elements['max_amount'].value = '5000000';
+    document.getElementById('editorForm').elements['min_term_months'].value = '3';
+    document.getElementById('editorForm').elements['max_term_months'].value = '24';
+    document.getElementById('editorForm').elements['is_active'].checked = true;
+    document.getElementById('editorForm').elements['allows_early_settle'].checked = true;
+    // switch to Basics tab
+    document.querySelector('.etab[data-tab="basics"]').click();
+    editorModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeEditor() {
+    editorModal.classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+async function editProduct(id) {
+    const { ok, body } = await req(`/loan-products/api/${id}`);
+    if (!ok || !body.ok) { showToast(body.error || 'Load failed', false); return; }
+    const p = body.product;
+
+    document.getElementById('editorTitle').textContent = `Edit: ${p.name}`;
+    document.getElementById('editorSubtitle').textContent = p.code ? `Code ${p.code}` : 'Update the product definition.';
+    document.getElementById('edId').value = p.id;
+
+    const form = document.getElementById('editorForm');
+    for (const [k, v] of Object.entries(p)) {
+        const el = form.elements[k];
+        if (!el) continue;
+        if (el.type === 'checkbox') el.checked = !!v;
+        else if (v !== null && v !== undefined) el.value = v;
+    }
+    document.getElementById('edSubmit').innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i>Update Product';
+    document.getElementById('edStatusHint').textContent =
+        `Created ${new Date(p.created_at).toLocaleDateString()} · updated ${new Date(p.updated_at).toLocaleString()}`;
+
+    document.querySelector('.etab[data-tab="basics"]').click();
+    editorModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+document.getElementById('editorForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.target;
+    const fd   = new FormData(form);
+    const d    = Object.fromEntries(fd.entries());
+
+    // checkboxes present as "on" only when checked
+    const payload = {};
+    for (const [k, v] of Object.entries(d)) {
+        if (k === 'id') continue;
+        // numbers
+        if (['min_amount','max_amount','amount_multiple_of','min_term_months',
+             'max_term_months','interest_rate_percent','grace_periods',
+             'processing_fee_percent','processing_fee_flat',
+             'insurance_fee_percent','insurance_fee_flat','other_fee_flat',
+             'penalty_rate_percent','penalty_grace_days',
+             'min_membership_months','min_shares_units','min_savings_balance',
+             'min_guarantors','max_loans_per_member','early_settle_penalty_percent'
+            ].includes(k)) {
+            payload[k] = v === '' ? null : Number(v);
+        } else {
+            payload[k] = v === '' ? null : v;
+        }
+    }
+    // explicitly add booleans as false when unchecked
+    ['require_guarantors','requires_collateral','allows_topup','allows_early_settle',
+     'is_active','penalty_compounding'].forEach(k => {
+        payload[k] = form.elements[k]?.checked || false;
+    });
+
+    const id = document.getElementById('edId').value;
+    const isEdit = !!id;
+
+    const btn = document.getElementById('edSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Saving…';
+
+    const { ok, body } = await req(
+        isEdit ? `/loan-products/api/${id}` : '/loan-products/api/create',
+        { method: isEdit ? 'PATCH' : 'POST', body: JSON.stringify(payload) },
+    );
+
+    btn.disabled = false;
+    btn.innerHTML = isEdit
+        ? '<i class="fa-solid fa-floppy-disk mr-2"></i>Update Product'
+        : '<i class="fa-solid fa-floppy-disk mr-2"></i>Save Product';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Save failed', false); return; }
+
+    closeEditor();
+    showToast(isEdit ? 'Product updated' : 'Product created', true);
+    loadProducts(); loadStats();
+});
+
+/* ============================================================ */
+/* QUICK ACTIONS                                                */
+/* ============================================================ */
+async function toggleProduct(id, currentActive) {
+    const next = !currentActive;
+    if (!confirm(`Are you sure you want to ${next ? 'activate' : 'deactivate'} this product?`)) return;
+    const { ok, body } = await req(`/loan-products/api/${id}/toggle`, {
+        method: 'PATCH', body: JSON.stringify({ is_active: next }),
+    });
+    if (!ok || !body.ok) { showToast(body.error || 'Toggle failed', false); return; }
+    showToast(`Product ${next ? 'activated' : 'deactivated'}`, true);
+    loadProducts(); loadStats();
+}
+
+async function duplicateProduct(id) {
+    const { ok, body } = await req(`/loan-products/api/${id}/duplicate`, { method: 'POST' });
+    if (!ok || !body.ok) { showToast(body.error || 'Duplicate failed', false); return; }
+    showToast('Product duplicated (inactive)', true);
+    loadProducts(); loadStats();
+    // immediately open in editor for convenience
+    if (body.product?.id) editProduct(body.product.id);
+}
+
+/* ============================================================ */
+/* SIMULATE                                                     */
+/* ============================================================ */
+async function runSimulation() {
+    const principal = Number(document.getElementById('simPrincipal').value || 0);
+    const term      = Number(document.getElementById('simTerm').value || 0);
+    if (principal <= 0 || term <= 0) { showToast('Enter a principal and term', false); return; }
+
+    // grab current values from the form
+    const form = document.getElementById('editorForm');
+    const product = {
+        interest_method:      form.elements['interest_method'].value,
+        interest_rate_percent:Number(form.elements['interest_rate_percent'].value || 0),
+        interest_period:      form.elements['interest_period'].value,
+        compound_frequency:   form.elements['compound_frequency'].value,
+        repayment_frequency:  form.elements['repayment_frequency'].value,
+        repayment_type:       form.elements['repayment_type'].value,
+    };
+
+    const { ok, body } = await req('/loan-products/api/simulate', {
+        method: 'POST',
+        body: JSON.stringify({ principal, term_months: term, product }),
+    });
+    if (!ok || !body.ok) { showToast(body.error || 'Simulation failed', false); return; }
+
+    const s = body.simulation;
+    document.getElementById('simInterest').textContent = fmtNum(s.total_interest);
+    document.getElementById('simPayable').textContent  = fmtNum(s.total_payable);
+    document.getElementById('simPeriods').textContent  = s.periods;
+    document.getElementById('simSummary').classList.remove('hidden');
+    document.getElementById('simScheduleWrap').classList.remove('hidden');
+
+    document.getElementById('simSchedule').innerHTML = s.schedule.map(r => `
+        <tr>
+          <td class="px-4 py-2 text-ink-muted">${r.period}</td>
+          <td class="px-4 py-2 text-right">${fmtNum(r.payment)}</td>
+          <td class="px-4 py-2 text-right text-ink-muted">${fmtNum(r.principal)}</td>
+          <td class="px-4 py-2 text-right text-success">${fmtNum(r.interest)}</td>
+          <td class="px-4 py-2 text-right text-ink-muted">${fmtNum(r.balance)}</td>
+        </tr>
+    `).join('');
+}
+
+/* ============================================================ */
+/* KEYBOARD                                                     */
+/* ============================================================ */
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !editorModal.classList.contains('hidden')) closeEditor();
+});
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    await Promise.all([loadStats(), loadProducts()]);
+})();
+</script>
+{% endblock %}

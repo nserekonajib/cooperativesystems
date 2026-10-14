@@ -1,0 +1,198 @@
+{% extends "memberBase.html" %}
+{% block title %}Dashboard — Member Portal{% endblock %}
+{% block page_title %}Welcome{% endblock %}
+
+{% block content %}
+
+<!-- Password change prompt (shown only if must_change_password) -->
+<div id="pwdBanner" class="hidden mb-5 rounded-2xl bg-warning-bg border border-warning/30 p-4 flex items-start gap-3">
+  <i class="fa-solid fa-triangle-exclamation text-warning text-lg mt-0.5"></i>
+  <div class="flex-1">
+    <p class="font-semibold text-sm text-ink">You're still using the default password</p>
+    <p class="text-xs text-ink-muted mt-0.5">For your security, please change it as soon as possible.</p>
+  </div>
+  <button onclick="showToast('Password change coming soon', true)"
+          class="px-3 py-1.5 rounded-lg bg-warning text-white text-xs font-semibold">
+    Change now
+  </button>
+</div>
+
+<!-- Welcome hero -->
+<div class="rounded-2xl bg-gradient-to-br from-navy to-navy-dark text-white p-6 lg:p-8 shadow-sm mb-6">
+  <p class="text-xs uppercase tracking-wider text-brand">Member Portal</p>
+  <h2 class="text-2xl lg:text-3xl font-bold mt-1">
+    Welcome back, <span id="heroName">—</span>
+  </h2>
+  <p class="text-slate-300 text-sm mt-2">
+    Member ID <span class="font-mono" id="heroMemberId">—</span> ·
+    <span id="heroOrg">—</span>
+  </p>
+</div>
+
+<!-- KPI cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Savings Balance</p>
+        <p id="kpiSavings" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+        <i class="fa-solid fa-wallet"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      Account <span id="kpiSavingsAcct" class="font-mono text-ink">—</span>
+    </p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">My Shares</p>
+        <p id="kpiSharesUnits" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+        <i class="fa-solid fa-chart-pie"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      Value <span id="kpiSharesValue" class="font-semibold text-ink">—</span>
+    </p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Loan Balance</p>
+        <p id="kpiLoan" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+        <i class="fa-solid fa-hand-holding-dollar"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      <span id="kpiActiveLoans" class="font-semibold text-ink">0</span> active loan(s)
+    </p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Dividends Received</p>
+        <p id="kpiDividends" class="text-2xl font-bold mt-1 text-success">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
+        <i class="fa-solid fa-circle-dollar-to-slot"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Total ever credited</p>
+  </div>
+</div>
+
+<!-- Subscription strip -->
+<div class="bg-white rounded-2xl shadow-sm p-5 mb-6">
+  <div class="flex flex-wrap items-center gap-4">
+    <div class="w-12 h-12 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+      <i class="fa-regular fa-calendar text-lg"></i>
+    </div>
+    <div class="flex-1 min-w-[200px]">
+      <p class="text-sm font-bold">
+        Annual subscription · <span id="subYear">—</span>
+      </p>
+      <p class="text-xs text-ink-muted mt-0.5">
+        Due <span id="subDue" class="font-semibold">—</span> ·
+        Paid <span id="subPaid" class="font-semibold">—</span>
+      </p>
+    </div>
+    <span id="subStatus" class="pill">—</span>
+  </div>
+</div>
+
+<!-- Quick actions -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+  <a href="#" class="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition text-center">
+    <div class="w-12 h-12 rounded-xl bg-success/10 text-success flex items-center justify-center mx-auto mb-2">
+      <i class="fa-solid fa-plus"></i>
+    </div>
+    <p class="text-sm font-semibold">Deposit Savings</p>
+  </a>
+  <a href="#" class="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition text-center">
+    <div class="w-12 h-12 rounded-xl bg-brand/10 text-brand flex items-center justify-center mx-auto mb-2">
+      <i class="fa-solid fa-hand-holding-dollar"></i>
+    </div>
+    <p class="text-sm font-semibold">Apply for Loan</p>
+  </a>
+  <a href="#" class="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition text-center">
+    <div class="w-12 h-12 rounded-xl bg-accent/10 text-accent flex items-center justify-center mx-auto mb-2">
+      <i class="fa-solid fa-chart-pie"></i>
+    </div>
+    <p class="text-sm font-semibold">Buy More Shares</p>
+  </a>
+  <a href="#" class="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition text-center">
+    <div class="w-12 h-12 rounded-xl bg-warning/10 text-warning flex items-center justify-center mx-auto mb-2">
+      <i class="fa-solid fa-file-invoice"></i>
+    </div>
+    <p class="text-sm font-semibold">View Statement</p>
+  </a>
+</div>
+
+<style>
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:4px 12px; border-radius:999px; text-transform:capitalize; }
+    .pill-paid     { background:#E6F4EA; color:#065F46; }
+    .pill-pending  { background:#FEF3C7; color:#92400E; }
+    .pill-partial  { background:#DBEAFE; color:#1E40AF; }
+    .pill-waived   { background:#EDE9FE; color:#6D28D9; }
+    .pill-overdue  { background:#FEE2E2; color:#991B1B; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadDashboard() {
+    const r = await fetch('/member/api/dashboard', { credentials: 'same-origin' });
+    if (!r.ok) { window.location.href = '/member/login'; return; }
+    const data = await r.json();
+    if (!data.ok) { showToast(data.error || 'Failed to load', false); return; }
+
+    const m = data.member;
+    const k = data.kpi;
+
+    document.getElementById('heroName').textContent    = m.full_name || '—';
+    document.getElementById('heroMemberId').textContent= m.member_id || '—';
+    document.getElementById('heroOrg').textContent     = m.org_name || '—';
+
+    document.getElementById('kpiSavings').textContent     = fmtNum(k.savings_balance);
+    document.getElementById('kpiSavingsAcct').textContent = k.savings_account || '—';
+    document.getElementById('kpiSharesUnits').textContent = fmtNum(k.shares_units);
+    document.getElementById('kpiSharesValue').textContent = fmtNum(k.shares_value);
+    document.getElementById('kpiLoan').textContent        = fmtNum(k.loan_balance);
+    document.getElementById('kpiActiveLoans').textContent = k.active_loans;
+    document.getElementById('kpiDividends').textContent   = fmtNum(k.dividends_total);
+
+    document.getElementById('subYear').textContent = k.subscription_year;
+    document.getElementById('subDue').textContent  = fmtNum(k.subscription_due);
+    document.getElementById('subPaid').textContent = fmtNum(k.subscription_paid);
+
+    const statusEl = document.getElementById('subStatus');
+    if (k.subscription_status) {
+        statusEl.textContent = k.subscription_status;
+        statusEl.className = 'pill pill-' + k.subscription_status;
+    } else {
+        statusEl.textContent = 'Not subscribed';
+        statusEl.className = 'pill pill-pending';
+    }
+
+    if (m.must_change_password) {
+        document.getElementById('pwdBanner').classList.remove('hidden');
+    }
+}
+
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+loadDashboard();
+</script>
+{% endblock %}

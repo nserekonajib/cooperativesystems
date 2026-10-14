@@ -1,0 +1,779 @@
+{% extends "base.html" %}
+{% block title %}Members — SACCO Pro{% endblock %}
+{% block page_title %}Members{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- STAT CARDS                                                    -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+  <!-- Total members -->
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Members</p>
+        <p id="statTotalMembers" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+        <i class="fa-solid fa-users"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      <span class="text-success font-semibold" id="statActiveMembers">0</span> active · 
+      <span id="statOtherMembers">0</span> other
+    </p>
+  </div>
+
+  <!-- Shares value -->
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Shares</p>
+        <p id="statSharesValue" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
+        <i class="fa-solid fa-chart-pie"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Member equity holdings</p>
+  </div>
+
+  <!-- Savings -->
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Savings</p>
+        <p id="statSavings" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+        <i class="fa-solid fa-wallet"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Aggregate member savings</p>
+  </div>
+
+  <!-- Loans -->
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Loans Outstanding</p>
+        <p id="statLoans" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+        <i class="fa-solid fa-hand-holding-dollar"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Total loan portfolio</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TOOLBAR                                                       -->
+<!-- ============================================================ -->
+<div class="flex flex-wrap items-center gap-3 mb-5">
+  <div class="relative flex-1 min-w-[240px] max-w-md">
+    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft text-sm"></i>
+    <input id="searchInput" placeholder="Search name, phone or member ID…"
+           class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-brand bg-white">
+  </div>
+  <select id="statusFilter" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+    <option value="">All statuses</option>
+    <option value="active">Active</option>
+    <option value="dormant">Dormant</option>
+    <option value="suspended">Suspended</option>
+    <option value="exited">Exited</option>
+  </select>
+  <button onclick="openCreateModal()"
+          class="ml-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-white text-sm font-semibold shadow-sm transition">
+    <i class="fa-solid fa-user-plus"></i> New Member
+  </button>
+</div>
+
+<!-- ============================================================ -->
+<!-- TABLE                                                         -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Member</th>
+          <th class="text-left px-5 py-3 font-semibold">Member ID</th>
+          <th class="text-left px-5 py-3 font-semibold">Phone</th>
+          <th class="text-right px-5 py-3 font-semibold">Shares</th>
+          <th class="text-right px-5 py-3 font-semibold">Savings</th>
+          <th class="text-right px-5 py-3 font-semibold">Loan</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+          <th class="px-5 py-3"></th>
+        </tr>
+      </thead>
+      <tbody id="membersTable" class="divide-y divide-slate-100">
+        <tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+    <span id="pageInfo">—</span>
+    <div class="flex gap-1">
+      <button id="prevBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+      <button id="nextBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- Status menu -->
+<div id="statusMenu" class="hidden fixed z-[90] w-44 bg-white rounded-xl shadow-2xl border border-slate-100 py-1 text-sm"></div>
+
+<!-- ============================================================ -->
+<!-- CREATE MEMBER MODAL                                           -->
+<!-- ============================================================ -->
+<div id="createModal" class="hidden fixed inset-0 bg-black/50 z-[70] flex items-start justify-center overflow-y-auto p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mt-8 mb-8">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl z-10">
+      <div>
+        <h3 class="font-bold text-base">Register New Member</h3>
+        <p class="text-xs text-ink-muted mt-0.5">A login is created automatically with the generated member ID.</p>
+      </div>
+      <button type="button" onclick="closeCreateModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <form id="createForm" class="p-6 space-y-6">
+
+      <div class="grid grid-cols-2 gap-3 p-1 bg-slate-100 rounded-xl">
+        <button type="button" data-cat="new"
+                class="cat-btn py-2.5 rounded-lg text-sm font-semibold bg-white shadow-sm text-brand transition">
+          <i class="fa-solid fa-user-plus mr-2"></i>New Member
+        </button>
+        <button type="button" data-cat="existing"
+                class="cat-btn py-2.5 rounded-lg text-sm font-semibold text-ink-muted transition">
+          <i class="fa-solid fa-rotate mr-2"></i>Existing / Legacy
+        </button>
+        <input type="hidden" name="category" value="new">
+      </div>
+
+      <div>
+        <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-3">Identity</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div><label class="lbl">First name *</label><input name="first_name" required class="inp"></div>
+          <div><label class="lbl">Last name *</label><input name="last_name" required class="inp"></div>
+          <div><label class="lbl">Other names</label><input name="other_names" class="inp"></div>
+          <div>
+            <label class="lbl">Gender</label>
+            <select name="gender" class="inp">
+              <option value="">—</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div><label class="lbl">Date of birth</label><input type="date" name="date_of_birth" class="inp"></div>
+          <div><label class="lbl">National ID</label><input name="national_id" class="inp"></div>
+        </div>
+      </div>
+
+      <div>
+        <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-3">Contact</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div><label class="lbl">Phone *</label><input name="phone" required class="inp" placeholder="+256…"></div>
+          <div><label class="lbl">Email</label><input type="email" name="email" class="inp"></div>
+          <div>
+            <label class="lbl">Member type</label>
+            <select name="member_type" class="inp">
+              <option value="individual">Individual</option>
+              <option value="group">Group</option>
+              <option value="corporate">Corporate</option>
+            </select>
+          </div>
+          <div class="md:col-span-2"><label class="lbl">Address</label><input name="address_line" class="inp"></div>
+          <div><label class="lbl">City</label><input name="city" class="inp"></div>
+          <div><label class="lbl">Occupation</label><input name="occupation" class="inp"></div>
+        </div>
+      </div>
+
+      <div id="existingBlock" class="hidden">
+        <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-3">
+          Carried-over Balances <span class="font-normal normal-case tracking-normal text-ink-soft">(as at migration)</span>
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div><label class="lbl">Shares (units)</label><input type="number" step="1" min="0" name="shares_units" class="inp" placeholder="0"></div>
+          <div><label class="lbl">Savings balance</label><input type="number" step="0.01" min="0" name="savings_balance" class="inp" placeholder="0"></div>
+          <div><label class="lbl">Loan balance</label><input type="number" step="0.01" min="0" name="loan_balance" class="inp" placeholder="0"></div>
+        </div>
+      </div>
+
+      <div>
+        <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-3">Registration Payment</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-ink-muted">
+                Minimum shares
+                (<span id="sumMinShares">—</span> × <span id="sumSharePrice">—</span>)
+              </span>
+              <span id="sumSharesAmount" class="font-semibold">—</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-ink-muted">Annual subscription</span>
+              <span id="sumSubscription" class="font-semibold">—</span>
+            </div>
+            <div class="flex justify-between items-center pt-2 border-t border-slate-200">
+              <span class="font-bold">Total due</span>
+              <span id="sumTotal" class="font-bold text-brand text-base">—</span>
+            </div>
+          </div>
+          <div>
+            <label class="lbl">Payment method</label>
+            <select name="payment_method" id="payMethod" class="inp">
+              <option value="cash">Cash</option>
+              <option value="online">Online (Mobile Money)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="onlineBlock" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label class="lbl">Provider</label>
+            <select name="payment_provider" class="inp">
+              <option value="MTN">MTN Mobile Money</option>
+              <option value="AIRTEL">Airtel Money</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Mobile money number</label>
+            <input name="payment_phone" class="inp" placeholder="+256…">
+          </div>
+        </div>
+
+        <input type="hidden" name="payment_amount" id="payAmount">
+      </div>
+
+      <div>
+        <label class="lbl">Notes (optional)</label>
+        <textarea name="notes" rows="2" class="inp" placeholder="Any additional information about this member"></textarea>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeCreateModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" id="createSubmit" class="btn-primary">
+          <i class="fa-solid fa-user-plus mr-2"></i>Create Member
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PAYMENT STATUS MODAL                                          -->
+<!-- ============================================================ -->
+<div id="payModal" class="hidden fixed inset-0 bg-black/50 z-[80] flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+    <div id="payIconWrap" class="w-16 h-16 mx-auto rounded-full bg-brand/10 text-brand flex items-center justify-center mb-4">
+      <i id="payIcon" class="fa-solid fa-mobile-screen-button text-2xl"></i>
+    </div>
+    <h3 id="payTitle" class="font-bold text-lg mb-1">Waiting for approval</h3>
+    <p id="payText" class="text-sm text-ink-muted mb-5">Approve the prompt on the customer's phone.</p>
+    <div id="paySpinner" class="hidden mb-4">
+      <i class="fa-solid fa-circle-notch fa-spin text-brand text-xl"></i>
+    </div>
+    <button onclick="closePayModal()" class="btn-ghost w-full">Close</button>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; transition:all .15s;
+           font-family:inherit; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   transition:.15s; border:none; cursor:pointer; }
+    .btn-primary:hover { background:#003ECC; }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { padding:10px 18px; border-radius:10px; background:#fff; border:1px solid #E2E8F0;
+                 color:#64748B; font-weight:600; font-size:14px; cursor:pointer; transition:.15s; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize;
+            gap:4px; cursor:pointer; user-select:none; }
+    .pill-active    { background:#E6F4EA; color:#065F46; }
+    .pill-dormant   { background:#FEF3C7; color:#92400E; }
+    .pill-suspended { background:#FEE2E2; color:#991B1B; }
+    .pill-exited    { background:#E2E8F0; color:#334155; }
+    .pill:hover { filter: brightness(0.96); }
+    .pill .chev { font-size:8px; opacity:.6; margin-left:2px; }
+    .member-avatar  { width:36px; height:36px; border-radius:50%;
+                      background:linear-gradient(135deg,#1A62FF,#003ECC);
+                      color:#fff; display:inline-flex; align-items:center; justify-content:center;
+                      font-weight:700; font-size:13px; flex-shrink:0; }
+
+    #statusMenu .item { display:flex; align-items:center; gap:8px; padding:7px 12px; cursor:pointer; color:#334155; }
+    #statusMenu .item:hover { background:#F4F6F9; }
+    #statusMenu .item .dot { width:8px; height:8px; border-radius:50%; }
+    #statusMenu .item[data-status="active"]    .dot { background:#10B981; }
+    #statusMenu .item[data-status="dormant"]   .dot { background:#F59E0B; }
+    #statusMenu .item[data-status="suspended"] .dot { background:#EF4444; }
+    #statusMenu .item[data-status="exited"]    .dot { background:#94A3B8; }
+    #statusMenu .item.selected { background:#EFF6FF; color:#003ECC; font-weight:600; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE                                                        */
+/* ============================================================ */
+const state = { page: 1, per_page: 20, q: '', status: '', total: 0 };
+
+const settings = {
+    min_shares: 0,
+    min_share_price: 0,
+    annual_subscription_fee: 0,
+    min_shares_value: 0,
+    total_registration_due: 0,
+    currency: 'UGX',
+};
+
+const STATUSES = ['active', 'dormant', 'suspended', 'exited'];
+
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtMoney(n) { return fmtNum(n) + ' ' + settings.currency; }
+function fmtCompact(n) {
+    n = Number(n || 0);
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return String(n);
+}
+function debounce(fn, ms = 300) {
+    let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+function initials(first, last) {
+    return ((first || '?')[0] + (last || '')[0] || '?').toUpperCase();
+}
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        ...opts,
+    });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, status: r.status, body };
+}
+
+/* ============================================================ */
+/* SETTINGS                                                     */
+/* ============================================================ */
+async function loadSettings() {
+    const { ok, body } = await req('/members/api/settings');
+    if (!ok || !body.ok) {
+        showToast('Could not load institution settings', false);
+        return;
+    }
+    Object.assign(settings, body.settings);
+    renderPaymentSummary();
+}
+
+/* ============================================================ */
+/* STAT CARDS                                                   */
+/* ============================================================ */
+async function loadStats() {
+    const { ok, body } = await req('/members/api/stats');
+    if (!ok || !body.ok) return;
+    const s = body.stats;
+
+    document.getElementById('statTotalMembers').textContent = fmtNum(s.total_members);
+    document.getElementById('statActiveMembers').textContent = fmtNum(s.active_members);
+
+    const others = (s.dormant_members || 0) + (s.suspended_members || 0) + (s.exited_members || 0);
+    document.getElementById('statOtherMembers').textContent = fmtNum(others);
+
+    document.getElementById('statSharesValue').textContent = fmtCompact(s.total_shares_value);
+    document.getElementById('statSavings').textContent     = fmtCompact(s.total_savings);
+    document.getElementById('statLoans').textContent       = fmtCompact(s.total_loans);
+}
+
+/* ============================================================ */
+/* MEMBERS LIST                                                 */
+/* ============================================================ */
+async function loadMembers() {
+    const tbody = document.getElementById('membersTable');
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const qs = new URLSearchParams({
+        page: state.page,
+        per_page: state.per_page,
+        q: state.q,
+        status: state.status,
+    });
+    const { ok, body } = await req('/members/api/list?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-500 py-10 text-sm">
+            ${escapeHtml(body.error || 'Load failed')}</td></tr>`;
+        return;
+    }
+
+    state.total = body.total;
+
+    if (!body.members.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No members yet. Click <strong>New Member</strong> to add one.
+        </td></tr>`;
+    } else {
+        tbody.innerHTML = body.members.map(m => `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-3">
+                  <div class="member-avatar">${initials(m.first_name, m.last_name)}</div>
+                  <div>
+                    <div class="font-semibold text-ink">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</div>
+                    <div class="text-xs text-ink-muted">${escapeHtml(m.email || '')}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-5 py-3 font-mono text-xs text-ink-muted">${escapeHtml(m.member_id)}</td>
+              <td class="px-5 py-3 text-ink-muted">${escapeHtml(m.phone || '')}</td>
+              <td class="px-5 py-3 text-right font-medium">${fmtNum(m.shares_units)}</td>
+              <td class="px-5 py-3 text-right font-medium">${fmtNum(m.savings_balance)}</td>
+              <td class="px-5 py-3 text-right font-medium">${fmtNum(m.loan_balance)}</td>
+              <td class="px-5 py-3">
+                <span class="pill pill-${m.status}" data-member-id="${m.id}" data-status="${m.status}"
+                      onclick="openStatusMenu(event, this)">
+                  ${escapeHtml(m.status)}
+                  <i class="fa-solid fa-chevron-down chev"></i>
+                </span>
+              </td>
+              <td class="px-5 py-3 text-right">
+                <button onclick="viewMember('${m.id}')"
+                        class="w-8 h-8 rounded-lg hover:bg-page text-ink-muted hover:text-brand transition">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+              </td>
+            </tr>
+        `).join('');
+    }
+
+    const from = state.total ? (state.page - 1) * state.per_page + 1 : 0;
+    const to   = Math.min(state.page * state.per_page, state.total);
+    document.getElementById('pageInfo').textContent =
+        state.total ? `${from}–${to} of ${state.total}` : '0 results';
+    document.getElementById('prevBtn').disabled = state.page <= 1;
+    document.getElementById('nextBtn').disabled = to >= state.total;
+}
+
+document.getElementById('prevBtn').onclick = () => {
+    if (state.page > 1) { state.page--; loadMembers(); }
+};
+document.getElementById('nextBtn').onclick = () => {
+    if (state.page * state.per_page < state.total) { state.page++; loadMembers(); }
+};
+document.getElementById('searchInput').addEventListener('input', debounce(e => {
+    state.q = e.target.value.trim();
+    state.page = 1;
+    loadMembers();
+}, 350));
+document.getElementById('statusFilter').addEventListener('change', e => {
+    state.status = e.target.value;
+    state.page = 1;
+    loadMembers();
+});
+
+/* ============================================================ */
+/* STATUS MENU                                                  */
+/* ============================================================ */
+const statusMenu = document.getElementById('statusMenu');
+
+function openStatusMenu(ev, chip) {
+    ev.stopPropagation();
+    const memberId      = chip.dataset.memberId;
+    const currentStatus = chip.dataset.status;
+
+    statusMenu.innerHTML = STATUSES.map(s => `
+        <div class="item ${s === currentStatus ? 'selected' : ''}" data-status="${s}">
+            <span class="dot"></span>
+            <span style="text-transform:capitalize;">${s}</span>
+            ${s === currentStatus ? '<i class="fa-solid fa-check ml-auto text-brand text-xs"></i>' : ''}
+        </div>
+    `).join('');
+
+    statusMenu.querySelectorAll('.item').forEach(item => {
+        item.onclick = () => {
+            const newStatus = item.dataset.status;
+            closeStatusMenu();
+            if (newStatus !== currentStatus) updateStatus(memberId, newStatus, chip);
+        };
+    });
+
+    const r = chip.getBoundingClientRect();
+    const menuW = 176;
+    const menuH = 160;
+    let left = r.left;
+    let top  = r.bottom + 6;
+    if (left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
+    if (top  + menuH > window.innerHeight - 8) top  = r.top - menuH - 6;
+
+    statusMenu.style.left = left + 'px';
+    statusMenu.style.top  = top  + 'px';
+    statusMenu.classList.remove('hidden');
+}
+
+function closeStatusMenu() { statusMenu.classList.add('hidden'); }
+
+document.addEventListener('click', () => closeStatusMenu());
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeStatusMenu(); });
+window.addEventListener('resize', closeStatusMenu);
+window.addEventListener('scroll', closeStatusMenu, true);
+
+async function updateStatus(memberId, newStatus, chipEl) {
+    const oldStatus = chipEl.dataset.status;
+    chipEl.dataset.status = newStatus;
+    chipEl.className = `pill pill-${newStatus}`;
+    chipEl.innerHTML = `${escapeHtml(newStatus)} <i class="fa-solid fa-chevron-down chev"></i>`;
+
+    const { ok, body } = await req(`/members/api/${memberId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+    });
+
+    if (!ok || !body.ok) {
+        chipEl.dataset.status = oldStatus;
+        chipEl.className = `pill pill-${oldStatus}`;
+        chipEl.innerHTML = `${escapeHtml(oldStatus)} <i class="fa-solid fa-chevron-down chev"></i>`;
+        showToast(body.error || 'Status update failed', false);
+        return;
+    }
+
+    showToast(`Status set to ${newStatus}`, true);
+    loadStats();
+    if (state.status && state.status !== newStatus) loadMembers();
+}
+
+/* ============================================================ */
+/* CREATE MODAL                                                 */
+/* ============================================================ */
+function openCreateModal() {
+    document.getElementById('createForm').reset();
+    setCategory('new');
+    renderPaymentSummary();
+    document.getElementById('createModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+function closeCreateModal() {
+    document.getElementById('createModal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+document.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => setCategory(btn.dataset.cat));
+});
+function setCategory(cat) {
+    document.querySelector('input[name="category"]').value = cat;
+    document.querySelectorAll('.cat-btn').forEach(b => {
+        const on = b.dataset.cat === cat;
+        b.classList.toggle('bg-white',    on);
+        b.classList.toggle('shadow-sm',   on);
+        b.classList.toggle('text-brand',  on);
+        b.classList.toggle('text-ink-muted', !on);
+    });
+    document.getElementById('existingBlock').classList.toggle('hidden', cat !== 'existing');
+    renderPaymentSummary();
+}
+
+/* ============================================================ */
+/* PAYMENT SUMMARY                                              */
+/* ============================================================ */
+function renderPaymentSummary() {
+    const el = id => document.getElementById(id);
+    if (!el('sumMinShares')) return;
+
+    const cat = document.querySelector('input[name="category"]').value;
+    const sharesAmount = cat === 'new' ? Number(settings.min_shares_value) : 0;
+    const subAmount    = Number(settings.annual_subscription_fee);
+    const total        = sharesAmount + subAmount;
+
+    el('sumMinShares').textContent    = fmtNum(settings.min_shares);
+    el('sumSharePrice').textContent   = fmtMoney(settings.min_share_price);
+    el('sumSharesAmount').textContent = fmtMoney(sharesAmount);
+    el('sumSubscription').textContent = fmtMoney(subAmount);
+    el('sumTotal').textContent        = fmtMoney(total);
+    el('payAmount').value             = total;
+}
+
+document.getElementById('payMethod').addEventListener('change', e => {
+    document.getElementById('onlineBlock').classList.toggle('hidden', e.target.value !== 'online');
+});
+
+/* ============================================================ */
+/* SUBMIT CREATE                                                */
+/* ============================================================ */
+document.getElementById('createForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.target;
+    const fd   = new FormData(form);
+    const d    = Object.fromEntries(fd.entries());
+
+    if (d.payment_method === 'online') {
+        if (!d.payment_phone || !d.payment_phone.trim()) {
+            showToast('Mobile money number is required for online payment', false);
+            return;
+        }
+    }
+
+    const payload = {
+        first_name:    d.first_name,
+        last_name:     d.last_name,
+        other_names:   d.other_names,
+        gender:        d.gender,
+        date_of_birth: d.date_of_birth || null,
+        national_id:   d.national_id,
+        phone:         d.phone,
+        email:         d.email,
+        address_line:  d.address_line,
+        city:          d.city,
+        occupation:    d.occupation,
+        member_type:   d.member_type,
+        category:      d.category,
+        notes:         d.notes || null,
+        payment: {
+            method:   d.payment_method,
+            amount:   d.payment_amount,
+            provider: d.payment_provider,
+            phone:    d.payment_phone,
+        },
+    };
+    if (d.category === 'existing') {
+        payload.shares_units    = d.shares_units;
+        payload.savings_balance = d.savings_balance;
+        payload.loan_balance    = d.loan_balance;
+    }
+
+    const btn = document.getElementById('createSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Creating…';
+
+    const { ok, body } = await req('/members/api/create', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-user-plus mr-2"></i>Create Member';
+
+    if (!ok || !body.ok) {
+        showToast(body.error || 'Creation failed', false);
+        return;
+    }
+
+    closeCreateModal();
+    loadMembers();
+    loadStats();
+
+    if (body.payment && body.payment.method === 'online') {
+        if (body.payment.status === 'pending' && body.payment.deposit_id) {
+            showPayModal(body.payment.deposit_id);
+        } else if (body.payment.status === 'failed') {
+            showToast(body.warning || 'Member created, but payment failed', false);
+        }
+    } else if (body.warning) {
+        showToast(body.warning, false);
+    } else {
+        showToast(`Member created · ID ${body.member.member_id}`, true);
+    }
+});
+
+/* ============================================================ */
+/* PAYMENT STATUS MODAL                                         */
+/* ============================================================ */
+let _pollTimer = null;
+
+function showPayModal(depositId) {
+    document.getElementById('payModal').classList.remove('hidden');
+    document.getElementById('paySpinner').classList.remove('hidden');
+    document.getElementById('payIconWrap').className =
+        'w-16 h-16 mx-auto rounded-full bg-brand/10 text-brand flex items-center justify-center mb-4';
+    document.getElementById('payIcon').className = 'fa-solid fa-mobile-screen-button text-2xl';
+    document.getElementById('payTitle').textContent = 'Waiting for approval';
+    document.getElementById('payText').textContent  =
+        "Approve the mobile-money prompt on the customer's phone.";
+    startPolling(depositId);
+}
+
+function closePayModal() {
+    document.getElementById('payModal').classList.add('hidden');
+    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+    loadMembers();
+    loadStats();
+}
+
+function startPolling(depositId) {
+    if (_pollTimer) clearInterval(_pollTimer);
+    let attempts = 0;
+    _pollTimer = setInterval(async () => {
+        attempts++;
+        const { ok, body } = await req(`/members/api/payment/${depositId}/verify`, { method: 'POST' });
+        if (!ok || !body.ok) {
+            if (attempts >= 30) { clearInterval(_pollTimer); _pollTimer = null; }
+            return;
+        }
+        if (body.status === 'completed') {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('paySpinner').classList.add('hidden');
+            document.getElementById('payIconWrap').className =
+                'w-16 h-16 mx-auto rounded-full bg-success-bg text-success flex items-center justify-center mb-4';
+            document.getElementById('payIcon').className = 'fa-solid fa-circle-check text-2xl';
+            document.getElementById('payTitle').textContent = 'Payment received';
+            document.getElementById('payText').textContent  =
+                body.member?.member_id ? `Member ${body.member.member_id} created.`
+                                       : 'Shares and subscription recorded.';
+            setTimeout(closePayModal, 1600);
+        } else if (body.status === 'failed') {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('paySpinner').classList.add('hidden');
+            document.getElementById('payIconWrap').className =
+                'w-16 h-16 mx-auto rounded-full bg-danger-bg text-danger flex items-center justify-center mb-4';
+            document.getElementById('payIcon').className = 'fa-solid fa-circle-xmark text-2xl';
+            document.getElementById('payTitle').textContent = 'Payment failed';
+            document.getElementById('payText').textContent  = body.reason || 'The payment was not completed.';
+        } else if (attempts >= 30) {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('paySpinner').classList.add('hidden');
+            document.getElementById('payTitle').textContent = 'Still pending';
+            document.getElementById('payText').textContent  =
+                'Timed out waiting. Check the member ledger later.';
+        }
+    }, 4000);
+}
+
+/* ============================================================ */
+/* DETAIL (placeholder)                                         */
+/* ============================================================ */
+function viewMember(id) {
+    showToast('Member detail page coming soon', true);
+}
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    await loadSettings();
+    await Promise.all([loadStats(), loadMembers()]);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,1166 @@
+{% extends "base.html" %}
+{% block title %}Loan Applications — SACCO Pro{% endblock %}
+{% block page_title %}Loan Applications{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- STAT CARDS                                                    -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Pending Review</p>
+        <p id="statPending" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+        <i class="fa-solid fa-clock"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Submitted or under review</p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Approved</p>
+        <p id="statApproved" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Awaiting disbursement</p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Disbursed</p>
+        <p id="statDisbursed" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+        <i class="fa-solid fa-hand-holding-dollar"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Funds released</p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Approved Value</p>
+        <p id="statApprovedValue" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
+        <i class="fa-solid fa-chart-line"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Cumulative approved amount</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TOOLBAR                                                       -->
+<!-- ============================================================ -->
+<div class="flex flex-wrap items-center gap-3 mb-5">
+  <div class="relative flex-1 min-w-[240px] max-w-md">
+    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft text-sm"></i>
+    <input id="searchInput" placeholder="Search app number, member name, ID or phone…"
+           class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-brand bg-white">
+  </div>
+  <select id="statusFilter" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+    <option value="">All statuses</option>
+    <option value="draft">Draft</option>
+    <option value="submitted">Submitted</option>
+    <option value="under_review">Under review</option>
+    <option value="approved">Approved</option>
+    <option value="rejected">Rejected</option>
+    <option value="disbursed">Disbursed</option>
+    <option value="cancelled">Cancelled</option>
+  </select>
+  <select id="sourceFilter" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+    <option value="">All sources</option>
+    <option value="admin">Admin-initiated</option>
+    <option value="member">Member-initiated</option>
+  </select>
+  <button onclick="openCreateModal()"
+          class="ml-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-white text-sm font-semibold shadow-sm transition">
+    <i class="fa-solid fa-plus"></i> New Application
+  </button>
+</div>
+
+<!-- ============================================================ -->
+<!-- TABLE                                                         -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">App #</th>
+          <th class="text-left px-5 py-3 font-semibold">Member</th>
+          <th class="text-left px-5 py-3 font-semibold">Product</th>
+          <th class="text-right px-5 py-3 font-semibold">Requested</th>
+          <th class="text-right px-5 py-3 font-semibold">Approved</th>
+          <th class="text-left px-5 py-3 font-semibold">Source</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+          <th class="px-5 py-3"></th>
+        </tr>
+      </thead>
+      <tbody id="appsTable" class="divide-y divide-slate-100">
+        <tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+    <span id="pageInfo">—</span>
+    <div class="flex gap-1">
+      <button id="prevBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+      <button id="nextBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- CREATE MODAL (z-90)                                           -->
+<!-- ============================================================ -->
+<div id="createModal" class="hidden fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mt-8 mb-8">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl z-10">
+      <div>
+        <h3 class="font-bold text-base">New Loan Application</h3>
+        <p class="text-xs text-ink-muted mt-0.5">Create on behalf of a member or as a member-initiated draft.</p>
+      </div>
+      <button type="button" onclick="closeCreateModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <form id="createForm" class="p-6 space-y-5">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Source *</label>
+          <select name="source" class="inp">
+            <option value="admin">Admin-initiated</option>
+            <option value="member">Member-initiated</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Member *</label>
+          <select name="member_id" id="memberPicker" class="inp" required></select>
+        </div>
+        <div class="md:col-span-2">
+          <label class="lbl">Loan product *</label>
+          <select name="product_id" id="productPicker" class="inp" required></select>
+        </div>
+        <div>
+          <label class="lbl">Requested amount *</label>
+          <input name="requested_amount" type="number" min="1" step="1" required class="inp">
+        </div>
+        <div>
+          <label class="lbl">Term (months) *</label>
+          <input name="requested_term_months" type="number" min="1" max="600" required class="inp">
+        </div>
+        <div class="md:col-span-2">
+          <label class="lbl">Purpose</label>
+          <textarea name="purpose" rows="2" class="inp" placeholder="Short reason shown on the application"></textarea>
+        </div>
+      </div>
+
+      <!-- Live eligibility preview -->
+      <div id="eligibilityBox" class="hidden rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+        <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-2">Eligibility Check</p>
+        <ul id="eligibilityList" class="space-y-1"></ul>
+      </div>
+
+      <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+        <label class="flex items-center gap-2 text-xs cursor-pointer">
+          <input type="checkbox" name="submit_now" checked class="w-4 h-4 text-brand">
+          Submit for review now
+        </label>
+        <div class="flex gap-3">
+          <button type="button" onclick="closeCreateModal()" class="btn-ghost">Cancel</button>
+          <button type="submit" id="createSubmit" class="btn-primary">
+            <i class="fa-solid fa-paper-plane mr-2"></i>Create Application
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- DETAIL DRAWER (z-75)                                          -->
+<!-- ============================================================ -->
+<div id="detailModal" class="hidden fixed inset-0 z-[75] flex items-stretch justify-center"
+     style="background:rgba(0,0,0,.5); backdrop-filter: blur(2px);">
+  <div class="bg-white w-full h-full flex flex-col">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-8 py-5 border-b border-slate-100 bg-white sticky top-0 z-10">
+      <div class="flex items-center gap-4">
+        <button onclick="closeDetailModal()"
+                class="w-10 h-10 rounded-xl hover:bg-page flex items-center justify-center text-ink-muted">
+          <i class="fa-solid fa-arrow-left text-lg"></i>
+        </button>
+        <div>
+          <h3 class="font-bold text-lg" id="dtlTitle">—</h3>
+          <p class="text-xs text-ink-muted mt-0.5" id="dtlSubtitle">—</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2" id="dtlActions"></div>
+    </div>
+
+    <!-- Body -->
+    <div class="flex-1 overflow-y-auto p-8 bg-page">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- LEFT: summary + member + terms -->
+        <div class="lg:col-span-1 space-y-5">
+          <div class="rounded-2xl bg-gradient-to-br from-brand to-brand-dark text-white p-6 shadow-md">
+            <p class="text-xs uppercase tracking-wider opacity-80">Requested</p>
+            <p id="dtlRequested" class="text-3xl font-extrabold mt-1">—</p>
+            <div class="mt-3 text-xs opacity-90 space-y-1">
+              <div class="flex justify-between"><span>Approved</span><span id="dtlApproved">—</span></div>
+              <div class="flex justify-between"><span>Term</span><span id="dtlTerm">—</span></div>
+              <div class="flex justify-between"><span>Total payable</span><span id="dtlTotalPayable">—</span></div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 text-sm space-y-2">
+            <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1">Member</p>
+            <p class="font-semibold" id="dtlMemberName">—</p>
+            <p class="font-mono text-xs text-ink-muted" id="dtlMemberId">—</p>
+            <p class="text-ink-muted text-xs" id="dtlMemberPhone">—</p>
+            <hr class="my-2 border-slate-100">
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Shares</span><span id="dtlMemberShares">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Savings</span><span id="dtlMemberSavings">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Loan balance</span><span id="dtlMemberLoan">—</span></div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 text-sm space-y-2">
+            <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1">Product Snapshot</p>
+            <p class="text-xs text-ink-muted" id="dtlProductLine">—</p>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Interest</span><span id="dtlRate" class="font-medium">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Repayment</span><span id="dtlRepay" class="font-medium">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Fees</span><span id="dtlFees" class="font-medium">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Net disbursement</span><span id="dtlNet" class="font-medium">—</span></div>
+          </div>
+        </div>
+
+        <!-- RIGHT: tabs -->
+        <div class="lg:col-span-2 space-y-5">
+          <!-- Tabs -->
+          <div class="bg-white rounded-2xl border border-slate-100">
+            <div class="flex border-b border-slate-100 overflow-x-auto">
+              <button data-dtab="overview" class="dtab px-4 py-3 text-sm font-semibold border-b-2 border-brand text-brand whitespace-nowrap">Overview</button>
+              <button data-dtab="schedule" class="dtab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">Repayment</button>
+              <button data-dtab="guarantors" class="dtab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">Guarantors</button>
+              <button data-dtab="events" class="dtab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">Activity</button>
+            </div>
+
+            <!-- Overview -->
+            <div data-dpanel="overview" class="dpanel p-5 space-y-4">
+              <div>
+                <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1">Purpose</p>
+                <p id="dtlPurpose" class="text-sm">—</p>
+              </div>
+              <div id="dtlEligibilityWrap">
+                <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-2">Eligibility</p>
+                <ul id="dtlEligibility" class="space-y-1 text-sm"></ul>
+              </div>
+            </div>
+
+            <!-- Repayment -->
+            <div data-dpanel="schedule" class="dpanel hidden p-5">
+              <div class="flex items-center justify-between mb-3">
+                <p class="text-sm font-bold">Repayment Schedule</p>
+                <button onclick="refreshSimulation()" class="text-xs text-brand font-semibold hover:underline">
+                  <i class="fa-solid fa-rotate mr-1"></i>Recalculate
+                </button>
+              </div>
+              <div id="dtlSimSummary" class="grid grid-cols-3 gap-3 mb-4">
+                <div class="bg-page rounded-xl p-3">
+                  <p class="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Interest</p>
+                  <p id="dtlSimInterest" class="text-sm font-bold mt-1">—</p>
+                </div>
+                <div class="bg-page rounded-xl p-3">
+                  <p class="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Total</p>
+                  <p id="dtlSimTotal" class="text-sm font-bold mt-1">—</p>
+                </div>
+                <div class="bg-page rounded-xl p-3">
+                  <p class="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Periods</p>
+                  <p id="dtlSimPeriods" class="text-sm font-bold mt-1">—</p>
+                </div>
+              </div>
+              <div class="overflow-x-auto max-h-80 border border-slate-100 rounded-xl">
+                <table class="w-full text-xs">
+                  <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider sticky top-0">
+                    <tr>
+                      <th class="text-left px-3 py-2 font-semibold">#</th>
+                      <th class="text-right px-3 py-2 font-semibold">Payment</th>
+                      <th class="text-right px-3 py-2 font-semibold">Principal</th>
+                      <th class="text-right px-3 py-2 font-semibold">Interest</th>
+                      <th class="text-right px-3 py-2 font-semibold">Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dtlSimSchedule" class="divide-y divide-slate-100"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Guarantors -->
+            <div data-dpanel="guarantors" class="dpanel hidden p-5">
+              <div class="flex items-center justify-between mb-3">
+                <p class="text-sm font-bold">Guarantors</p>
+                <button onclick="openAddGuarantor()" class="text-xs text-brand font-semibold hover:underline">
+                  <i class="fa-solid fa-plus mr-1"></i>Add
+                </button>
+              </div>
+              <div id="dtlGuarantors" class="space-y-2"></div>
+            </div>
+
+            <!-- Events -->
+            <div data-dpanel="events" class="dpanel hidden p-5">
+              <p class="text-sm font-bold mb-3">Activity Log</p>
+              <div id="dtlEvents" class="space-y-3"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- APPROVE MODAL (z-90)                                          -->
+<!-- ============================================================ -->
+<div id="approveModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-base">Approve Application</h3>
+      <button onclick="closeApproveModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form id="approveForm" class="p-6 space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Approved amount</label>
+          <input name="approved_amount" type="number" min="1" step="1" class="inp">
+        </div>
+        <div>
+          <label class="lbl">Approved term (months)</label>
+          <input name="approved_term_months" type="number" min="1" max="600" class="inp">
+        </div>
+        <div>
+          <label class="lbl">Interest rate (%)</label>
+          <input name="approved_interest_rate_percent" type="number" min="0" step="0.001" class="inp">
+        </div>
+        <div>
+          <label class="lbl">Interest method</label>
+          <select name="approved_interest_method" class="inp">
+            <option value="flat">Flat</option>
+            <option value="reducing_balance">Reducing balance</option>
+            <option value="compound">Compound</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Repayment frequency</label>
+          <select name="approved_repayment_frequency" class="inp">
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Bi-weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="lump_sum">Lump sum</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Repayment type</label>
+          <select name="approved_repayment_type" class="inp">
+            <option value="amortized">Amortized</option>
+            <option value="equal_principal">Equal principal</option>
+            <option value="interest_only">Interest only</option>
+            <option value="bullet">Bullet</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="approveFeesPreview" class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs space-y-1"></div>
+
+      <div>
+        <label class="lbl">Approval notes (optional)</label>
+        <textarea name="notes" rows="2" class="inp"></textarea>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeApproveModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" class="btn-primary">
+          <i class="fa-solid fa-check mr-2"></i>Approve
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- REJECT MODAL (z-90)                                           -->
+<!-- ============================================================ -->
+<div id="rejectModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-base">Reject Application</h3>
+      <button onclick="closeRejectModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form id="rejectForm" class="p-6 space-y-4">
+      <div>
+        <label class="lbl">Reason *</label>
+        <textarea name="reason" required rows="3" class="inp" placeholder="Explain why the application was rejected"></textarea>
+      </div>
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeRejectModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" class="btn-primary" style="background:#EF4444;">
+          <i class="fa-solid fa-xmark mr-2"></i>Reject
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- DISBURSE MODAL (z-90)                                         -->
+<!-- ============================================================ -->
+<div id="disburseModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-base">Disburse Loan</h3>
+      <button onclick="closeDisburseModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form id="disburseForm" class="p-6 space-y-4">
+      <div>
+        <label class="lbl">Disbursement method *</label>
+        <select name="method" class="inp">
+          <option value="cash">Cash</option>
+          <option value="savings_credit">Credit to savings</option>
+          <option value="online">Online (mobile money)</option>
+        </select>
+      </div>
+      <div class="rounded-xl border border-warning/20 bg-warning/5 p-3 text-xs">
+        <i class="fa-solid fa-circle-info text-warning mr-1"></i>
+        This will update the member's loan balance and write a ledger entry.
+      </div>
+      <div>
+        <label class="lbl">Notes (optional)</label>
+        <textarea name="notes" rows="2" class="inp"></textarea>
+      </div>
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeDisburseModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" class="btn-primary">
+          <i class="fa-solid fa-hand-holding-dollar mr-2"></i>Disburse
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ADD GUARANTOR MODAL (z-90)                                    -->
+<!-- ============================================================ -->
+<div id="guarantorModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-base">Add Guarantor</h3>
+      <button onclick="closeGuarantorModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form id="guarantorForm" class="p-6 space-y-4">
+      <div>
+        <label class="lbl">Guarantor member *</label>
+        <select name="member_id" id="gMemberPicker" class="inp" required></select>
+      </div>
+      <div>
+        <label class="lbl">Amount guaranteed *</label>
+        <input name="amount_guaranteed" type="number" min="1" step="1" required class="inp">
+      </div>
+      <div>
+        <label class="lbl">Note</label>
+        <input name="note" class="inp">
+      </div>
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeGuarantorModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" class="btn-primary">
+          <i class="fa-solid fa-plus mr-2"></i>Add Guarantor
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; transition:all .15s;
+           font-family:inherit; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   transition:.15s; border:none; cursor:pointer; }
+    .btn-primary:hover { filter: brightness(0.92); }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { display:inline-flex; align-items:center; padding:10px 18px; border-radius:10px;
+                 background:#fff; border:1px solid #E2E8F0;
+                 color:#64748B; font-weight:600; font-size:14px; cursor:pointer; transition:.15s; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+
+    .la-pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+               padding:3px 10px; border-radius:999px; text-transform:capitalize; white-space:nowrap; }
+    .la-draft       { background:#E2E8F0; color:#334155; }
+    .la-submitted   { background:#DBEAFE; color:#1E40AF; }
+    .la-under_review{ background:#EDE9FE; color:#6D28D9; }
+    .la-approved    { background:#E6F4EA; color:#065F46; }
+    .la-rejected    { background:#FEE2E2; color:#991B1B; }
+    .la-disbursed   { background:#D1FAE5; color:#065F46; }
+    .la-active      { background:#D1FAE5; color:#065F46; }
+    .la-closed      { background:#E2E8F0; color:#334155; }
+    .la-cancelled   { background:#FEF3C7; color:#92400E; }
+
+    .member-avatar  { width:36px; height:36px; border-radius:50%;
+                      background:linear-gradient(135deg,#1A62FF,#003ECC);
+                      color:#fff; display:inline-flex; align-items:center; justify-content:center;
+                      font-weight:700; font-size:13px; flex-shrink:0; }
+
+    .elig-ok   { color:#065F46; }
+    .elig-bad  { color:#991B1B; }
+    .elig-ok::before  { content:"\f00c"; font-family:"Font Awesome 6 Free"; font-weight:900; margin-right:6px; color:#10B981; }
+    .elig-bad::before { content:"\f00d"; font-family:"Font Awesome 6 Free"; font-weight:900; margin-right:6px; color:#EF4444; }
+
+    .action-btn { display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600;
+                  padding:6px 12px; border-radius:8px; border:1px solid transparent; cursor:pointer; transition:.15s; }
+    .action-approve { background:#1A62FF; color:#fff; }
+    .action-approve:hover { background:#003ECC; }
+    .action-reject { background:#FEE2E2; color:#991B1B; }
+    .action-reject:hover { background:#FECACA; }
+    .action-disburse { background:#10B981; color:#fff; }
+    .action-disburse:hover { background:#047857; }
+    .action-ghost { background:#fff; border-color:#E2E8F0; color:#64748B; }
+    .action-ghost:hover { background:#F4F6F9; color:#1E293B; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE                                                        */
+/* ============================================================ */
+const state = {
+    page: 1, per_page: 20, q: '', status: '', source: '', total: 0,
+};
+let currentAppId = null;
+let currentApp   = null;
+let productsCache = [];
+let membersCache  = [];
+
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtCompact(n) {
+    n = Number(n || 0);
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return String(n);
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString(undefined, {
+        year:'numeric', month:'short', day:'2-digit',
+        hour:'2-digit', minute:'2-digit',
+    });
+}
+function initials(f, l) { return ((f || '?')[0] + (l || '')[0] || '?').toUpperCase(); }
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        ...opts,
+    });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, status: r.status, body };
+}
+function debounce(fn, ms = 300) {
+    let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+
+/* ============================================================ */
+/* LOOKUPS                                                      */
+/* ============================================================ */
+async function loadLookups() {
+    const [p, m] = await Promise.all([
+        req('/loan-products/api/list?per_page=100&status=active'),
+        req('/members/api/list?per_page=100'),
+    ]);
+    if (p.ok && p.body.ok) productsCache = p.body.products || [];
+    if (m.ok && m.body.ok) membersCache  = m.body.members  || [];
+}
+
+/* ============================================================ */
+/* STATS                                                        */
+/* ============================================================ */
+async function loadStats() {
+    const { ok, body } = await req('/loan-applications/api/stats');
+    if (!ok || !body.ok) return;
+    const s = body.stats;
+    document.getElementById('statPending').textContent      = s.pending_review;
+    document.getElementById('statApproved').textContent     = s.approved;
+    document.getElementById('statDisbursed').textContent    = s.disbursed;
+    document.getElementById('statApprovedValue').textContent= fmtCompact(s.total_approved);
+}
+
+/* ============================================================ */
+/* LIST                                                         */
+/* ============================================================ */
+async function loadApps() {
+    const tbody = document.getElementById('appsTable');
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const qs = new URLSearchParams({
+        page: state.page, per_page: state.per_page,
+        q: state.q, status: state.status, source: state.source,
+    });
+    const { ok, body } = await req('/loan-applications/api/list?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-500 py-10 text-sm">
+            ${escapeHtml(body.error || 'Load failed')}</td></tr>`;
+        return;
+    }
+
+    state.total = body.total;
+
+    if (!body.applications.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No applications found.
+        </td></tr>`;
+    } else {
+        tbody.innerHTML = body.applications.map(a => {
+            const m = a.members || {};
+            const p = a.loan_products || {};
+            return `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3 font-mono text-xs text-ink-muted">${escapeHtml(a.app_number)}</td>
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-3">
+                  <div class="member-avatar">${initials(m.first_name, m.last_name)}</div>
+                  <div>
+                    <div class="font-semibold text-ink">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</div>
+                    <div class="text-xs text-ink-muted">ID ${escapeHtml(m.member_id || '')}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-5 py-3 text-xs">
+                <div class="font-medium">${escapeHtml(p.name || '')}</div>
+                <div class="text-ink-muted">${escapeHtml(p.category || '')}</div>
+              </td>
+              <td class="px-5 py-3 text-right text-xs">
+                <div>${fmtNum(a.requested_amount)}</div>
+                <div class="text-ink-muted">${a.requested_term_months} mo</div>
+              </td>
+              <td class="px-5 py-3 text-right text-xs">
+                ${a.approved_amount ? `<div class="font-medium">${fmtNum(a.approved_amount)}</div>
+                <div class="text-ink-muted">${a.approved_term_months} mo</div>` : '<span class="text-ink-muted">—</span>'}
+              </td>
+              <td class="px-5 py-3 text-xs text-ink-muted">${escapeHtml(a.source)}</td>
+              <td class="px-5 py-3"><span class="la-pill la-${a.status}">${escapeHtml(a.status)}</span></td>
+              <td class="px-5 py-3 text-right">
+                <button onclick="openDetail('${a.id}')"
+                        class="w-8 h-8 rounded-lg hover:bg-page text-ink-muted hover:text-brand transition">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+              </td>
+            </tr>`;
+        }).join('');
+    }
+
+    const from = state.total ? (state.page - 1) * state.per_page + 1 : 0;
+    const to   = Math.min(state.page * state.per_page, state.total);
+    document.getElementById('pageInfo').textContent =
+        state.total ? `${from}–${to} of ${state.total}` : '0 results';
+    document.getElementById('prevBtn').disabled = state.page <= 1;
+    document.getElementById('nextBtn').disabled = to >= state.total;
+}
+
+document.getElementById('prevBtn').onclick = () => { if (state.page > 1) { state.page--; loadApps(); } };
+document.getElementById('nextBtn').onclick = () => {
+    if (state.page * state.per_page < state.total) { state.page++; loadApps(); }
+};
+document.getElementById('searchInput').addEventListener('input', debounce(e => {
+    state.q = e.target.value.trim(); state.page = 1; loadApps();
+}, 350));
+document.getElementById('statusFilter').addEventListener('change', e => {
+    state.status = e.target.value; state.page = 1; loadApps();
+});
+document.getElementById('sourceFilter').addEventListener('change', e => {
+    state.source = e.target.value; state.page = 1; loadApps();
+});
+
+/* ============================================================ */
+/* CREATE MODAL                                                 */
+/* ============================================================ */
+function openCreateModal() {
+    const mp = document.getElementById('memberPicker');
+    mp.innerHTML = '<option value="">— Select member —</option>' +
+        membersCache.map(m =>
+            `<option value="${m.id}">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)} · ID ${escapeHtml(m.member_id)}</option>`
+        ).join('');
+
+    const pp = document.getElementById('productPicker');
+    pp.innerHTML = '<option value="">— Select product —</option>' +
+        productsCache.map(p =>
+            `<option value="${p.id}">${escapeHtml(p.name)}${p.code ? ' · '+escapeHtml(p.code) : ''}</option>`
+        ).join('');
+
+    document.getElementById('createForm').reset();
+    document.getElementById('eligibilityBox').classList.add('hidden');
+
+    // hook live eligibility check
+    mp.onchange = pp.onchange = () => tryEligibilityCheck();
+
+    document.getElementById('createModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+function closeCreateModal() {
+    document.getElementById('createModal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+async function tryEligibilityCheck() {
+    const form = document.getElementById('createForm');
+    const mid = form.elements['member_id'].value;
+    const pid = form.elements['product_id'].value;
+    const amt = form.elements['requested_amount'].value;
+    const term= form.elements['requested_term_months'].value;
+    if (!mid || !pid || !amt || !term) {
+        document.getElementById('eligibilityBox').classList.add('hidden');
+        return;
+    }
+    const { ok, body } = await req('/loan-applications/api/eligibility-check', {
+        method: 'POST',
+        body: JSON.stringify({
+            member_id: mid, product_id: pid,
+            requested_amount: amt, requested_term_months: Number(term),
+        }),
+    });
+    if (!ok || !body.ok) return;
+    const list = document.getElementById('eligibilityList');
+    list.innerHTML = (body.eligibility || []).map(r => {
+        if (r.ok) return `<li class="elig-ok">${escapeHtml(r.message || r.rule)}</li>`;
+        return `<li class="elig-bad">${escapeHtml(r.message || r.rule)}</li>`;
+    }).join('');
+    document.getElementById('eligibilityBox').classList.remove('hidden');
+}
+
+document.getElementById('createForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    const payload = {
+        member_id: d.member_id,
+        product_id: d.product_id,
+        requested_amount: Number(d.requested_amount),
+        requested_term_months: Number(d.requested_term_months),
+        purpose: d.purpose || null,
+        source: d.source,
+        submit: e.target.elements['submit_now'].checked,
+    };
+
+    const btn = document.getElementById('createSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Creating…';
+
+    const { ok, body } = await req('/loan-applications/api/create', {
+        method: 'POST', body: JSON.stringify(payload),
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Create Application';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Create failed', false); return; }
+
+    closeCreateModal();
+    showToast(`Application ${body.application.app_number} created`, true);
+    loadApps(); loadStats();
+});
+
+/* ============================================================ */
+/* DETAIL                                                       */
+/* ============================================================ */
+document.querySelectorAll('.dtab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.dtab;
+        document.querySelectorAll('.dtab').forEach(b => {
+            const on = b.dataset.dtab === tab;
+            b.classList.toggle('border-brand', on);
+            b.classList.toggle('text-brand', on);
+            b.classList.toggle('border-transparent', !on);
+            b.classList.toggle('text-ink-muted', !on);
+        });
+        document.querySelectorAll('.dpanel').forEach(p => {
+            p.classList.toggle('hidden', p.dataset.dpanel !== tab);
+        });
+    });
+});
+
+async function openDetail(id) {
+    currentAppId = id;
+    document.getElementById('detailModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    await refreshDetail();
+}
+
+function closeDetailModal() {
+    document.getElementById('detailModal').classList.add('hidden');
+    document.body.style.overflow = '';
+    currentAppId = null;
+    currentApp = null;
+}
+
+async function refreshDetail() {
+    if (!currentAppId) return;
+    const { ok, body } = await req(`/loan-applications/api/${currentAppId}`);
+    if (!ok || !body.ok) { showToast(body.error || 'Load failed', false); return; }
+
+    currentApp = body.application;
+    const a = currentApp;
+    const m = a.members || {};
+    const p = a.loan_products || {};
+
+    document.getElementById('dtlTitle').textContent    = a.app_number;
+    document.getElementById('dtlSubtitle').textContent =
+        `${m.first_name} ${m.last_name} · ${p.name || ''} · ${a.source}-initiated`;
+
+    document.getElementById('dtlRequested').textContent = fmtNum(a.requested_amount) + ' ' + (a.currency || 'UGX');
+    document.getElementById('dtlApproved').textContent  = a.approved_amount ? fmtNum(a.approved_amount) : '—';
+    document.getElementById('dtlTerm').textContent      = `${a.requested_term_months} mo` +
+        (a.approved_term_months && a.approved_term_months !== a.requested_term_months
+            ? ` → ${a.approved_term_months} mo` : '');
+    document.getElementById('dtlTotalPayable').textContent = a.total_payable ? fmtNum(a.total_payable) : '—';
+
+    document.getElementById('dtlMemberName').textContent  = `${m.first_name} ${m.last_name}`;
+    document.getElementById('dtlMemberId').textContent    = m.member_id || '';
+    document.getElementById('dtlMemberPhone').textContent = m.phone || '';
+    document.getElementById('dtlMemberShares').textContent  = fmtNum(m.shares_units);
+    document.getElementById('dtlMemberSavings').textContent = fmtNum(m.savings_balance);
+    document.getElementById('dtlMemberLoan').textContent    = fmtNum(m.loan_balance);
+
+    const snap = a.product_snapshot || {};
+    document.getElementById('dtlProductLine').textContent = p.name || snap.name || '';
+    document.getElementById('dtlRate').textContent =
+        `${snap.interest_rate_percent}% ${snap.interest_method || ''} / ${snap.interest_period || ''}`;
+    document.getElementById('dtlRepay').textContent =
+        `${snap.repayment_frequency || ''} · ${snap.repayment_type || ''}`;
+    document.getElementById('dtlFees').textContent = a.total_fees ? fmtNum(a.total_fees) : '—';
+    document.getElementById('dtlNet').textContent  = a.net_disbursement ? fmtNum(a.net_disbursement) : '—';
+
+    document.getElementById('dtlPurpose').textContent = a.purpose || '—';
+
+    // Actions
+    renderActions(a);
+
+    // Guarantors
+    renderGuarantors(body.guarantors || []);
+
+    // Events
+    renderEvents(body.events || []);
+
+    // Auto simulation on open
+    refreshSimulation();
+}
+
+function renderActions(a) {
+    const wrap = document.getElementById('dtlActions');
+    const id = a.id;
+    const parts = [];
+
+    if (a.status === 'draft') {
+        parts.push(`<button class="action-btn action-approve" onclick="transitionSubmit('${id}')"><i class="fa-solid fa-paper-plane"></i>Submit</button>`);
+        parts.push(`<button class="action-btn action-ghost" onclick="transitionCancel('${id}')"><i class="fa-solid fa-xmark"></i>Cancel</button>`);
+    } else if (a.status === 'submitted') {
+        parts.push(`<button class="action-btn action-ghost" onclick="transitionReview('${id}')"><i class="fa-solid fa-eye"></i>Mark reviewing</button>`);
+        parts.push(`<button class="action-btn action-approve" onclick="openApproveModal()"><i class="fa-solid fa-check"></i>Approve</button>`);
+        parts.push(`<button class="action-btn action-reject" onclick="openRejectModal()"><i class="fa-solid fa-xmark"></i>Reject</button>`);
+    } else if (a.status === 'under_review') {
+        parts.push(`<button class="action-btn action-approve" onclick="openApproveModal()"><i class="fa-solid fa-check"></i>Approve</button>`);
+        parts.push(`<button class="action-btn action-reject" onclick="openRejectModal()"><i class="fa-solid fa-xmark"></i>Reject</button>`);
+    } else if (a.status === 'approved') {
+        parts.push(`<button class="action-btn action-disburse" onclick="openDisburseModal()"><i class="fa-solid fa-hand-holding-dollar"></i>Disburse</button>`);
+        parts.push(`<button class="action-btn action-reject" onclick="openRejectModal()"><i class="fa-solid fa-xmark"></i>Reject</button>`);
+    }
+
+    wrap.innerHTML = parts.join('');
+}
+
+function renderGuarantors(list) {
+    const wrap = document.getElementById('dtlGuarantors');
+    if (!list.length) {
+        wrap.innerHTML = `<p class="text-xs text-ink-muted">No guarantors yet.</p>`;
+        return;
+    }
+    wrap.innerHTML = list.map(g => {
+        const m = g.members || {};
+        const cls = { pending: 'la-submitted', accepted: 'la-approved',
+                      declined: 'la-rejected', released: 'la-closed' }[g.status] || 'la-draft';
+        return `
+            <div class="flex items-center justify-between border border-slate-100 rounded-xl p-3">
+              <div>
+                <p class="text-sm font-medium">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</p>
+                <p class="text-xs text-ink-muted">ID ${escapeHtml(m.member_id || '')} · Guaranteed ${fmtNum(g.amount_guaranteed)}</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="la-pill ${cls}">${escapeHtml(g.status)}</span>
+                <button onclick="removeGuarantor('${g.id}')" class="w-7 h-7 rounded-lg hover:bg-page text-ink-muted hover:text-danger">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </div>
+            </div>`;
+    }).join('');
+}
+
+function renderEvents(list) {
+    const wrap = document.getElementById('dtlEvents');
+    if (!list.length) {
+        wrap.innerHTML = `<p class="text-xs text-ink-muted">No activity yet.</p>`;
+        return;
+    }
+    wrap.innerHTML = list.map(e => `
+        <div class="flex gap-3">
+          <div class="w-2 h-2 rounded-full bg-brand mt-2 flex-shrink-0"></div>
+          <div class="flex-1">
+            <p class="text-sm font-medium">${escapeHtml(e.event)}</p>
+            ${e.note ? `<p class="text-xs text-ink-muted">${escapeHtml(e.note)}</p>` : ''}
+            <p class="text-[10px] text-ink-soft mt-0.5">${fmtDate(e.created_at)}</p>
+          </div>
+        </div>
+    `).join('');
+}
+
+/* ============================================================ */
+/* SIMULATION (for the detail drawer)                           */
+/* ============================================================ */
+async function refreshSimulation() {
+    if (!currentAppId) return;
+    const { ok, body } = await req(`/loan-applications/api/${currentAppId}/simulate`);
+    if (!ok || !body.ok) return;
+    const s = body.simulation;
+    document.getElementById('dtlSimInterest').textContent = fmtNum(s.total_interest);
+    document.getElementById('dtlSimTotal').textContent    = fmtNum(s.total_payable);
+    document.getElementById('dtlSimPeriods').textContent  = s.periods;
+    document.getElementById('dtlSimSchedule').innerHTML = s.schedule.map(r => `
+        <tr>
+          <td class="px-3 py-1.5 text-ink-muted">${r.period}</td>
+          <td class="px-3 py-1.5 text-right">${fmtNum(r.payment)}</td>
+          <td class="px-3 py-1.5 text-right text-ink-muted">${fmtNum(r.principal)}</td>
+          <td class="px-3 py-1.5 text-right text-success">${fmtNum(r.interest)}</td>
+          <td class="px-3 py-1.5 text-right text-ink-muted">${fmtNum(r.balance)}</td>
+        </tr>
+    `).join('');
+}
+
+/* ============================================================ */
+/* TRANSITIONS                                                  */
+/* ============================================================ */
+async function transitionSubmit(id) {
+    const { ok, body } = await req(`/loan-applications/api/${id}/submit`, { method: 'POST' });
+    if (!ok || !body.ok) { showToast(body.error || 'Failed', false); return; }
+    showToast('Submitted', true); refreshDetail(); loadApps(); loadStats();
+}
+async function transitionReview(id) {
+    const { ok, body } = await req(`/loan-applications/api/${id}/review`, {
+        method: 'POST', body: JSON.stringify({}),
+    });
+    if (!ok || !body.ok) { showToast(body.error || 'Failed', false); return; }
+    showToast('Marked under review', true); refreshDetail(); loadApps(); loadStats();
+}
+async function transitionCancel(id) {
+    if (!confirm('Cancel this application?')) return;
+    const { ok, body } = await req(`/loan-applications/api/${id}/cancel`, {
+        method: 'POST', body: JSON.stringify({}),
+    });
+    if (!ok || !body.ok) { showToast(body.error || 'Failed', false); return; }
+    showToast('Cancelled', true); refreshDetail(); loadApps(); loadStats();
+}
+
+/* ============================================================ */
+/* APPROVE                                                      */
+/* ============================================================ */
+function openApproveModal() {
+    const a = currentApp;
+    const snap = a.product_snapshot || {};
+    const f = document.getElementById('approveForm');
+    f.elements['approved_amount'].value = a.requested_amount;
+    f.elements['approved_term_months'].value = a.requested_term_months;
+    f.elements['approved_interest_rate_percent'].value = snap.interest_rate_percent || 0;
+    f.elements['approved_interest_method'].value = snap.interest_method || 'flat';
+    f.elements['approved_repayment_frequency'].value = snap.repayment_frequency || 'monthly';
+    f.elements['approved_repayment_type'].value = snap.repayment_type || 'amortized';
+
+    updateApproveFeesPreview();
+    document.getElementById('approveForm').elements['approved_amount'].oninput = updateApproveFeesPreview;
+    document.getElementById('approveModal').classList.remove('hidden');
+}
+function closeApproveModal() { document.getElementById('approveModal').classList.add('hidden'); }
+
+function updateApproveFeesPreview() {
+    const a = currentApp; if (!a) return;
+    const snap = a.product_snapshot || {};
+    const amount = Number(document.getElementById('approveForm').elements['approved_amount'].value || 0);
+    const pf = (Number(snap.processing_fee_percent || 0) / 100) * amount + Number(snap.processing_fee_flat || 0);
+    const inf = (Number(snap.insurance_fee_percent || 0) / 100) * amount + Number(snap.insurance_fee_flat || 0);
+    const other = Number(snap.other_fee_flat || 0);
+    const total = pf + inf + other;
+    const net = amount - total;
+    document.getElementById('approveFeesPreview').innerHTML = `
+        <div class="flex justify-between"><span>Processing fee</span><span>${fmtNum(pf)}</span></div>
+        <div class="flex justify-between"><span>Insurance fee</span><span>${fmtNum(inf)}</span></div>
+        <div class="flex justify-between"><span>Other fee</span><span>${fmtNum(other)}</span></div>
+        <div class="flex justify-between font-bold border-t border-slate-200 pt-1 mt-1">
+            <span>Net disbursement</span><span>${fmtNum(net)}</span>
+        </div>
+    `;
+}
+
+document.getElementById('approveForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    const payload = {
+        approved_amount: Number(d.approved_amount),
+        approved_term_months: Number(d.approved_term_months),
+        approved_interest_rate_percent: Number(d.approved_interest_rate_percent),
+        approved_interest_method: d.approved_interest_method,
+        approved_repayment_frequency: d.approved_repayment_frequency,
+        approved_repayment_type: d.approved_repayment_type,
+        notes: d.notes || null,
+    };
+    const { ok, body } = await req(`/loan-applications/api/${currentAppId}/approve`, {
+        method: 'POST', body: JSON.stringify(payload),
+    });
+    if (!ok || !body.ok) { showToast(body.error || 'Approve failed', false); return; }
+    closeApproveModal();
+    showToast('Approved', true);
+    refreshDetail(); loadApps(); loadStats();
+});
+
+/* ============================================================ */
+/* REJECT                                                       */
+/* ============================================================ */
+function openRejectModal() { document.getElementById('rejectModal').classList.remove('hidden'); }
+function closeRejectModal() { document.getElementById('rejectModal').classList.add('hidden'); }
+document.getElementById('rejectForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    const { ok, body } = await req(`/loan-applications/api/${currentAppId}/reject`, {
+        method: 'POST', body: JSON.stringify({ reason: d.reason }),
+    });
+    if (!ok || !body.ok) { showToast(body.error || 'Reject failed', false); return; }
+    closeRejectModal();
+    showToast('Rejected', true);
+    refreshDetail(); loadApps(); loadStats();
+});
+
+/* ============================================================ */
+/* DISBURSE                                                     */
+/* ============================================================ */
+function openDisburseModal() { document.getElementById('disburseModal').classList.remove('hidden'); }
+function closeDisburseModal() { document.getElementById('disburseModal').classList.add('hidden'); }
+document.getElementById('disburseForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    const { ok, body } = await req(`/loan-applications/api/${currentAppId}/disburse`, {
+        method: 'POST', body: JSON.stringify({ method: d.method, notes: d.notes || null }),
+    });
+    if (!ok || !body.ok) { showToast(body.error || 'Disburse failed', false); return; }
+    closeDisburseModal();
+    showToast('Disbursed', true);
+    refreshDetail(); loadApps(); loadStats();
+});
+
+/* ============================================================ */
+/* GUARANTORS                                                   */
+/* ============================================================ */
+function openAddGuarantor() {
+    const picker = document.getElementById('gMemberPicker');
+    picker.innerHTML = '<option value="">— Select member —</option>' +
+        membersCache
+            .filter(m => !currentApp || m.id !== currentApp.member_id)
+            .map(m => `<option value="${m.id}">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)} · ID ${escapeHtml(m.member_id)}</option>`)
+            .join('');
+    document.getElementById('guarantorForm').reset();
+    document.getElementById('guarantorModal').classList.remove('hidden');
+}
+function closeGuarantorModal() { document.getElementById('guarantorModal').classList.add('hidden'); }
+
+document.getElementById('guarantorForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    const { ok, body } = await req(`/loan-applications/api/${currentAppId}/guarantors`, {
+        method: 'POST',
+        body: JSON.stringify({
+            member_id: d.member_id,
+            amount_guaranteed: Number(d.amount_guaranteed),
+            note: d.note || null,
+        }),
+    });
+    if (!ok || !body.ok) { showToast(body.error || 'Failed', false); return; }
+    closeGuarantorModal();
+    showToast('Guarantor added', true);
+    refreshDetail();
+});
+
+async function removeGuarantor(gid) {
+    if (!confirm('Remove this guarantor?')) return;
+    const { ok, body } = await req(`/loan-applications/api/guarantors/${gid}`, { method: 'DELETE' });
+    if (!ok || !body.ok) { showToast(body.error || 'Failed', false); return; }
+    showToast('Removed', true);
+    refreshDetail();
+}
+
+/* ============================================================ */
+/* ESC                                                          */
+/* ============================================================ */
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        const modals = ['guarantorModal','disburseModal','rejectModal','approveModal','createModal'];
+        for (const m of modals) {
+            const el = document.getElementById(m);
+            if (!el.classList.contains('hidden')) { el.classList.add('hidden'); return; }
+        }
+        if (!document.getElementById('detailModal').classList.contains('hidden')) closeDetailModal();
+    }
+});
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    await loadLookups();
+    await Promise.all([loadStats(), loadApps()]);
+})();
+</script>
+{% endblock %}

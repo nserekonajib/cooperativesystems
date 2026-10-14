@@ -1,0 +1,731 @@
+{% extends "base.html" %}
+{% block title %}Loan Portfolio — SACCO Pro{% endblock %}
+{% block page_title %}Loan Portfolio{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- TOP KPI CARDS                                                 -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Outstanding</p>
+        <p id="kpiOutstanding" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+        <i class="fa-solid fa-hand-holding-dollar"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      Principal: <span id="kpiOutPrincipal" class="font-semibold text-ink">—</span>
+    </p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Interest Revenue</p>
+        <p id="kpiInterestRev" class="text-2xl font-bold mt-1 text-success">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+        <i class="fa-solid fa-percent"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      Penalties: <span id="kpiPenaltyRev" class="font-semibold text-ink">—</span> ·
+      Fees: <span id="kpiFeeRev" class="font-semibold text-ink">—</span>
+    </p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Active Loans</p>
+        <p id="kpiActive" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
+        <i class="fa-solid fa-book"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      <span id="kpiOverdue" class="text-warning font-semibold">0</span> overdue ·
+      <span id="kpiClosed" class="font-semibold text-ink">0</span> closed
+    </p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">PAR &gt; 30d</p>
+        <p id="kpiPAR30" class="text-2xl font-bold mt-1 text-warning">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      PAR &gt; 60d: <span id="kpiPAR60" class="font-semibold text-ink">—</span> ·
+      &gt; 90d: <span id="kpiPAR90" class="font-semibold text-ink">—</span>
+    </p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TABS                                                          -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm mb-5">
+  <div class="flex border-b border-slate-100 overflow-x-auto">
+    <button data-tab="overview" class="ptab px-5 py-3.5 text-sm font-semibold border-b-2 border-brand text-brand whitespace-nowrap">
+      <i class="fa-solid fa-chart-pie mr-2"></i>Overview
+    </button>
+    <button data-tab="loans" class="ptab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">
+      <i class="fa-solid fa-list mr-2"></i>Loans
+    </button>
+    <button data-tab="borrowers" class="ptab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">
+      <i class="fa-solid fa-users mr-2"></i>Top Borrowers
+    </button>
+    <button data-tab="upcoming" class="ptab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">
+      <i class="fa-solid fa-calendar-day mr-2"></i>Upcoming
+    </button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TAB: OVERVIEW                                                 -->
+<!-- ============================================================ -->
+<section id="tab-overview">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    <!-- Aging -->
+    <div class="bg-white rounded-2xl p-6 shadow-sm">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="font-bold text-base">Aging Analysis</h3>
+        <span class="text-xs text-ink-muted">Days since last repayment</span>
+      </div>
+      <div id="agingChart" class="space-y-3"></div>
+    </div>
+
+    <!-- Products rollup -->
+    <div class="bg-white rounded-2xl p-6 shadow-sm">
+      <h3 class="font-bold text-base mb-5">Portfolio by Product</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-ink-muted uppercase text-[11px] tracking-wider">
+            <tr>
+              <th class="text-left py-2 font-semibold">Product</th>
+              <th class="text-right py-2 font-semibold">Loans</th>
+              <th class="text-right py-2 font-semibold">Outstanding</th>
+              <th class="text-right py-2 font-semibold">Interest</th>
+            </tr>
+          </thead>
+          <tbody id="productsTable" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monthly performance chart placeholder -->
+  <div class="bg-white rounded-2xl p-6 shadow-sm mt-5">
+    <h3 class="font-bold text-base mb-5">12-Month Performance</h3>
+    <div id="monthlyPerformance" class="grid grid-cols-12 gap-2 items-end h-40">
+      <!-- rendered by JS -->
+    </div>
+    <div class="flex items-center gap-4 mt-4 text-xs text-ink-muted">
+      <span><span class="inline-block w-3 h-3 rounded-sm bg-brand align-middle mr-1"></span>Disbursed</span>
+      <span><span class="inline-block w-3 h-3 rounded-sm bg-success align-middle mr-1"></span>Collected (total)</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- TAB: LOANS                                                    -->
+<!-- ============================================================ -->
+<section id="tab-loans" class="hidden">
+  <div class="flex flex-wrap items-center gap-3 mb-5">
+    <div class="relative flex-1 min-w-[220px] max-w-md">
+      <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft text-sm"></i>
+      <input id="loanSearch" placeholder="Search loan, member, phone…"
+             class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-brand bg-white">
+    </div>
+    <select id="loanStatusFilter" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+      <option value="">All statuses</option>
+      <option value="active">Active</option>
+      <option value="overdue">Overdue</option>
+      <option value="closed">Closed</option>
+      <option value="written_off">Written off</option>
+    </select>
+    <select id="loanBucketFilter" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+      <option value="">All buckets</option>
+      <option value="current">Current</option>
+      <option value="1_30">1–30</option>
+      <option value="31_60">31–60</option>
+      <option value="61_90">61–90</option>
+      <option value="90_plus">90+</option>
+    </select>
+    <button onclick="exportCSV()" class="ml-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-page text-ink-muted hover:text-ink text-sm font-semibold shadow-sm transition">
+      <i class="fa-solid fa-file-csv"></i> Export
+    </button>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+          <tr>
+            <th class="text-left px-4 py-3 font-semibold">Loan</th>
+            <th class="text-left px-4 py-3 font-semibold">Member</th>
+            <th class="text-right px-4 py-3 font-semibold">Principal</th>
+            <th class="text-right px-4 py-3 font-semibold">Outstanding</th>
+            <th class="text-right px-4 py-3 font-semibold">Interest</th>
+            <th class="text-left px-4 py-3 font-semibold">Bucket</th>
+            <th class="text-left px-4 py-3 font-semibold">Status</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="loansTable" class="divide-y divide-slate-100">
+          <tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+      <span id="pageInfo">—</span>
+      <div class="flex gap-1">
+        <button id="prevBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+        <button id="nextBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- TAB: BORROWERS                                                -->
+<!-- ============================================================ -->
+<section id="tab-borrowers" class="hidden">
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+          <tr>
+            <th class="text-left px-5 py-3 font-semibold">Member</th>
+            <th class="text-right px-5 py-3 font-semibold">Loans</th>
+            <th class="text-right px-5 py-3 font-semibold">Outstanding</th>
+            <th class="text-right px-5 py-3 font-semibold">Interest</th>
+            <th class="text-right px-5 py-3 font-semibold">Penalties</th>
+          </tr>
+        </thead>
+        <tbody id="borrowersTable" class="divide-y divide-slate-100">
+          <tr><td colspan="5" class="text-center text-ink-muted py-10 text-sm">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- TAB: UPCOMING                                                 -->
+<!-- ============================================================ -->
+<section id="tab-upcoming" class="hidden">
+  <div class="flex items-center gap-3 mb-5">
+    <label class="text-xs font-semibold text-ink-muted uppercase tracking-wider">Window</label>
+    <select id="upcomingDays" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+      <option value="7">Next 7 days</option>
+      <option value="14">Next 14 days</option>
+      <option value="30" selected>Next 30 days</option>
+      <option value="60">Next 60 days</option>
+      <option value="90">Next 90 days</option>
+    </select>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+          <tr>
+            <th class="text-left px-5 py-3 font-semibold">Due</th>
+            <th class="text-left px-5 py-3 font-semibold">Member</th>
+            <th class="text-left px-5 py-3 font-semibold">Loan</th>
+            <th class="text-right px-5 py-3 font-semibold">Expected</th>
+            <th class="text-right px-5 py-3 font-semibold">Outstanding</th>
+          </tr>
+        </thead>
+        <tbody id="upcomingTable" class="divide-y divide-slate-100">
+          <tr><td colspan="5" class="text-center text-ink-muted py-10 text-sm">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- DETAIL DRAWER                                                 -->
+<!-- ============================================================ -->
+<div id="detailModal" class="hidden fixed inset-0 z-[75] flex items-stretch justify-center"
+     style="background:rgba(0,0,0,.5); backdrop-filter: blur(2px);">
+  <div class="bg-white w-full h-full flex flex-col">
+    <div class="flex items-center justify-between px-8 py-5 border-b border-slate-100 bg-white sticky top-0 z-10">
+      <div class="flex items-center gap-4">
+        <button onclick="closeDetailModal()" class="w-10 h-10 rounded-xl hover:bg-page flex items-center justify-center text-ink-muted">
+          <i class="fa-solid fa-arrow-left text-lg"></i>
+        </button>
+        <div>
+          <h3 class="font-bold text-lg" id="dtlTitle">—</h3>
+          <p class="text-xs text-ink-muted mt-0.5" id="dtlSubtitle">—</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2" id="dtlActions"></div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-8 bg-page">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1 space-y-5">
+          <div class="rounded-2xl bg-gradient-to-br from-brand to-brand-dark text-white p-6 shadow-md">
+            <p class="text-xs uppercase tracking-wider opacity-80">Outstanding</p>
+            <p id="dtlOutstanding" class="text-3xl font-extrabold mt-2">—</p>
+            <div class="mt-4 text-xs opacity-90 space-y-1">
+              <div class="flex justify-between"><span>Principal</span><span id="dtlOutPrincipal">—</span></div>
+              <div class="flex justify-between"><span>Interest</span><span id="dtlOutInterest">—</span></div>
+              <div class="flex justify-between"><span>Penalties</span><span id="dtlOutPenalties">—</span></div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 text-sm space-y-2">
+            <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1">Revenue (collected)</p>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Interest</span><span id="dtlColInterest" class="font-semibold text-success">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Penalties</span><span id="dtlColPenalties" class="font-semibold text-success">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Fees</span><span id="dtlColFees" class="font-semibold text-success">—</span></div>
+            <hr class="my-2 border-slate-100">
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Principal (balance sheet)</span><span id="dtlColPrincipal" class="font-semibold">—</span></div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 text-sm space-y-2">
+            <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1">Terms</p>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Rate</span><span id="dtlRate">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Term</span><span id="dtlTerm">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Disbursed</span><span id="dtlDisbursed">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Maturity</span><span id="dtlMaturity">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Risk grade</span><span id="dtlRisk">—</span></div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2 space-y-5">
+          <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h4 class="text-sm font-bold">Recent Repayments</h4>
+              <span class="text-xs text-ink-muted" id="dtlRepCount">—</span>
+            </div>
+            <div class="overflow-x-auto max-h-[520px]">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider sticky top-0 text-[11px]">
+                  <tr>
+                    <th class="text-left px-4 py-2.5 font-semibold">Date</th>
+                    <th class="text-left px-4 py-2.5 font-semibold">Receipt</th>
+                    <th class="text-right px-4 py-2.5 font-semibold">Amount</th>
+                    <th class="text-right px-4 py-2.5 font-semibold">Interest</th>
+                    <th class="text-right px-4 py-2.5 font-semibold">Principal</th>
+                  </tr>
+                </thead>
+                <tbody id="dtlRepayments" class="divide-y divide-slate-100">
+                  <tr><td colspan="5" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; transition:all .15s; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   transition:.15s; border:none; cursor:pointer; }
+    .btn-primary:hover { filter:brightness(0.92); }
+    .btn-ghost { display:inline-flex; align-items:center; padding:10px 18px; border-radius:10px;
+                 background:#fff; border:1px solid #E2E8F0;
+                 color:#64748B; font-weight:600; font-size:14px; cursor:pointer; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .s-active    { background:#E6F4EA; color:#065F46; }
+    .s-overdue   { background:#FEF3C7; color:#92400E; }
+    .s-closed    { background:#DBEAFE; color:#1E40AF; }
+    .s-written_off{ background:#FEE2E2; color:#991B1B; }
+    .s-restructured{ background:#EDE9FE; color:#6D28D9; }
+    .bucket-current { background:#E6F4EA; color:#065F46; }
+    .bucket-1_30    { background:#FEF3C7; color:#92400E; }
+    .bucket-31_60   { background:#FFEDD5; color:#9A3412; }
+    .bucket-61_90   { background:#FEE2E2; color:#991B1B; }
+    .bucket-90_plus { background:#7F1D1D; color:#fff; }
+    .member-avatar  { width:36px; height:36px; border-radius:50%;
+                      background:linear-gradient(135deg,#1A62FF,#003ECC);
+                      color:#fff; display:inline-flex; align-items:center; justify-content:center;
+                      font-weight:700; font-size:13px; flex-shrink:0; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE & HELPERS                                              */
+/* ============================================================ */
+const state = { page: 1, per_page: 20, q: '', status: '', bucket: '', total: 0 };
+let currentLoanId = null;
+
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtCompact(n) {
+    n = Number(n || 0);
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return String(n);
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
+}
+function initials(f, l) { return ((f || '?')[0] + (l || '')[0] || '?').toUpperCase(); }
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function debounce(fn, ms = 300) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        ...opts,
+    });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, status: r.status, body };
+}
+function bucketOf(l) {
+    if (!l.disbursed_at) return '90_plus';
+    const d = new Date(l.disbursed_at);
+    const days = Math.floor((Date.now() - d) / 86400000);
+    if (days <= 30)  return 'current';
+    if (days <= 60)  return '1_30';
+    if (days <= 90)  return '31_60';
+    if (days <= 180) return '61_90';
+    return '90_plus';
+}
+
+/* ============================================================ */
+/* TABS                                                         */
+/* ============================================================ */
+document.querySelectorAll('.ptab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.ptab').forEach(b => {
+            const on = b.dataset.tab === tab;
+            b.classList.toggle('border-brand', on);
+            b.classList.toggle('text-brand', on);
+            b.classList.toggle('border-transparent', !on);
+            b.classList.toggle('text-ink-muted', !on);
+        });
+        ['overview','loans','borrowers','upcoming'].forEach(t => {
+            document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
+        });
+        if (tab === 'loans')     loadLoans();
+        if (tab === 'borrowers') loadBorrowers();
+        if (tab === 'upcoming')  loadUpcoming();
+    });
+});
+
+/* ============================================================ */
+/* OVERVIEW                                                     */
+/* ============================================================ */
+async function loadOverview() {
+    const { ok, body } = await req('/loan-portfolio/api/overview');
+    if (!ok || !body.ok) return;
+    const o = body.overview;
+    document.getElementById('kpiOutstanding').textContent   = fmtCompact(o.total_outstanding);
+    document.getElementById('kpiOutPrincipal').textContent  = fmtCompact(o.outstanding_principal);
+    document.getElementById('kpiInterestRev').textContent   = fmtCompact(o.collected_interest);
+    document.getElementById('kpiPenaltyRev').textContent    = fmtCompact(o.collected_penalties);
+    document.getElementById('kpiFeeRev').textContent        = fmtCompact(o.collected_fees);
+    document.getElementById('kpiActive').textContent        = o.active_loans;
+    document.getElementById('kpiOverdue').textContent       = o.overdue_loans;
+    document.getElementById('kpiClosed').textContent        = o.closed_loans;
+    document.getElementById('kpiPAR30').textContent         = fmtCompact(o.par_30);
+    document.getElementById('kpiPAR60').textContent         = fmtCompact(o.par_60);
+    document.getElementById('kpiPAR90').textContent         = fmtCompact(o.par_90);
+}
+
+async function loadAging() {
+    const { ok, body } = await req('/loan-portfolio/api/aging');
+    if (!ok || !body.ok) return;
+    const buckets = body.buckets || [];
+    const labels  = {
+        current: 'Current (≤ 30d)',
+        '1_30':  '1–30 days',
+        '31_60': '31–60 days',
+        '61_90': '61–90 days',
+        '90_plus': 'Over 90 days',
+    };
+    const colors  = {
+        current: 'bg-success',
+        '1_30':  'bg-warning',
+        '31_60': 'bg-orange-400',
+        '61_90': 'bg-danger',
+        '90_plus': 'bg-red-800',
+    };
+    const total = buckets.reduce((s, b) => s + Number(b.total || 0), 0);
+    document.getElementById('agingChart').innerHTML = buckets.map(b => {
+        const pct = total > 0 ? (Number(b.total) / total) * 100 : 0;
+        return `
+        <div>
+          <div class="flex justify-between text-xs mb-1">
+            <span class="font-medium">${labels[b.bucket] || b.bucket}</span>
+            <span class="text-ink-muted">${b.loan_count} loans · ${fmtCompact(b.total)}</span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+            <div class="h-full ${colors[b.bucket] || 'bg-brand'}" style="width:${pct}%"></div>
+          </div>
+        </div>`;
+    }).join('') || '<p class="text-xs text-ink-muted">No active loans.</p>';
+}
+
+async function loadProducts() {
+    const { ok, body } = await req('/loan-portfolio/api/products');
+    if (!ok || !body.ok) return;
+    const tbody = document.getElementById('productsTable');
+    if (!body.products.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-ink-muted py-8 text-xs">No products.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = body.products.map(p => `
+        <tr>
+          <td class="py-2">
+            <div class="font-medium text-sm">${escapeHtml(p.name)}</div>
+            <div class="text-xs text-ink-muted">${escapeHtml(p.category || '')}</div>
+          </td>
+          <td class="py-2 text-right text-sm">${p.loan_count}</td>
+          <td class="py-2 text-right text-sm font-medium">${fmtCompact(p.outstanding)}</td>
+          <td class="py-2 text-right text-sm text-success">${fmtCompact(p.collected_interest)}</td>
+        </tr>
+    `).join('');
+}
+
+async function loadMonthlyPerformance() {
+    const { ok, body } = await req('/loan-portfolio/api/monthly-performance');
+    if (!ok || !body.ok) return;
+    const series = body.series || [];
+    const max = Math.max(1, ...series.map(s => Math.max(s.disbursed, s.collected_total)));
+    document.getElementById('monthlyPerformance').innerHTML = series.map(s => {
+        const d = (s.disbursed / max) * 100;
+        const c = (s.collected_total / max) * 100;
+        const month = s.month.slice(-2);
+        return `
+        <div class="flex flex-col justify-end items-center h-full">
+          <div class="w-full flex items-end gap-0.5 h-full">
+            <div class="flex-1 bg-brand rounded-t" style="height:${d}%" title="Disbursed ${fmtCompact(s.disbursed)}"></div>
+            <div class="flex-1 bg-success rounded-t" style="height:${c}%" title="Collected ${fmtCompact(s.collected_total)}"></div>
+          </div>
+          <span class="text-[10px] text-ink-muted mt-1">${month}</span>
+        </div>`;
+    }).join('');
+}
+
+/* ============================================================ */
+/* LOANS                                                        */
+/* ============================================================ */
+async function loadLoans() {
+    const tbody = document.getElementById('loansTable');
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+    const qs = new URLSearchParams({
+        page: state.page, per_page: state.per_page,
+        q: state.q, status: state.status, bucket: state.bucket,
+    });
+    const { ok, body } = await req('/loan-portfolio/api/loans?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-500 py-10 text-sm">Load failed</td></tr>`;
+        return;
+    }
+    state.total = body.total;
+    if (!body.loans.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-12 text-sm">No loans.</td></tr>`;
+    } else {
+        tbody.innerHTML = body.loans.map(l => {
+            const m = l.members || {};
+            const p = l.loan_products || {};
+            const bucket = bucketOf(l);
+            const outstanding = Number(l.outstanding_principal) + Number(l.outstanding_interest) + Number(l.outstanding_penalties);
+            return `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-4 py-3 font-mono text-xs text-ink-muted">${escapeHtml(l.loan_number)}</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-3">
+                  <div class="member-avatar">${initials(m.first_name, m.last_name)}</div>
+                  <div>
+                    <div class="font-semibold text-ink text-sm">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</div>
+                    <div class="text-xs text-ink-muted">ID ${escapeHtml(m.member_id || '')} · ${escapeHtml(p.name || '')}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-right text-sm">${fmtNum(l.principal_amount)} <span class="text-xs text-ink-muted">${escapeHtml(l.currency)}</span></td>
+              <td class="px-4 py-3 text-right font-medium text-sm">${fmtNum(outstanding)}</td>
+              <td class="px-4 py-3 text-right text-sm text-success">+${fmtNum(l.collected_interest)}</td>
+              <td class="px-4 py-3"><span class="pill bucket-${bucket}">${bucket.replace('_','–')}</span></td>
+              <td class="px-4 py-3"><span class="pill s-${l.status}">${escapeHtml(l.status)}</span></td>
+              <td class="px-4 py-3 text-right">
+                <button onclick="openDetail('${l.id}')" class="w-8 h-8 rounded-lg hover:bg-page text-ink-muted hover:text-brand transition">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+              </td>
+            </tr>`;
+        }).join('');
+    }
+    const from = state.total ? (state.page - 1) * state.per_page + 1 : 0;
+    const to   = Math.min(state.page * state.per_page, state.total);
+    document.getElementById('pageInfo').textContent = state.total ? `${from}–${to} of ${state.total}` : '0 results';
+    document.getElementById('prevBtn').disabled = state.page <= 1;
+    document.getElementById('nextBtn').disabled = to >= state.total;
+}
+document.getElementById('prevBtn').onclick = () => { if (state.page > 1) { state.page--; loadLoans(); } };
+document.getElementById('nextBtn').onclick = () => {
+    if (state.page * state.per_page < state.total) { state.page++; loadLoans(); }
+};
+document.getElementById('loanSearch').addEventListener('input', debounce(e => {
+    state.q = e.target.value.trim(); state.page = 1; loadLoans();
+}, 350));
+document.getElementById('loanStatusFilter').addEventListener('change', e => {
+    state.status = e.target.value; state.page = 1; loadLoans();
+});
+document.getElementById('loanBucketFilter').addEventListener('change', e => {
+    state.bucket = e.target.value; state.page = 1; loadLoans();
+});
+
+function exportCSV() {
+    const qs = new URLSearchParams({ q: state.q, status: state.status });
+    window.location.href = '/loan-portfolio/api/export?' + qs.toString();
+}
+
+/* ============================================================ */
+/* TOP BORROWERS                                                */
+/* ============================================================ */
+async function loadBorrowers() {
+    const tbody = document.getElementById('borrowersTable');
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+    const { ok, body } = await req('/loan-portfolio/api/top-borrowers?limit=30');
+    if (!ok || !body.ok) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-red-500 py-10 text-sm">Load failed</td></tr>`; return; }
+    if (!body.borrowers.length) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-ink-muted py-12 text-sm">No active borrowers.</td></tr>`; return; }
+    tbody.innerHTML = body.borrowers.map(b => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-5 py-3">
+            <div class="flex items-center gap-3">
+              <div class="member-avatar">${initials(b.name.split(' ')[0], b.name.split(' ')[1])}</div>
+              <div>
+                <div class="font-semibold text-ink text-sm">${escapeHtml(b.name)}</div>
+                <div class="text-xs text-ink-muted">ID ${escapeHtml(b.external_id || '')} · ${escapeHtml(b.phone || '')}</div>
+              </div>
+            </div>
+          </td>
+          <td class="px-5 py-3 text-right text-sm">${b.loan_count}</td>
+          <td class="px-5 py-3 text-right font-medium text-sm">${fmtNum(b.outstanding)}</td>
+          <td class="px-5 py-3 text-right text-sm text-success">+${fmtNum(b.interest)}</td>
+          <td class="px-5 py-3 text-right text-sm text-warning">${fmtNum(b.penalties)}</td>
+        </tr>
+    `).join('');
+}
+
+/* ============================================================ */
+/* UPCOMING                                                     */
+/* ============================================================ */
+async function loadUpcoming() {
+    const tbody = document.getElementById('upcomingTable');
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+    const days = document.getElementById('upcomingDays').value || 30;
+    const { ok, body } = await req('/loan-portfolio/api/upcoming?days=' + days);
+    if (!ok || !body.ok) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-red-500 py-10 text-sm">Load failed</td></tr>`; return; }
+    if (!body.upcoming.length) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-ink-muted py-12 text-sm">No upcoming installments.</td></tr>`; return; }
+    tbody.innerHTML = body.upcoming.map(u => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-5 py-3 text-xs">
+            <div class="font-medium">${fmtDate(u.due_date)}</div>
+            <div class="text-ink-muted">in ${u.days_until} days</div>
+          </td>
+          <td class="px-5 py-3 text-sm">
+            <div class="font-medium">${escapeHtml(u.member_name)}</div>
+            <div class="text-xs text-ink-muted">${escapeHtml(u.member_id || '')}</div>
+          </td>
+          <td class="px-5 py-3 font-mono text-xs text-ink-muted">${escapeHtml(u.loan_number)}</td>
+          <td class="px-5 py-3 text-right font-semibold text-sm">${fmtNum(u.expected)}</td>
+          <td class="px-5 py-3 text-right text-sm">${fmtNum(u.outstanding)}</td>
+        </tr>
+    `).join('');
+}
+document.getElementById('upcomingDays').addEventListener('change', loadUpcoming);
+
+/* ============================================================ */
+/* DETAIL DRAWER                                                */
+/* ============================================================ */
+async function openDetail(id) {
+    currentLoanId = id;
+    document.getElementById('detailModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    const { ok, body } = await req(`/loan-portfolio/api/loans/${id}`);
+    if (!ok || !body.ok) { showToast('Could not load loan', false); return; }
+    const l = body.loan;
+    const m = l.members || {};
+    document.getElementById('dtlTitle').textContent = l.loan_number;
+    document.getElementById('dtlSubtitle').textContent = `${m.first_name || ''} ${m.last_name || ''} · ID ${m.member_id || ''}`;
+    document.getElementById('dtlOutstanding').textContent = fmtNum(l.total_outstanding);
+    document.getElementById('dtlOutPrincipal').textContent = fmtNum(l.outstanding_principal);
+    document.getElementById('dtlOutInterest').textContent  = fmtNum(l.outstanding_interest);
+    document.getElementById('dtlOutPenalties').textContent = fmtNum(l.outstanding_penalties);
+    document.getElementById('dtlColInterest').textContent  = fmtNum(l.collected_interest);
+    document.getElementById('dtlColPenalties').textContent = fmtNum(l.collected_penalties);
+    document.getElementById('dtlColFees').textContent      = fmtNum(l.collected_fees);
+    document.getElementById('dtlColPrincipal').textContent = fmtNum(l.collected_principal);
+    document.getElementById('dtlRate').textContent      = `${l.interest_rate_percent}% ${l.interest_method}`;
+    document.getElementById('dtlTerm').textContent      = `${l.term_months} months`;
+    document.getElementById('dtlDisbursed').textContent = fmtDate(l.disbursed_at);
+    document.getElementById('dtlMaturity').textContent  = fmtDate(l.maturity_date);
+    document.getElementById('dtlRisk').textContent      = l.risk_grade || '—';
+
+    document.getElementById('dtlRepCount').textContent = `${body.repayments.length} recent`;
+    document.getElementById('dtlRepayments').innerHTML = body.repayments.map(r => {
+        const a = (r.repayment_allocations || [{}])[0];
+        return `
+            <tr>
+              <td class="px-4 py-2.5 text-xs text-ink-muted">${fmtDate(r.paid_at || r.created_at)}</td>
+              <td class="px-4 py-2.5 text-xs font-mono">${escapeHtml(r.receipt_number)}</td>
+              <td class="px-4 py-2.5 text-right text-xs font-medium">${fmtNum(r.amount)}</td>
+              <td class="px-4 py-2.5 text-right text-xs text-success">${fmtNum(a.to_interest)}</td>
+              <td class="px-4 py-2.5 text-right text-xs">${fmtNum(a.to_principal)}</td>
+            </tr>`;
+    }).join('') || `<tr><td colspan="5" class="text-center text-ink-muted py-8 text-xs">No repayments.</td></tr>`;
+}
+function closeDetailModal() {
+    document.getElementById('detailModal').classList.add('hidden');
+    document.body.style.overflow = '';
+    currentLoanId = null;
+}
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !document.getElementById('detailModal').classList.contains('hidden')) closeDetailModal();
+});
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    await Promise.all([
+        loadOverview(), loadAging(), loadProducts(), loadMonthlyPerformance(),
+    ]);
+})();
+</script>
+{% endblock %}

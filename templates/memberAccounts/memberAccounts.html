@@ -1,0 +1,663 @@
+{% extends "memberBase.html" %}
+{% block title %}My Savings — Member Portal{% endblock %}
+{% block page_title %}My Savings{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- HERO                                                          -->
+<!-- ============================================================ -->
+<div class="rounded-2xl bg-gradient-to-br from-navy to-navy-dark text-white p-6 lg:p-8 shadow-sm mb-6">
+  <div class="flex items-start justify-between flex-wrap gap-4">
+    <div>
+      <p class="text-xs uppercase tracking-wider text-brand">My Savings Account</p>
+      <p id="heroBalance" class="text-4xl font-extrabold mt-2">—</p>
+      <p class="text-slate-300 text-sm mt-1">
+        Account <span id="heroAcct" class="font-mono">—</span>
+        · <span id="heroCurrency">—</span>
+      </p>
+    </div>
+    <div class="flex flex-col gap-2">
+      <button onclick="openDepositModal()"
+              class="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-brand hover:bg-brand-dark text-white font-semibold text-sm transition shadow-lg">
+        <i class="fa-solid fa-mobile-screen-button"></i> Deposit
+      </button>
+      <button onclick="openWithdrawModal()"
+              class="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-sm transition">
+        <i class="fa-solid fa-arrow-up-from-bracket"></i> Request Withdrawal
+      </button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
+    <div class="rounded-xl bg-white/5 p-3">
+      <p class="text-[10px] uppercase tracking-wider text-slate-400">Total Deposits</p>
+      <p id="statDeposits" class="font-bold text-sm mt-1">—</p>
+    </div>
+    <div class="rounded-xl bg-white/5 p-3">
+      <p class="text-[10px] uppercase tracking-wider text-slate-400">Total Withdrawals</p>
+      <p id="statWithdrawals" class="font-bold text-sm mt-1">—</p>
+    </div>
+    <div class="rounded-xl bg-white/5 p-3">
+      <p class="text-[10px] uppercase tracking-wider text-slate-400">Pending Requests</p>
+      <p id="statPending" class="font-bold text-sm mt-1">—</p>
+    </div>
+  </div>
+
+  <!-- Info banner when account is missing -->
+  <div id="noAccountBanner" class="hidden mt-5 rounded-xl bg-warning-bg text-warning p-3 text-xs flex items-start gap-2">
+    <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+    <span>You don't have a savings account yet. Contact your SACCO to open one.</span>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TABS                                                          -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm mb-5">
+  <div class="flex border-b border-slate-100 overflow-x-auto">
+    <button data-tab="transactions" class="matab px-5 py-3.5 text-sm font-semibold border-b-2 border-brand text-brand whitespace-nowrap">
+      <i class="fa-solid fa-file-lines mr-2"></i>Transactions
+    </button>
+    <button data-tab="withdrawals" class="matab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">
+      <i class="fa-solid fa-hourglass-half mr-2"></i>Withdrawal Requests
+    </button>
+  </div>
+</div>
+
+<!-- TAB: TRANSACTIONS -->
+<section id="tab-transactions">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="font-bold text-base">Transaction history</h3>
+      <p class="text-xs text-ink-muted mt-0.5">Every deposit and withdrawal on this account.</p>
+    </div>
+    <a href="/member/accounts/api/statement" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-page text-ink-muted hover:text-ink text-sm font-semibold shadow-sm">
+      <i class="fa-solid fa-file-csv"></i> Export
+    </a>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+          <tr>
+            <th class="text-left px-5 py-3 font-semibold">Date</th>
+            <th class="text-left px-5 py-3 font-semibold">Type</th>
+            <th class="text-left px-5 py-3 font-semibold">Method</th>
+            <th class="text-right px-5 py-3 font-semibold">Amount</th>
+            <th class="text-right px-5 py-3 font-semibold">Balance</th>
+            <th class="text-left px-5 py-3 font-semibold">Status</th>
+          </tr>
+        </thead>
+        <tbody id="txTable" class="divide-y divide-slate-100">
+          <tr><td colspan="6" class="text-center text-ink-muted py-10 text-sm">
+            <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+      <span id="txPageInfo">—</span>
+      <div class="flex gap-1">
+        <button id="txPrev" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+        <button id="txNext" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TAB: WITHDRAWALS -->
+<section id="tab-withdrawals" class="hidden">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="font-bold text-base">My withdrawal requests</h3>
+      <p class="text-xs text-ink-muted mt-0.5">Track the status of each request. Admin approves at the SACCO counter.</p>
+    </div>
+    <button onclick="openWithdrawModal()"
+            class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-brand hover:bg-brand-dark text-white text-sm font-semibold">
+      <i class="fa-solid fa-plus"></i> New Request
+    </button>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+          <tr>
+            <th class="text-left px-5 py-3 font-semibold">Requested</th>
+            <th class="text-right px-5 py-3 font-semibold">Amount</th>
+            <th class="text-left px-5 py-3 font-semibold">Reason</th>
+            <th class="text-left px-5 py-3 font-semibold">Status</th>
+            <th class="text-left px-5 py-3 font-semibold">Approved</th>
+            <th class="text-left px-5 py-3 font-semibold">Paid</th>
+          </tr>
+        </thead>
+        <tbody id="wrTable" class="divide-y divide-slate-100">
+          <tr><td colspan="6" class="text-center text-ink-muted py-10 text-sm">
+            <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+      <span id="wrPageInfo">—</span>
+      <div class="flex gap-1">
+        <button id="wrPrev" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+        <button id="wrNext" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- DEPOSIT MODAL (ONLINE ONLY)                                   -->
+<!-- ============================================================ -->
+<div id="depositModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div>
+        <h3 class="font-bold text-base">Deposit savings</h3>
+        <p class="text-xs text-ink-muted mt-0.5">
+          Only mobile-money deposits are accepted from the portal.
+        </p>
+      </div>
+      <button onclick="closeDepositModal()"
+              class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <form id="depositForm" class="p-6 space-y-5">
+      <div>
+        <label class="lbl">Amount *</label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted text-xs font-semibold" id="depCurrency">UGX</span>
+          <input name="amount" type="number" min="1" step="1" required class="inp pl-14" placeholder="0">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Provider *</label>
+          <select name="provider" class="inp">
+            <option value="MTN">MTN Mobile Money</option>
+            <option value="AIRTEL">Airtel Money</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Mobile money number *</label>
+          <input name="phone" class="inp" placeholder="+256…">
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Narration (optional)</label>
+        <input name="narration" class="inp" placeholder="e.g. Monthly savings">
+      </div>
+
+      <div class="rounded-xl bg-brand/5 border border-brand/10 p-3 text-xs text-brand-dark flex items-start gap-2">
+        <i class="fa-solid fa-circle-info mt-0.5"></i>
+        <span>Approve the prompt on your phone to complete the deposit.</span>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeDepositModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" id="depositSubmit" class="btn-primary">
+          <i class="fa-solid fa-paper-plane mr-2"></i>Deposit
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- WITHDRAWAL REQUEST MODAL                                      -->
+<!-- ============================================================ -->
+<div id="withdrawModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div>
+        <h3 class="font-bold text-base">Request withdrawal</h3>
+        <p class="text-xs text-ink-muted mt-0.5">
+          Amounts are paid out at the SACCO counter once approved.
+        </p>
+      </div>
+      <button onclick="closeWithdrawModal()"
+              class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <form id="withdrawForm" class="p-6 space-y-5">
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+        <div class="flex justify-between">
+          <span class="text-ink-muted">Available balance</span>
+          <span id="wdBalance" class="font-semibold">—</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Amount *</label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted text-xs font-semibold" id="wdCurrency">UGX</span>
+          <input name="amount" type="number" min="1" step="1" required class="inp pl-14" placeholder="0">
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Reason (optional)</label>
+        <input name="reason" class="inp" placeholder="e.g. School fees">
+      </div>
+
+      <div class="rounded-xl bg-warning-bg border border-warning/30 p-3 text-xs text-ink">
+        <i class="fa-solid fa-circle-info text-warning mr-1"></i>
+        Your request will be <strong>pending</strong> until the SACCO reviews it.
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeWithdrawModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" id="wdSubmit" class="btn-primary">
+          <i class="fa-solid fa-paper-plane mr-2"></i>Submit request
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- STATUS MODAL                                                  -->
+<!-- ============================================================ -->
+<div id="statusModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+    <div id="statusIconWrap" class="w-16 h-16 mx-auto rounded-full bg-brand/10 text-brand flex items-center justify-center mb-4">
+      <i id="statusIcon" class="fa-solid fa-mobile-screen-button text-2xl"></i>
+    </div>
+    <h3 id="statusTitle" class="font-bold text-lg mb-1">Waiting for approval</h3>
+    <p id="statusText" class="text-sm text-ink-muted mb-5">Approve the prompt on your phone.</p>
+    <div id="statusSpinner" class="hidden mb-4">
+      <i class="fa-solid fa-circle-notch fa-spin text-brand text-xl"></i>
+    </div>
+    <button onclick="closeStatusModal()" class="btn-ghost w-full">Close</button>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; transition:all .15s; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   border:none; cursor:pointer; }
+    .btn-primary:hover { filter:brightness(0.92); }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                 border-radius:10px; background:#fff; border:1px solid #E2E8F0;
+                 color:#64748B; font-weight:600; font-size:14px; cursor:pointer; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .s-completed { background:#E6F4EA; color:#065F46; }
+    .s-pending   { background:#FEF3C7; color:#92400E; }
+    .s-failed    { background:#FEE2E2; color:#991B1B; }
+    .s-approved  { background:#DBEAFE; color:#1E40AF; }
+    .s-paid      { background:#E6F4EA; color:#065F46; }
+    .s-rejected  { background:#FEE2E2; color:#991B1B; }
+    .s-cancelled { background:#E2E8F0; color:#334155; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE                                                        */
+/* ============================================================ */
+const txState = { page: 1, per_page: 20, total: 0 };
+const wrState = { page: 1, per_page: 20, total: 0 };
+let currentAccount = null;
+let _pollTimer = null;
+
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
+}
+function fmtDateTime(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString(undefined, { year:'numeric', month:'short', day:'2-digit',
+                                                     hour:'2-digit', minute:'2-digit' });
+}
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials:'same-origin',
+        headers:{'Content-Type':'application/json'},
+        ...opts,
+    });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, body };
+}
+
+/* ============================================================ */
+/* TABS                                                         */
+/* ============================================================ */
+function switchTab(tab) {
+    document.querySelectorAll('.matab').forEach(b => {
+        const on = b.dataset.tab === tab;
+        b.classList.toggle('border-brand', on);
+        b.classList.toggle('text-brand', on);
+        b.classList.toggle('border-transparent', !on);
+        b.classList.toggle('text-ink-muted', !on);
+    });
+    ['transactions','withdrawals'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
+    });
+    if (tab === 'withdrawals') loadWithdrawals();
+}
+document.querySelectorAll('.matab').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+/* ============================================================ */
+/* SNAPSHOT                                                     */
+/* ============================================================ */
+async function loadSnapshot() {
+    const { ok, body } = await req('/member/accounts/api/me');
+    if (!ok || !body.ok) {
+        if (body.reason === 'unauthenticated') window.location.href = '/member/login';
+        else showToast(body.error || 'Could not load account', false);
+        return;
+    }
+
+    if (!body.account) {
+        document.getElementById('noAccountBanner').classList.remove('hidden');
+        document.getElementById('heroBalance').textContent = '—';
+        document.getElementById('heroAcct').textContent    = '—';
+        document.getElementById('heroCurrency').textContent= '—';
+        document.getElementById('statDeposits').textContent   = '—';
+        document.getElementById('statWithdrawals').textContent= '—';
+        document.getElementById('statPending').textContent    = '—';
+        // disable action buttons
+        document.querySelectorAll('button[onclick^="openDepositModal"],button[onclick^="openWithdrawModal"]')
+            .forEach(b => b.disabled = true);
+        return;
+    }
+
+    currentAccount = body.account;
+    const cur = currentAccount.currency;
+
+    document.getElementById('heroBalance').textContent = fmtNum(currentAccount.balance) + ' ' + cur;
+    document.getElementById('heroAcct').textContent    = currentAccount.account_number;
+    document.getElementById('heroCurrency').textContent= cur;
+    document.getElementById('depCurrency').textContent = cur;
+    document.getElementById('wdCurrency').textContent  = cur;
+
+    document.getElementById('statDeposits').textContent    = fmtNum(body.stats.deposits_total) + ' ' + cur;
+    document.getElementById('statWithdrawals').textContent = fmtNum(body.stats.withdrawals_total) + ' ' + cur;
+    document.getElementById('statPending').textContent     = body.stats.pending_withdrawals;
+}
+
+/* ============================================================ */
+/* TRANSACTIONS                                                 */
+/* ============================================================ */
+async function loadTransactions() {
+    const tbody = document.getElementById('txTable');
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const qs = new URLSearchParams({ page: txState.page, per_page: txState.per_page });
+    const { ok, body } = await req('/member/accounts/api/transactions?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-10 text-sm">Load failed</td></tr>`;
+        return;
+    }
+    txState.total = body.total;
+
+    if (!body.transactions.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No transactions yet.</td></tr>`;
+    } else {
+        tbody.innerHTML = body.transactions.map(t => {
+            const isOut = (t.type || '').includes("withdrawal");
+            return `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3 text-xs text-ink-muted whitespace-nowrap">${fmtDateTime(t.created_at)}</td>
+              <td class="px-5 py-3 text-xs">${escapeHtml(t.type || '')}</td>
+              <td class="px-5 py-3 text-xs text-ink-muted">${escapeHtml(t.method || '')}${t.provider ? ' · '+escapeHtml(t.provider) : ''}</td>
+              <td class="px-5 py-3 text-right font-medium ${isOut ? 'text-danger' : 'text-success'}">
+                ${isOut ? '-' : '+'}${fmtNum(t.amount)} <span class="text-xs text-ink-muted">${escapeHtml(t.currency)}</span>
+              </td>
+              <td class="px-5 py-3 text-right text-xs text-ink-muted">${t.balance_after != null ? fmtNum(t.balance_after) : '—'}</td>
+              <td class="px-5 py-3"><span class="pill s-${t.status}">${escapeHtml(t.status)}</span></td>
+            </tr>`;
+        }).join('');
+    }
+
+    const from = txState.total ? (txState.page - 1) * txState.per_page + 1 : 0;
+    const to   = Math.min(txState.page * txState.per_page, txState.total);
+    document.getElementById('txPageInfo').textContent =
+        txState.total ? `${from}–${to} of ${txState.total}` : '0 results';
+    document.getElementById('txPrev').disabled = txState.page <= 1;
+    document.getElementById('txNext').disabled = to >= txState.total;
+}
+document.getElementById('txPrev').onclick = () => { if (txState.page > 1) { txState.page--; loadTransactions(); } };
+document.getElementById('txNext').onclick = () => {
+    if (txState.page * txState.per_page < txState.total) { txState.page++; loadTransactions(); }
+};
+
+/* ============================================================ */
+/* WITHDRAWALS                                                  */
+/* ============================================================ */
+async function loadWithdrawals() {
+    const tbody = document.getElementById('wrTable');
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const qs = new URLSearchParams({ page: wrState.page, per_page: wrState.per_page });
+    const { ok, body } = await req('/member/accounts/api/withdrawals?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-10 text-sm">Load failed</td></tr>`;
+        return;
+    }
+    wrState.total = body.total;
+
+    if (!body.requests.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No withdrawal requests yet.</td></tr>`;
+    } else {
+        tbody.innerHTML = body.requests.map(r => `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3 text-xs text-ink-muted whitespace-nowrap">${fmtDateTime(r.created_at)}</td>
+              <td class="px-5 py-3 text-right font-semibold">${fmtNum(r.amount)} <span class="text-xs text-ink-muted">${escapeHtml(r.currency)}</span></td>
+              <td class="px-5 py-3 text-xs">${escapeHtml(r.reason || '')}</td>
+              <td class="px-5 py-3"><span class="pill s-${r.status}">${escapeHtml(r.status)}</span></td>
+              <td class="px-5 py-3 text-xs text-ink-muted">${fmtDate(r.reviewed_at)}</td>
+              <td class="px-5 py-3 text-xs text-ink-muted">${fmtDate(r.paid_at)}</td>
+            </tr>
+        `).join('');
+    }
+
+    const from = wrState.total ? (wrState.page - 1) * wrState.per_page + 1 : 0;
+    const to   = Math.min(wrState.page * wrState.per_page, wrState.total);
+    document.getElementById('wrPageInfo').textContent =
+        wrState.total ? `${from}–${to} of ${wrState.total}` : '0 results';
+    document.getElementById('wrPrev').disabled = wrState.page <= 1;
+    document.getElementById('wrNext').disabled = to >= wrState.total;
+}
+document.getElementById('wrPrev').onclick = () => { if (wrState.page > 1) { wrState.page--; loadWithdrawals(); } };
+document.getElementById('wrNext').onclick = () => {
+    if (wrState.page * wrState.per_page < wrState.total) { wrState.page++; loadWithdrawals(); }
+};
+
+/* ============================================================ */
+/* DEPOSIT MODAL                                                */
+/* ============================================================ */
+function openDepositModal() {
+    if (!currentAccount) return;
+    document.getElementById('depositForm').reset();
+    document.getElementById('depositModal').classList.remove('hidden');
+}
+function closeDepositModal() { document.getElementById('depositModal').classList.add('hidden'); }
+
+document.getElementById('depositForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    const d = Object.fromEntries(new FormData(f).entries());
+    if (!d.phone || !d.phone.trim()) { showToast('Mobile number required', false); return; }
+
+    const btn = document.getElementById('depositSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Processing…';
+
+    const { ok, body } = await req('/member/accounts/api/deposit', {
+        method:'POST', body: JSON.stringify({
+            amount:    Number(d.amount),
+            method:    'online',
+            provider:  d.provider,
+            phone:     d.phone,
+            narration: d.narration || null,
+        }),
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Deposit';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Deposit failed', false); return; }
+    closeDepositModal();
+    if (body.pending && body.payment.deposit_id) {
+        showStatusModal(body.payment.deposit_id);
+    } else {
+        showToast('Deposit submitted', true);
+        loadSnapshot(); loadTransactions();
+    }
+});
+
+/* ============================================================ */
+/* WITHDRAWAL MODAL                                             */
+/* ============================================================ */
+function openWithdrawModal() {
+    if (!currentAccount) return;
+    document.getElementById('withdrawForm').reset();
+    document.getElementById('wdBalance').textContent =
+        `${fmtNum(currentAccount.balance)} ${currentAccount.currency}`;
+    document.getElementById('withdrawModal').classList.remove('hidden');
+}
+function closeWithdrawModal() { document.getElementById('withdrawModal').classList.add('hidden'); }
+
+document.getElementById('withdrawForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    const d = Object.fromEntries(new FormData(f).entries());
+
+    const btn = document.getElementById('wdSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Submitting…';
+
+    const { ok, body } = await req('/member/accounts/api/withdrawals', {
+        method:'POST', body: JSON.stringify({
+            amount: Number(d.amount),
+            reason: d.reason || null,
+        }),
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Submit request';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Failed', false); return; }
+    closeWithdrawModal();
+    showToast('Withdrawal request submitted (pending approval)', true);
+    loadSnapshot();
+    switchTab('withdrawals');
+});
+
+/* ============================================================ */
+/* STATUS MODAL                                                 */
+/* ============================================================ */
+function showStatusModal(depositId) {
+    document.getElementById('statusModal').classList.remove('hidden');
+    document.getElementById('statusSpinner').classList.remove('hidden');
+    document.getElementById('statusIconWrap').className =
+        'w-16 h-16 mx-auto rounded-full bg-brand/10 text-brand flex items-center justify-center mb-4';
+    document.getElementById('statusIcon').className = 'fa-solid fa-mobile-screen-button text-2xl';
+    document.getElementById('statusTitle').textContent = 'Waiting for approval';
+    document.getElementById('statusText').textContent  = 'Approve the prompt on your phone.';
+    startPolling(depositId);
+}
+function closeStatusModal() {
+    document.getElementById('statusModal').classList.add('hidden');
+    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+    loadSnapshot(); loadTransactions();
+}
+function startPolling(depositId) {
+    if (_pollTimer) clearInterval(_pollTimer);
+    let attempts = 0;
+    _pollTimer = setInterval(async () => {
+        attempts++;
+        const { ok, body } = await req(`/member/accounts/api/payment/${depositId}/verify`, { method: 'POST' });
+        if (!ok || !body.ok) {
+            if (attempts >= 30) { clearInterval(_pollTimer); _pollTimer = null; }
+            return;
+        }
+        if (body.status === 'completed') {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('statusSpinner').classList.add('hidden');
+            document.getElementById('statusIconWrap').className =
+                'w-16 h-16 mx-auto rounded-full bg-success-bg text-success flex items-center justify-center mb-4';
+            document.getElementById('statusIcon').className = 'fa-solid fa-circle-check text-2xl';
+            document.getElementById('statusTitle').textContent = 'Deposit received';
+            document.getElementById('statusText').textContent  =
+                `New balance: ${fmtNum(body.deposit.new_balance)}`;
+            setTimeout(closeStatusModal, 1800);
+        } else if (body.status === 'failed') {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('statusSpinner').classList.add('hidden');
+            document.getElementById('statusIconWrap').className =
+                'w-16 h-16 mx-auto rounded-full bg-danger-bg text-danger flex items-center justify-center mb-4';
+            document.getElementById('statusIcon').className = 'fa-solid fa-circle-xmark text-2xl';
+            document.getElementById('statusTitle').textContent = 'Payment failed';
+            document.getElementById('statusText').textContent  = body.reason || 'The payment was not completed.';
+        } else if (attempts >= 30) {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('statusSpinner').classList.add('hidden');
+            document.getElementById('statusTitle').textContent = 'Still pending';
+            document.getElementById('statusText').textContent  = 'Timed out. Check your account later.';
+        }
+    }, 4000);
+}
+
+/* ============================================================ */
+/* ESC                                                          */
+/* ============================================================ */
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        const modals = ['statusModal','withdrawModal','depositModal'];
+        for (const mid of modals) {
+            const el = document.getElementById(mid);
+            if (!el.classList.contains('hidden')) { el.classList.add('hidden'); return; }
+        }
+    }
+});
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    await loadSnapshot();
+    await loadTransactions();
+})();
+</script>
+{% endblock %}

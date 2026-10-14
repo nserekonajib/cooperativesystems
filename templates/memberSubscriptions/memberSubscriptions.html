@@ -1,0 +1,526 @@
+{% extends "memberBase.html" %}
+{% block title %}Subscriptions — Member Portal{% endblock %}
+{% block page_title %}Subscriptions{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- CURRENT-YEAR SUBSCRIPTION HERO                                -->
+<!-- ============================================================ -->
+<div class="rounded-2xl bg-gradient-to-br from-navy to-navy-dark text-white p-6 lg:p-8 shadow-sm mb-6">
+  <div class="flex items-start justify-between flex-wrap gap-4">
+    <div>
+      <p class="text-xs uppercase tracking-wider text-brand">
+        Subscription · <span id="heroYear">—</span>
+      </p>
+      <p id="heroBalance" class="text-4xl font-extrabold mt-2">—</p>
+      <p class="text-slate-300 text-sm mt-1">
+        Outstanding balance
+      </p>
+    </div>
+    <div class="flex flex-col gap-2">
+      <button id="payBtn" onclick="openPayModal()"
+              class="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-brand hover:bg-brand-dark text-white font-semibold text-sm transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+        <i class="fa-solid fa-mobile-screen-button"></i> Pay online
+      </button>
+      <select id="yearSelect" class="px-3 py-2 rounded-lg bg-white/10 text-white text-sm outline-none">
+        <option>Loading…</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
+    <div class="rounded-xl bg-white/5 p-3">
+      <p class="text-[10px] uppercase tracking-wider text-slate-400">Amount due</p>
+      <p id="heroDue" class="font-bold text-sm mt-1">—</p>
+    </div>
+    <div class="rounded-xl bg-white/5 p-3">
+      <p class="text-[10px] uppercase tracking-wider text-slate-400">Amount paid</p>
+      <p id="heroPaid" class="font-bold text-sm mt-1">—</p>
+    </div>
+    <div class="rounded-xl bg-white/5 p-3">
+      <p class="text-[10px] uppercase tracking-wider text-slate-400">Status</p>
+      <p id="heroStatus" class="font-bold text-sm mt-1 capitalize">—</p>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div id="heroProgressWrap" class="mt-5">
+    <div class="flex justify-between text-xs text-slate-300 mb-1">
+      <span>Progress</span>
+      <span id="heroPercent">—</span>
+    </div>
+    <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+      <div id="heroProgressBar" class="h-full bg-brand transition-all duration-500" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Info banner when subscription row is missing -->
+  <div id="notCreatedBanner" class="hidden mt-5 rounded-xl bg-warning-bg text-warning p-3 text-xs flex items-start gap-2">
+    <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+    <span>Your SACCO hasn't created this year's subscription yet. It will appear here once set up.</span>
+  </div>
+
+  <!-- Info banner when fully paid -->
+  <div id="paidBanner" class="hidden mt-5 rounded-xl bg-success-bg text-success p-3 text-xs flex items-start gap-2">
+    <i class="fa-solid fa-circle-check mt-0.5"></i>
+    <span>Fully paid. Thank you!</span>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PAYMENT HISTORY                                               -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+  <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+    <div>
+      <h3 class="font-bold text-base">Payment history</h3>
+      <p class="text-xs text-ink-muted mt-0.5">
+        All subscription payments for <span id="historyYear" class="font-semibold">—</span>
+      </p>
+    </div>
+    <span id="payCount" class="text-xs text-ink-muted">—</span>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Date</th>
+          <th class="text-left px-5 py-3 font-semibold">Method</th>
+          <th class="text-left px-5 py-3 font-semibold">Narration</th>
+          <th class="text-right px-5 py-3 font-semibold">Amount</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+          <th class="px-5 py-3"></th>
+        </tr>
+      </thead>
+      <tbody id="paymentsTable" class="divide-y divide-slate-100">
+        <tr><td colspan="6" class="text-center text-ink-muted py-10 text-sm">
+          <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+    <span id="pageInfo">—</span>
+    <div class="flex gap-1">
+      <button id="prevBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+      <button id="nextBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PAY MODAL (ONLINE ONLY)                                       -->
+<!-- ============================================================ -->
+<div id="payModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div>
+        <h3 class="font-bold text-base">Pay subscription</h3>
+        <p class="text-xs text-ink-muted mt-0.5" id="payYearLabel">—</p>
+      </div>
+      <button onclick="closePayModal()"
+              class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <form id="payForm" class="p-6 space-y-5">
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm space-y-1">
+        <div class="flex justify-between">
+          <span class="text-ink-muted">Amount due</span>
+          <span id="payDue" class="font-semibold">—</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-ink-muted">Already paid</span>
+          <span id="payPaid" class="font-semibold">—</span>
+        </div>
+        <div class="flex justify-between font-bold pt-1 border-t border-slate-200 mt-1">
+          <span>Outstanding</span>
+          <span id="payBalance">—</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Amount to pay *</label>
+        <input name="amount" id="payAmount" type="number" min="1" step="1" required class="inp">
+        <button type="button" onclick="fillFullBalance()"
+                class="text-xs text-brand font-semibold mt-1 hover:underline">
+          Pay full balance
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Provider *</label>
+          <select name="provider" class="inp">
+            <option value="MTN">MTN Mobile Money</option>
+            <option value="AIRTEL">Airtel Money</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Mobile money number *</label>
+          <input name="phone" class="inp" placeholder="+256…">
+        </div>
+      </div>
+
+      <div class="rounded-xl bg-brand/5 border border-brand/10 p-3 text-xs text-brand-dark flex items-start gap-2">
+        <i class="fa-solid fa-circle-info mt-0.5"></i>
+        <span>You'll receive a prompt on your phone. Approve it to complete the payment.</span>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closePayModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" id="paySubmit" class="btn-primary">
+          <i class="fa-solid fa-paper-plane mr-2"></i>Pay
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PAYMENT STATUS MODAL                                          -->
+<!-- ============================================================ -->
+<div id="statusModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+    <div id="statusIconWrap" class="w-16 h-16 mx-auto rounded-full bg-brand/10 text-brand flex items-center justify-center mb-4">
+      <i id="statusIcon" class="fa-solid fa-mobile-screen-button text-2xl"></i>
+    </div>
+    <h3 id="statusTitle" class="font-bold text-lg mb-1">Waiting for approval</h3>
+    <p id="statusText" class="text-sm text-ink-muted mb-5">Approve the prompt on your phone.</p>
+    <div id="statusSpinner" class="hidden mb-4">
+      <i class="fa-solid fa-circle-notch fa-spin text-brand text-xl"></i>
+    </div>
+    <button onclick="closeStatusModal()" class="btn-ghost w-full">Close</button>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; transition:all .15s; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   border:none; cursor:pointer; }
+    .btn-primary:hover { filter:brightness(0.92); }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                 border-radius:10px; background:#fff; border:1px solid #E2E8F0;
+                 color:#64748B; font-weight:600; font-size:14px; cursor:pointer; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .s-completed { background:#E6F4EA; color:#065F46; }
+    .s-pending   { background:#FEF3C7; color:#92400E; }
+    .s-failed    { background:#FEE2E2; color:#991B1B; }
+    .s-partial   { background:#DBEAFE; color:#1E40AF; }
+    .s-paid      { background:#E6F4EA; color:#065F46; }
+    .s-waived    { background:#EDE9FE; color:#6D28D9; }
+    .s-cancelled { background:#E2E8F0; color:#334155; }
+    .s-overdue   { background:#FEE2E2; color:#991B1B; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE                                                        */
+/* ============================================================ */
+const state = {
+    year: new Date().getFullYear(),
+    page: 1, per_page: 20, total: 0,
+    sub: null,
+};
+let _pollTimer = null;
+
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
+}
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials:'same-origin',
+        headers:{'Content-Type':'application/json'},
+        ...opts,
+    });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, body };
+}
+
+/* ============================================================ */
+/* LOAD snapshot                                                */
+/* ============================================================ */
+async function loadSnapshot() {
+    const { ok, body } = await req(`/member/subscriptions/api/me?year=${state.year}`);
+    if (!ok || !body.ok) {
+        if (body.reason === 'unauthenticated') window.location.href = '/member/login';
+        else showToast(body.error || 'Could not load subscription', false);
+        return;
+    }
+    state.sub = body.subscription;
+    const s = body.subscription;
+
+    document.getElementById('heroYear').textContent    = s.year;
+    document.getElementById('historyYear').textContent = s.year;
+
+    // amount line
+    const cur = s.currency || 'UGX';
+    document.getElementById('heroBalance').textContent = `${fmtNum(s.balance)} ${cur}`;
+    document.getElementById('heroDue').textContent     = `${fmtNum(s.amount_due)} ${cur}`;
+    document.getElementById('heroPaid').textContent    = `${fmtNum(s.amount_paid)} ${cur}`;
+    document.getElementById('heroStatus').textContent  = s.status;
+
+    // progress
+    const pct = s.amount_due > 0 ? Math.min(100, (s.amount_paid / s.amount_due) * 100) : 0;
+    document.getElementById('heroPercent').textContent = pct.toFixed(1) + '%';
+    document.getElementById('heroProgressBar').style.width = pct + '%';
+
+    // banners
+    document.getElementById('notCreatedBanner').classList.toggle('hidden', s.exists !== false);
+    document.getElementById('paidBanner').classList.toggle('hidden', s.status !== 'paid');
+
+    // pay button
+    const payBtn = document.getElementById('payBtn');
+    payBtn.disabled = !s.can_pay;
+    if (!s.can_pay) {
+        payBtn.title = !s.exists
+            ? 'Subscription not created yet'
+            : s.status === 'paid'
+                ? 'Already fully paid'
+                : 'Nothing to pay';
+    } else {
+        payBtn.title = '';
+    }
+}
+
+/* ============================================================ */
+/* LOAD years                                                   */
+/* ============================================================ */
+async function loadYears() {
+    const { ok, body } = await req('/member/subscriptions/api/years');
+    if (!ok || !body.ok) return;
+    const sel = document.getElementById('yearSelect');
+    sel.innerHTML = body.years.map(y =>
+        `<option value="${y}" ${y === state.year ? 'selected' : ''}>Year ${y}</option>`
+    ).join('');
+    sel.addEventListener('change', e => {
+        state.year = Number(e.target.value);
+        state.page = 1;
+        loadSnapshot();
+        loadPayments();
+    });
+}
+
+/* ============================================================ */
+/* LOAD payments                                                */
+/* ============================================================ */
+async function loadPayments() {
+    const tbody = document.getElementById('paymentsTable');
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const qs = new URLSearchParams({
+        year: state.year, page: state.page, per_page: state.per_page,
+    });
+    const { ok, body } = await req('/member/subscriptions/api/payments?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-10 text-sm">Load failed</td></tr>`;
+        return;
+    }
+    state.total = body.total;
+    document.getElementById('payCount').textContent = `${body.total} entries`;
+
+    if (!body.payments.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No payments yet for ${state.year}.</td></tr>`;
+    } else {
+        tbody.innerHTML = body.payments.map(p => `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3 text-xs text-ink-muted whitespace-nowrap">${fmtDate(p.created_at)}</td>
+              <td class="px-5 py-3 text-xs text-ink-muted">
+                ${escapeHtml(p.method || '')}${p.provider ? ' · '+escapeHtml(p.provider) : ''}
+              </td>
+              <td class="px-5 py-3 text-xs">${escapeHtml(p.narration || '')}</td>
+              <td class="px-5 py-3 text-right font-semibold">${fmtNum(p.amount)} <span class="text-xs text-ink-muted">${escapeHtml(p.currency)}</span></td>
+              <td class="px-5 py-3"><span class="pill s-${p.status}">${escapeHtml(p.status)}</span></td>
+              <td class="px-5 py-3 text-right">
+                <a href="/member/subscriptions/api/payments/${p.id}/receipt" target="_blank"
+                   class="w-8 h-8 inline-flex items-center justify-center rounded-lg hover:bg-page text-ink-muted hover:text-brand transition">
+                  <i class="fa-solid fa-receipt"></i>
+                </a>
+              </td>
+            </tr>
+        `).join('');
+    }
+
+    const from = state.total ? (state.page - 1) * state.per_page + 1 : 0;
+    const to   = Math.min(state.page * state.per_page, state.total);
+    document.getElementById('pageInfo').textContent =
+        state.total ? `${from}–${to} of ${state.total}` : '0 results';
+    document.getElementById('prevBtn').disabled = state.page <= 1;
+    document.getElementById('nextBtn').disabled = to >= state.total;
+}
+document.getElementById('prevBtn').onclick = () => { if (state.page > 1) { state.page--; loadPayments(); } };
+document.getElementById('nextBtn').onclick = () => {
+    if (state.page * state.per_page < state.total) { state.page++; loadPayments(); }
+};
+
+/* ============================================================ */
+/* PAY MODAL                                                    */
+/* ============================================================ */
+function openPayModal() {
+    const s = state.sub;
+    if (!s || !s.can_pay) return;
+
+    document.getElementById('payYearLabel').textContent = `Subscription ${s.year}`;
+    document.getElementById('payDue').textContent       = `${fmtNum(s.amount_due)} ${s.currency}`;
+    document.getElementById('payPaid').textContent      = `${fmtNum(s.amount_paid)} ${s.currency}`;
+    document.getElementById('payBalance').textContent   = `${fmtNum(s.balance)} ${s.currency}`;
+
+    const form = document.getElementById('payForm');
+    form.reset();
+    document.getElementById('payAmount').value = Math.round(s.balance);
+    document.getElementById('payModal').classList.remove('hidden');
+}
+function closePayModal() { document.getElementById('payModal').classList.add('hidden'); }
+
+function fillFullBalance() {
+    if (!state.sub) return;
+    document.getElementById('payAmount').value = Math.round(state.sub.balance);
+}
+
+document.getElementById('payForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.target;
+    const d = Object.fromEntries(new FormData(form).entries());
+
+    if (!d.phone || !d.phone.trim()) {
+        showToast('Mobile money number is required', false);
+        return;
+    }
+
+    const payload = {
+        amount:   Number(d.amount),
+        method:   'online',
+        provider: d.provider,
+        phone:    d.phone,
+        year:     state.year,
+    };
+
+    const btn = document.getElementById('paySubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Processing…';
+
+    const { ok, body } = await req('/member/subscriptions/api/pay', {
+        method:'POST', body: JSON.stringify(payload),
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Pay';
+
+    if (!ok || !body.ok) {
+        showToast(body.error || 'Payment failed', false);
+        return;
+    }
+
+    closePayModal();
+    if (body.pending && body.payment.deposit_id) {
+        showStatusModal(body.payment.deposit_id);
+    } else {
+        showToast('Payment submitted', true);
+        loadSnapshot(); loadPayments();
+    }
+});
+
+/* ============================================================ */
+/* STATUS MODAL                                                 */
+/* ============================================================ */
+function showStatusModal(depositId) {
+    document.getElementById('statusModal').classList.remove('hidden');
+    document.getElementById('statusSpinner').classList.remove('hidden');
+    document.getElementById('statusIconWrap').className =
+        'w-16 h-16 mx-auto rounded-full bg-brand/10 text-brand flex items-center justify-center mb-4';
+    document.getElementById('statusIcon').className = 'fa-solid fa-mobile-screen-button text-2xl';
+    document.getElementById('statusTitle').textContent = 'Waiting for approval';
+    document.getElementById('statusText').textContent  = 'Approve the prompt on your phone.';
+    startPolling(depositId);
+}
+function closeStatusModal() {
+    document.getElementById('statusModal').classList.add('hidden');
+    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+    loadSnapshot(); loadPayments();
+}
+function startPolling(depositId) {
+    if (_pollTimer) clearInterval(_pollTimer);
+    let attempts = 0;
+    _pollTimer = setInterval(async () => {
+        attempts++;
+        const { ok, body } = await req(`/member/subscriptions/api/payment/${depositId}/verify`, { method: 'POST' });
+        if (!ok || !body.ok) {
+            if (attempts >= 30) { clearInterval(_pollTimer); _pollTimer = null; }
+            return;
+        }
+        if (body.status === 'completed') {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('statusSpinner').classList.add('hidden');
+            document.getElementById('statusIconWrap').className =
+                'w-16 h-16 mx-auto rounded-full bg-success-bg text-success flex items-center justify-center mb-4';
+            document.getElementById('statusIcon').className = 'fa-solid fa-circle-check text-2xl';
+            document.getElementById('statusTitle').textContent = 'Payment received';
+            document.getElementById('statusText').textContent  =
+                `Balance now ${fmtNum(body.payment.balance)} ${body.payment.currency || ''}.`;
+            setTimeout(closeStatusModal, 1800);
+        } else if (body.status === 'failed') {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('statusSpinner').classList.add('hidden');
+            document.getElementById('statusIconWrap').className =
+                'w-16 h-16 mx-auto rounded-full bg-danger-bg text-danger flex items-center justify-center mb-4';
+            document.getElementById('statusIcon').className = 'fa-solid fa-circle-xmark text-2xl';
+            document.getElementById('statusTitle').textContent = 'Payment failed';
+            document.getElementById('statusText').textContent  = body.reason || 'The payment was not completed.';
+        } else if (attempts >= 30) {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('statusSpinner').classList.add('hidden');
+            document.getElementById('statusTitle').textContent = 'Still pending';
+            document.getElementById('statusText').textContent  = 'Timed out. Check your payments later.';
+        }
+    }, 4000);
+}
+
+/* ============================================================ */
+/* ESC                                                          */
+/* ============================================================ */
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        if (!document.getElementById('statusModal').classList.contains('hidden')) closeStatusModal();
+        else if (!document.getElementById('payModal').classList.contains('hidden')) closePayModal();
+    }
+});
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    await loadYears();
+    await Promise.all([loadSnapshot(), loadPayments()]);
+})();
+</script>
+{% endblock %}

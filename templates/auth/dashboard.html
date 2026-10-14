@@ -1,0 +1,754 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — SACCO Pro{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- GREETING + QUICK ACTIONS                                      -->
+<!-- ============================================================ -->
+<div class="flex flex-wrap items-center gap-4 mb-6">
+  <div class="flex items-center gap-4">
+    <div class="w-12 h-12 rounded-2xl bg-brand text-white flex items-center justify-center text-xl shadow-md">
+      <i class="fa-solid fa-building-columns"></i>
+    </div>
+    <div>
+      <h1 class="text-xl font-extrabold tracking-tight" id="greeting">
+        Welcome back<span class="skel-inline skel-w-32 ml-2"></span>
+      </h1>
+      <p class="text-xs text-ink-muted mt-0.5" id="greetingSub">
+        Loading your dashboard<span class="dots"></span>
+      </p>
+    </div>
+  </div>
+  <div class="ml-auto flex items-center gap-2">
+    <div class="px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-ink-muted" id="todayLabel">
+      <i class="fa-regular fa-calendar mr-2"></i>
+    </div>
+    <div class="relative">
+      <button onclick="toggleQuickActions()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-white text-sm font-semibold shadow-sm">
+        <i class="fa-solid fa-bolt"></i> Quick Action
+        <i class="fa-solid fa-chevron-down text-xs"></i>
+      </button>
+      <div id="quickMenu" class="hidden absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-2xl border border-slate-100 py-1 z-30">
+        <a href="{{ url_for('members.page') }}" class="block px-4 py-2 text-sm hover:bg-page"><i class="fa-solid fa-user-plus mr-2 text-ink-muted"></i>Add New Member</a>
+        <a href="{{ url_for('yearly_subscriptions.page') }}" class="block px-4 py-2 text-sm hover:bg-page"><i class="fa-solid fa-coins mr-2 text-ink-muted"></i>Record Subscription</a>
+        <a href="{{ url_for('shares.page') }}" class="block px-4 py-2 text-sm hover:bg-page"><i class="fa-solid fa-chart-pie mr-2 text-ink-muted"></i>Allocate Shares</a>
+        <a href="{{ url_for('dividends.page') }}" class="block px-4 py-2 text-sm hover:bg-page"><i class="fa-solid fa-hand-holding-heart mr-2 text-ink-muted"></i>Process Dividend</a>
+        <a href="{{ url_for('loan_applications.page') }}" class="block px-4 py-2 text-sm hover:bg-page"><i class="fa-solid fa-money-bill-transfer mr-2 text-ink-muted"></i>Loan Disbursement</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- KPI CARDS — skeleton start                                    -->
+<!-- ============================================================ -->
+<div id="kpiGrid" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
+  <!-- 6 skeleton cards; replaced by JS when /api/overview returns -->
+  <script>
+    document.write(Array.from({length: 6}).map(() => `
+      <div class="kpi-card">
+        <div class="flex items-start justify-between">
+          <div class="min-w-0 flex-1">
+            <div class="skel skel-w-24 h-3 mb-3"></div>
+            <div class="skel skel-w-20 h-6"></div>
+          </div>
+          <div class="kpi-icon bg-slate-100">
+            <i class="fa-solid fa-circle-notch fa-spin text-slate-300"></i>
+          </div>
+        </div>
+        <div class="skel skel-w-32 h-3 mt-4"></div>
+      </div>
+    `).join(''));
+  </script>
+</div>
+
+<!-- ============================================================ -->
+<!-- MAIN ROW                                                      -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 xl:grid-cols-4 gap-5">
+
+  <div class="xl:col-span-3 space-y-5">
+
+    <!-- Two-column charts row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+      <!-- Membership Growth -->
+      <div class="bg-white rounded-2xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-5">
+          <h3 class="font-bold text-base">Membership Growth</h3>
+          <span class="text-xs text-ink-muted">Last 12 months</span>
+        </div>
+        <div class="flex items-center gap-4 text-xs text-ink-muted mb-3">
+          <span><span class="inline-block w-2 h-2 rounded-full bg-brand mr-1"></span>Total Members</span>
+          <span><span class="inline-block w-2 h-2 rounded-full bg-success mr-1"></span>Active Members</span>
+        </div>
+        <div id="growthChart" class="h-56 relative">
+          <div class="skeleton-chart">
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+            <span>Loading growth…</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shares & Subscriptions Collection -->
+      <div class="bg-white rounded-2xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-5">
+          <h3 class="font-bold text-base">Shares &amp; Subscriptions Collection</h3>
+          <span class="text-xs text-ink-muted">This Year</span>
+        </div>
+        <div class="flex items-center gap-4 text-xs text-ink-muted mb-3">
+          <span><span class="inline-block w-2 h-2 rounded-sm bg-brand mr-1"></span>Shares</span>
+          <span><span class="inline-block w-2 h-2 rounded-sm bg-success mr-1"></span>Subscriptions</span>
+        </div>
+        <div id="collectionsChart" class="h-56 relative">
+          <div class="skeleton-chart">
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+            <span>Loading collections…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dividend + Loan donuts -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+      <div class="bg-white rounded-2xl shadow-sm p-6 lg:col-span-2">
+        <h3 class="font-bold text-base mb-5">Dividend Distribution</h3>
+        <div class="flex items-center gap-8">
+          <div id="dividendDonut" class="relative w-48 h-48 flex-shrink-0">
+            <div class="skeleton-donut">
+              <i class="fa-solid fa-circle-notch fa-spin"></i>
+            </div>
+          </div>
+          <div id="dividendLegend" class="flex-1 space-y-2.5 text-sm">
+            <div class="skel h-3 w-full"></div>
+            <div class="skel h-3 w-3/4"></div>
+            <div class="skel h-3 w-5/6"></div>
+            <div class="skel h-3 w-2/3"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm p-6">
+        <h3 class="font-bold text-base mb-5">Loan Portfolio Overview</h3>
+        <div id="loanDonut" class="relative w-40 h-40 mx-auto">
+          <div class="skeleton-donut">
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+          </div>
+        </div>
+        <div id="loanLegend" class="mt-5 space-y-2 text-xs">
+          <div class="skel h-3 w-full"></div>
+          <div class="skel h-3 w-2/3"></div>
+          <div class="skel h-3 w-4/5"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent activity -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h3 class="font-bold text-sm">Recent Subscriptions</h3>
+          <a href="{{ url_for('yearly_subscriptions.page') }}" class="text-xs text-brand font-semibold hover:underline">View all</a>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider">
+              <tr>
+                <th class="text-left px-4 py-2.5 font-semibold">Member</th>
+                <th class="text-right px-4 py-2.5 font-semibold">Amount</th>
+                <th class="text-right px-4 py-2.5 font-semibold">Year</th>
+                <th class="text-left px-4 py-2.5 font-semibold">Date</th>
+                <th class="text-left px-4 py-2.5 font-semibold">Status</th>
+              </tr>
+            </thead>
+            <tbody id="recentSubs" class="divide-y divide-slate-100">
+              <tr><td colspan="5" class="px-4 py-3"><div class="skel h-3 w-full"></div></td></tr>
+              <tr><td colspan="5" class="px-4 py-3"><div class="skel h-3 w-4/5"></div></td></tr>
+              <tr><td colspan="5" class="px-4 py-3"><div class="skel h-3 w-2/3"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h3 class="font-bold text-sm">Recent Share Contributions</h3>
+          <a href="{{ url_for('shares.page') }}" class="text-xs text-brand font-semibold hover:underline">View all</a>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider">
+              <tr>
+                <th class="text-left px-4 py-2.5 font-semibold">Member</th>
+                <th class="text-right px-4 py-2.5 font-semibold">Shares</th>
+                <th class="text-left px-4 py-2.5 font-semibold">Date</th>
+                <th class="text-left px-4 py-2.5 font-semibold">Status</th>
+              </tr>
+            </thead>
+            <tbody id="recentShares" class="divide-y divide-slate-100">
+              <tr><td colspan="4" class="px-4 py-3"><div class="skel h-3 w-full"></div></td></tr>
+              <tr><td colspan="4" class="px-4 py-3"><div class="skel h-3 w-3/4"></div></td></tr>
+              <tr><td colspan="4" class="px-4 py-3"><div class="skel h-3 w-2/3"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings + Dividend history -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+      <div class="bg-white rounded-2xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-5">
+          <h3 class="font-bold text-base">Shares &amp; Subscription Settings</h3>
+          <a href="{{ url_for('institution_settings.page') }}" class="text-xs text-brand font-semibold hover:underline">View Settings</a>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="rounded-xl bg-page p-4">
+            <div class="w-9 h-9 rounded-lg bg-brand/10 text-brand flex items-center justify-center mb-2">
+              <i class="fa-solid fa-file-signature"></i>
+            </div>
+            <p class="text-[10px] text-ink-muted uppercase tracking-wider">Minimum Shares Per Member</p>
+            <p class="font-bold text-lg mt-1" id="setMinShares">
+              <span class="skel-inline skel-w-20"></span>
+            </p>
+            <a href="{{ url_for('institution_settings.page') }}" class="text-[10px] text-brand font-semibold hover:underline">Configurable in settings</a>
+          </div>
+          <div class="rounded-xl bg-page p-4">
+            <div class="w-9 h-9 rounded-lg bg-success/10 text-success flex items-center justify-center mb-2">
+              <i class="fa-regular fa-calendar"></i>
+            </div>
+            <p class="text-[10px] text-ink-muted uppercase tracking-wider">Yearly Subscription Amount</p>
+            <p class="font-bold text-lg mt-1" id="setSubAmt">
+              <span class="skel-inline skel-w-24"></span>
+            </p>
+            <span class="text-[10px] text-ink-muted">Per member</span>
+          </div>
+          <div class="rounded-xl bg-page p-4">
+            <div class="w-9 h-9 rounded-lg bg-accent/10 text-accent flex items-center justify-center mb-2">
+              <i class="fa-solid fa-gear"></i>
+            </div>
+            <p class="text-[10px] text-ink-muted uppercase tracking-wider">Subscription Period</p>
+            <p class="font-bold text-lg mt-1">1 year</p>
+            <span class="text-[10px] text-ink-muted">Auto-renew enabled</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h3 class="font-bold text-base">Dividend Overview</h3>
+          <a href="{{ url_for('dividends.page') }}" class="text-xs text-brand font-semibold hover:underline">View Details</a>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider">
+              <tr>
+                <th class="text-left px-5 py-2.5 font-semibold">Financial Year</th>
+                <th class="text-right px-5 py-2.5 font-semibold">Amount</th>
+                <th class="text-left px-5 py-2.5 font-semibold">Status</th>
+              </tr>
+            </thead>
+            <tbody id="dividendHistory" class="divide-y divide-slate-100">
+              <tr><td colspan="3" class="px-5 py-3"><div class="skel h-3 w-full"></div></td></tr>
+              <tr><td colspan="3" class="px-5 py-3"><div class="skel h-3 w-3/4"></div></td></tr>
+              <tr><td colspan="3" class="px-5 py-3"><div class="skel h-3 w-2/3"></div></td></tr>
+              <tr><td colspan="3" class="px-5 py-3"><div class="skel h-3 w-5/6"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT RAIL -->
+  <aside class="xl:col-span-1 space-y-5">
+
+    <div class="bg-brand text-white rounded-2xl shadow-md overflow-hidden">
+      <div class="px-5 py-4 border-b border-white/10">
+        <h3 class="font-bold text-sm"><i class="fa-solid fa-bolt mr-2"></i>Quick Actions</h3>
+      </div>
+      <div class="p-3 space-y-1">
+        <a href="{{ url_for('members.page') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-sm transition">
+          <i class="fa-solid fa-user-plus w-4"></i> Add New Member
+        </a>
+        <a href="{{ url_for('yearly_subscriptions.page') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-sm transition">
+          <i class="fa-regular fa-calendar-check w-4"></i> Record Subscription
+        </a>
+        <a href="{{ url_for('shares.page') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-sm transition">
+          <i class="fa-solid fa-chart-pie w-4"></i> Allocate Shares
+        </a>
+        <a href="{{ url_for('dividends.page') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-sm transition">
+          <i class="fa-solid fa-hand-holding-heart w-4"></i> Process Dividend
+        </a>
+        <a href="{{ url_for('loan_applications.page') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-sm transition">
+          <i class="fa-solid fa-money-bill-transfer w-4"></i> Loan Disbursement
+        </a>
+      </div>
+    </div>
+
+    <!-- Upcoming Events -->
+    <div class="bg-white rounded-2xl shadow-sm">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <h3 class="font-bold text-sm">Upcoming Events</h3>
+        <span class="text-xs text-brand font-semibold">View all</span>
+      </div>
+      <div id="upcomingEvents" class="p-4 space-y-3">
+        <div class="flex items-start gap-3">
+          <div class="skel w-9 h-9 rounded-lg flex-shrink-0"></div>
+          <div class="flex-1 min-w-0">
+            <div class="skel h-3 w-3/4 mb-2"></div>
+            <div class="skel h-2.5 w-1/3"></div>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="skel w-9 h-9 rounded-lg flex-shrink-0"></div>
+          <div class="flex-1 min-w-0">
+            <div class="skel h-3 w-2/3 mb-2"></div>
+            <div class="skel h-2.5 w-1/4"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Promo -->
+    <div class="rounded-2xl shadow-md overflow-hidden bg-gradient-to-br from-emerald-700 to-emerald-900 text-white p-6 relative">
+      <h4 class="font-bold text-base">Together We Grow</h4>
+      <p class="text-xs mt-2 opacity-90 leading-relaxed">
+        Your savings, shares, and participation build a stronger future for everyone.
+      </p>
+      <button onclick="window.location.href='{{ url_for('financial_reports.page') }}'"
+              class="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-emerald-800 font-semibold text-xs">
+        <i class="fa-solid fa-chart-line"></i> View Reports
+      </button>
+      <div class="absolute bottom-0 right-0 opacity-10 text-9xl pointer-events-none">
+        <i class="fa-solid fa-seedling"></i>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<style>
+    /* ---------- Cards ---------- */
+    .kpi-card { background:#fff; border-radius:16px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.05);
+                display:flex; flex-direction:column; justify-content:space-between; min-height:110px; }
+    .kpi-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; }
+    .kpi-brand    { background:rgba(26,98,255,.1);  color:#1A62FF; }
+    .kpi-success  { background:rgba(16,185,129,.1); color:#10B981; }
+    .kpi-warning  { background:rgba(245,158,11,.1); color:#F59E0B; }
+    .kpi-accent   { background:rgba(139,92,246,.1); color:#8B5CF6; }
+    .kpi-label { font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:#64748B; }
+    .kpi-value { font-size:20px; font-weight:800; margin-top:4px; color:#1E293B; }
+    .kpi-delta { font-size:11px; font-weight:600; margin-top:6px; display:flex; align-items:center; gap:4px; }
+    .kpi-delta.up   { color:#10B981; }
+    .kpi-delta.down { color:#EF4444; }
+    .kpi-delta.flat { color:#94A3B8; }
+
+    /* ---------- Skeletons ---------- */
+    @keyframes skel-pulse {
+        0%, 100% { background-color: #F1F5F9; opacity: .7; }
+        50%      { background-color: #E2E8F0; opacity: 1; }
+    }
+    .skel {
+        display: inline-block;
+        border-radius: 6px;
+        animation: skel-pulse 1.4s ease-in-out infinite;
+        background-color: #F1F5F9;
+    }
+    .skel-inline { display: inline-block; height: .8em; border-radius: 6px;
+                   animation: skel-pulse 1.4s ease-in-out infinite; background: #F1F5F9;
+                   vertical-align: middle; }
+    .skel-w-20 { width: 80px; }
+    .skel-w-24 { width: 96px; }
+    .skel-w-32 { width: 128px; }
+
+    .skeleton-chart {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 8px; color: #94A3B8; font-size: 12px;
+    }
+    .skeleton-chart i { font-size: 20px; color: #CBD5E1; }
+
+    .skeleton-donut {
+        position: absolute; inset: 0;
+        border-radius: 50%;
+        border: 22px solid #F1F5F9;
+        display: flex; align-items: center; justify-content: center;
+        color: #94A3B8; font-size: 20px;
+        animation: skel-pulse 1.4s ease-in-out infinite;
+    }
+
+    /* Loading dots appended to greeting subtitle */
+    .dots::after {
+        content: "";
+        display: inline-block;
+        width: 1em;
+        text-align: left;
+        animation: dots 1.4s steps(4, end) infinite;
+    }
+    @keyframes dots {
+        0%   { content: ""; }
+        25%  { content: "."; }
+        50%  { content: ".."; }
+        75%  { content: "..."; }
+        100% { content: ""; }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtCompact(n) {
+    n = Number(n || 0);
+    if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return String(Math.round(n));
+}
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
+}
+async function req(url, opts = {}) {
+    const r = await fetch(url, { credentials:'same-origin', headers:{'Content-Type':'application/json'}, ...opts });
+    return r.json();
+}
+function toggleQuickActions() {
+    document.getElementById('quickMenu').classList.toggle('hidden');
+}
+document.addEventListener('click', e => {
+    const menu = document.getElementById('quickMenu');
+    if (menu && !menu.classList.contains('hidden') && !e.target.closest('#quickMenu') && !e.target.closest('[onclick="toggleQuickActions()"]')) {
+        menu.classList.add('hidden');
+    }
+});
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    document.getElementById('todayLabel').innerHTML =
+        `<i class="fa-regular fa-calendar mr-2"></i>${new Date().toLocaleDateString(undefined, { day:'numeric', month:'short', year:'numeric' })}`;
+
+    const data = await req('/dashboard/api/overview');
+    if (!data || !data.ok) {
+        // Replace every spinner with a friendly error state
+        document.querySelectorAll('.skeleton-chart, .skeleton-donut').forEach(el => {
+            el.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i><span>Could not load</span>`;
+            el.style.animation = 'none';
+        });
+        showToast('Could not load dashboard', false);
+        return;
+    }
+
+    // ---- greeting ----
+    if (data.user?.name) {
+        document.getElementById('greeting').innerHTML = `Welcome back, ${escapeHtml(data.user.name)} 👋`;
+    }
+    if (data.user?.org) {
+        document.getElementById('greetingSub').textContent =
+            `Here's what's happening with ${data.user.org} today.`;
+    } else {
+        document.getElementById('greetingSub').textContent = "Here's what's happening today.";
+    }
+
+    // ---- render each region as its data arrives ----
+    renderKPIs(data.kpis);
+    renderGrowth(data.membership_growth);
+    renderCollections(data.collections);
+    renderDividendDonut(data.dividend_donut);
+    renderLoanDonut(data.loan_donut);
+    renderRecentSubs(data.recent_subscriptions);
+    renderRecentShares(data.recent_shares);
+    renderUpcoming(data.upcoming_events);
+    renderSettings(data.settings);
+    renderDividendHistory(data.dividend_history);
+})();
+
+/* ============================================================ */
+/* KPI CARDS                                                    */
+/* ============================================================ */
+function renderKPIs(kpiBlock) {
+    const grid = document.getElementById('kpiGrid');
+    const items = kpiBlock.items || [];
+    const currency = kpiBlock.currency || 'UGX';
+
+    grid.innerHTML = items.map(k => {
+        const isMoney = k.type === 'money';
+        const displayValue = isMoney ? `${currency} ${fmtCompact(k.value)}` : fmtCompact(k.value);
+        const deltaClass = k.delta_pct > 0 ? 'up' : (k.delta_pct < 0 ? 'down' : 'flat');
+        const arrow = k.delta_pct > 0 ? 'fa-arrow-up' : (k.delta_pct < 0 ? 'fa-arrow-down' : 'fa-minus');
+        const sign  = k.delta_pct > 0 ? '+' : '';
+        const iconCls = `kpi-${k.color || 'brand'}`;
+
+        return `
+        <div class="kpi-card">
+          <div class="flex items-start justify-between">
+            <div class="min-w-0">
+              <p class="kpi-label truncate">${escapeHtml(k.label)}</p>
+              <p class="kpi-value truncate">${displayValue}</p>
+            </div>
+            <div class="kpi-icon ${iconCls}">
+              <i class="fa-solid ${k.icon}"></i>
+            </div>
+          </div>
+          <div class="kpi-delta ${deltaClass}">
+            <i class="fa-solid ${arrow}"></i>
+            ${sign}${k.delta_pct}% <span class="text-ink-muted font-normal">from last month</span>
+          </div>
+        </div>`;
+    }).join('');
+}
+
+/* ============================================================ */
+/* GROWTH LINE CHART                                            */
+/* ============================================================ */
+function renderGrowth(series) {
+    const el = document.getElementById('growthChart');
+    if (!series || !series.length) {
+        el.innerHTML = `<div class="text-center text-ink-muted text-xs py-12">No data yet.</div>`;
+        return;
+    }
+    const W = el.clientWidth || 500;
+    const H = el.clientHeight || 224;
+    const pad = { l: 36, r: 8, t: 12, b: 24 };
+    const maxTotal = Math.max(...series.map(s => s.total), 1);
+    const xStep = (W - pad.l - pad.r) / Math.max(1, series.length - 1);
+
+    const scaleY = v => H - pad.b - (v / maxTotal) * (H - pad.t - pad.b);
+    const scaleX = i => pad.l + i * xStep;
+
+    const totalPts   = series.map((s, i) => `${scaleX(i)},${scaleY(s.total)}`).join(' ');
+    const activePts  = series.map((s, i) => `${scaleX(i)},${scaleY(s.active)}`).join(' ');
+
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map(p => {
+        const v = maxTotal * p;
+        const y = scaleY(v);
+        return `<line x1="${pad.l}" y1="${y}" x2="${W - pad.r}" y2="${y}" stroke="#F1F5F9"/>
+                <text x="${pad.l - 6}" y="${y + 3}" text-anchor="end" font-size="9" fill="#94A3B8">${fmtCompact(v)}</text>`;
+    }).join('');
+
+    const xLabels = series.map((s, i) => {
+        const month = s.month.slice(-2);
+        return `<text x="${scaleX(i)}" y="${H - 6}" text-anchor="middle" font-size="9" fill="#94A3B8">${month}</text>`;
+    }).join('');
+
+    el.innerHTML = `
+    <svg width="100%" height="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      ${yTicks}
+      <polyline fill="none" stroke="#1A62FF" stroke-width="2" points="${totalPts}"/>
+      <polyline fill="none" stroke="#10B981" stroke-width="2" points="${activePts}"/>
+      ${series.map((s, i) => `
+        <circle cx="${scaleX(i)}" cy="${scaleY(s.total)}" r="2.5" fill="#1A62FF"/>
+        <circle cx="${scaleX(i)}" cy="${scaleY(s.active)}" r="2.5" fill="#10B981"/>
+      `).join('')}
+      ${xLabels}
+    </svg>`;
+}
+
+/* ============================================================ */
+/* COLLECTIONS BAR CHART                                        */
+/* ============================================================ */
+function renderCollections(series) {
+    const el = document.getElementById('collectionsChart');
+    if (!series || !series.length) {
+        el.innerHTML = `<div class="text-center text-ink-muted text-xs py-12">No data yet.</div>`;
+        return;
+    }
+    const max = Math.max(...series.map(s => Math.max(s.shares, s.subscriptions)), 1);
+
+    el.innerHTML = `
+    <div class="flex items-end justify-between gap-2 h-full pt-2">
+      ${series.map(s => {
+          const sh = (s.shares / max) * 100;
+          const su = (s.subscriptions / max) * 100;
+          return `
+          <div class="flex flex-col items-center gap-1 flex-1 h-full">
+            <div class="flex items-end justify-center gap-0.5 h-full w-full">
+              <div class="w-2.5 bg-brand rounded-t transition-all" style="height:${Math.max(2, sh)}%" title="Shares ${fmtNum(s.shares)}"></div>
+              <div class="w-2.5 bg-success rounded-t transition-all" style="height:${Math.max(2, su)}%" title="Subscriptions ${fmtNum(s.subscriptions)}"></div>
+            </div>
+            <span class="text-[10px] text-ink-muted">${s.month.slice(-2)}</span>
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
+/* ============================================================ */
+/* DONUTS                                                       */
+/* ============================================================ */
+const DONUT_COLORS = ['#10B981', '#1A62FF', '#8B5CF6', '#F59E0B', '#EF4444', '#64748B', '#0EA5E9'];
+
+function renderDonutSVG(el, segments, totalLabel, currency) {
+    if (!segments || !segments.length) {
+        el.innerHTML = `<div class="w-full h-full rounded-full border-8 border-slate-100 flex items-center justify-center text-xs text-ink-muted">No data</div>`;
+        return;
+    }
+    const size = 160, r = 60, cx = size / 2, cy = size / 2;
+    const circumference = 2 * Math.PI * r;
+    let offset = 0;
+
+    const slices = segments.map((s, i) => {
+        const pct = (s.percent || 0) / 100;
+        const dash = pct * circumference;
+        const gap = circumference - dash;
+        const rotate = (offset / circumference) * 360 - 90;
+        offset += dash;
+        return `<circle cx="${cx}" cy="${cy}" r="${r}"
+                        fill="none"
+                        stroke="${DONUT_COLORS[i % DONUT_COLORS.length]}"
+                        stroke-width="22"
+                        stroke-dasharray="${dash} ${gap}"
+                        transform="rotate(${rotate} ${cx} ${cy})"/>`;
+    }).join('');
+
+    el.innerHTML = `
+    <svg width="100%" height="100%" viewBox="0 0 ${size} ${size}">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#F1F5F9" stroke-width="22"/>
+      ${slices}
+      <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="9" fill="#64748B">${currency}</text>
+      <text x="${cx}" y="${cy + 10}" text-anchor="middle" font-size="14" font-weight="800" fill="#1E293B">${totalLabel}</text>
+    </svg>`;
+}
+
+function renderDividendDonut(d) {
+    const el = document.getElementById('dividendDonut');
+    const legend = document.getElementById('dividendLegend');
+
+    renderDonutSVG(el, d.segments || [], fmtCompact(d.total || 0), d.currency || 'UGX');
+
+    legend.innerHTML = (d.segments || []).map((s, i) => `
+        <div class="flex items-center justify-between text-xs">
+          <span class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full" style="background:${DONUT_COLORS[i % DONUT_COLORS.length]}"></span>
+            ${escapeHtml(s.label)}
+          </span>
+          <span class="text-right">
+            <span class="font-semibold">${(d.currency || '')} ${fmtCompact(s.amount)}</span>
+            <span class="text-ink-muted ml-2">${s.percent}%</span>
+          </span>
+        </div>
+    `).join('') || `<p class="text-xs text-ink-muted">No dividend runs yet.</p>`;
+}
+
+function renderLoanDonut(d) {
+    const el = document.getElementById('loanDonut');
+    const legend = document.getElementById('loanLegend');
+
+    renderDonutSVG(el, d.segments || [], fmtCompact(d.total || 0), 'Outstanding');
+
+    legend.innerHTML = (d.segments || []).map((s, i) => `
+        <div class="flex items-center justify-between">
+          <span class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full" style="background:${DONUT_COLORS[i % DONUT_COLORS.length]}"></span>
+            ${escapeHtml(s.label)}
+          </span>
+          <span class="font-semibold">${s.percent}%</span>
+        </div>
+    `).join('') || `<p class="text-xs text-ink-muted">No active loans.</p>`;
+}
+
+/* ============================================================ */
+/* TABLES                                                       */
+/* ============================================================ */
+function renderRecentSubs(rows) {
+    const tbody = document.getElementById('recentSubs');
+    if (!rows || !rows.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-ink-muted py-6">No subscriptions yet.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = rows.map(r => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-2.5">
+            <div class="font-medium text-ink">${escapeHtml(r.member)}</div>
+          </td>
+          <td class="px-4 py-2.5 text-right font-medium">${fmtNum(r.amount)} <span class="text-ink-muted">${escapeHtml(r.currency || '')}</span></td>
+          <td class="px-4 py-2.5 text-right text-ink-muted">${r.year}</td>
+          <td class="px-4 py-2.5 text-ink-muted">${fmtDate(r.date)}</td>
+          <td class="px-4 py-2.5"><span class="pill ${r.status === 'paid' ? 'pill-success' : 'pill-warn'}">${escapeHtml(r.status)}</span></td>
+        </tr>
+    `).join('');
+}
+
+function renderRecentShares(rows) {
+    const tbody = document.getElementById('recentShares');
+    if (!rows || !rows.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-ink-muted py-6">No share purchases yet.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = rows.map(r => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-2.5 font-medium text-ink">${escapeHtml(r.member)}</td>
+          <td class="px-4 py-2.5 text-right font-medium">${fmtNum(r.units)}</td>
+          <td class="px-4 py-2.5 text-ink-muted">${fmtDate(r.date)}</td>
+          <td class="px-4 py-2.5"><span class="pill ${r.status === 'completed' ? 'pill-success' : 'pill-warn'}">${escapeHtml(r.status)}</span></td>
+        </tr>
+    `).join('');
+}
+
+function renderDividendHistory(rows) {
+    const tbody = document.getElementById('dividendHistory');
+    if (!rows || !rows.length) {
+        tbody.innerHTML = `<tr><td colspan="3" class="text-center text-ink-muted py-6">No dividends declared yet.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = rows.map(r => {
+        const cls = r.status === 'posted' ? 'pill-success'
+                  : r.status === 'draft'  ? 'pill-warn'
+                  : r.status === 'reversed'? 'pill-danger'
+                  : 'pill-warn';
+        return `
+        <tr>
+          <td class="px-5 py-2.5 font-medium">${r.year}</td>
+          <td class="px-5 py-2.5 text-right font-medium">${fmtNum(r.total)} <span class="text-ink-muted">${escapeHtml(r.currency || '')}</span></td>
+          <td class="px-5 py-2.5"><span class="pill ${cls}">${escapeHtml(r.status)}</span></td>
+        </tr>`;
+    }).join('');
+}
+
+/* ============================================================ */
+/* UPCOMING + SETTINGS                                          */
+/* ============================================================ */
+function renderUpcoming(events) {
+    const box = document.getElementById('upcomingEvents');
+    if (!events || !events.length) {
+        box.innerHTML = `<p class="text-center text-xs text-ink-muted py-3">Nothing on the calendar.</p>`;
+        return;
+    }
+    box.innerHTML = events.map(e => {
+        const color = e.color === 'danger' ? 'danger' : e.color === 'success' ? 'success' : 'brand';
+        return `
+        <div class="flex items-start gap-3">
+          <div class="w-9 h-9 rounded-lg bg-${color}/10 text-${color} flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid ${e.icon}"></i>
+          </div>
+          <div class="min-w-0">
+            <p class="text-sm font-medium truncate">${escapeHtml(e.title)}</p>
+            <p class="text-xs text-ink-muted">${fmtDate(e.date)}</p>
+          </div>
+        </div>`;
+    }).join('');
+}
+
+function renderSettings(s) {
+    document.getElementById('setMinShares').textContent  = fmtNum(s.min_shares) + ' shares';
+    document.getElementById('setSubAmt').textContent     = `${fmtNum(s.yearly_subscription)} ${s.currency}`;
+}
+</script>
+{% endblock %}

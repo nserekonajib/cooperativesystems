@@ -1,0 +1,656 @@
+{% extends "base.html" %}
+{% block title %}Financial Reports — SACCO Pro{% endblock %}
+{% block page_title %}Financial Reports{% endblock %}
+
+{% block content %}
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+  <!-- LEFT: report list -->
+  <aside class="lg:col-span-1">
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-100">
+        <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider">Reports</p>
+      </div>
+      <div id="reportList" class="py-1 max-h-[70vh] overflow-y-auto">
+        <div class="text-center text-ink-muted py-8 text-sm">
+          <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- RIGHT: params + table -->
+  <section class="lg:col-span-3 space-y-5">
+
+    <!-- Params bar -->
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="flex-1 min-w-[180px]">
+          <label class="lbl">Report</label>
+          <select id="reportPicker" class="inp"></select>
+        </div>
+        <div id="paramContainer" class="flex flex-wrap gap-3"></div>
+        <div class="ml-auto flex gap-2">
+          <button onclick="runReport()" class="btn-primary">
+            <i class="fa-solid fa-play mr-2"></i>Run
+          </button>
+          <button onclick="exportCSV()" class="btn-ghost">
+            <i class="fa-solid fa-file-csv mr-2"></i>CSV
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary chips -->
+    <div id="metaBar" class="hidden bg-white rounded-2xl shadow-sm p-4">
+      <div id="metaChips" class="flex flex-wrap gap-2"></div>
+    </div>
+
+    <!-- Table -->
+    <div id="reportWrap" class="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div id="reportHeader" class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+        <h3 id="reportTitle" class="font-bold text-base">Select a report</h3>
+        <span id="reportSubtitle" class="text-xs text-ink-muted"></span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead id="reportThead" class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+            <tr><th class="text-left px-5 py-3">—</th></tr>
+          </thead>
+          <tbody id="reportTbody" class="divide-y divide-slate-100">
+            <tr><td class="text-center text-ink-muted py-12 text-sm">
+              Pick a report and press Run. Click any row to see the underlying entries.
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="totalsBar" class="hidden bg-slate-50 border-t border-slate-100 px-5 py-3 text-sm font-medium"></div>
+    </div>
+  </section>
+</div>
+
+<!-- ============================================================ -->
+<!-- ACCOUNT PICKER (for account_ledger) -->
+<!-- ============================================================ -->
+<div id="accountPickerModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.5);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-base">Select Account</h3>
+      <button onclick="closeAccountPicker()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="p-4">
+      <input id="accountSearch" placeholder="Type to filter…" class="inp mb-3">
+      <div id="accountList" class="max-h-72 overflow-y-auto text-sm divide-y divide-slate-100"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- MEMBER PICKER (for member_statement) -->
+<!-- ============================================================ -->
+<div id="memberPickerModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.5);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-base">Select Member</h3>
+      <button onclick="closeMemberPicker()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="p-4">
+      <input id="memberSearch" placeholder="Type name, ID, or phone…" class="inp mb-3">
+      <div id="memberList" class="max-h-72 overflow-y-auto text-sm divide-y divide-slate-100"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- DRILL-DOWN MODAL -->
+<!-- ============================================================ -->
+<div id="drillModal" class="hidden fixed inset-0 z-[95] flex items-stretch justify-center"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white w-full h-full max-w-6xl mx-auto my-6 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white sticky top-0 z-10">
+      <div class="flex items-center gap-3">
+        <button onclick="closeDrill()" class="w-9 h-9 rounded-xl hover:bg-page flex items-center justify-center text-ink-muted">
+          <i class="fa-solid fa-arrow-left text-lg"></i>
+        </button>
+        <div>
+          <h3 id="drillTitle" class="font-bold text-base">Details</h3>
+          <p id="drillSubtitle" class="text-xs text-ink-muted mt-0.5"></p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="exportDrillCSV()" class="btn-ghost text-xs">
+          <i class="fa-solid fa-file-csv mr-2"></i>Export CSV
+        </button>
+        <button onclick="closeDrill()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Meta chips -->
+    <div id="drillMetaBar" class="hidden px-6 py-3 bg-slate-50 border-b border-slate-100">
+      <div id="drillMetaChips" class="flex flex-wrap gap-2"></div>
+    </div>
+
+    <!-- Table -->
+    <div class="flex-1 overflow-auto">
+      <table class="w-full text-sm">
+        <thead id="drillThead" class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider sticky top-0"></thead>
+        <tbody id="drillTbody" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+
+    <!-- Totals -->
+    <div id="drillTotalsBar" class="hidden bg-slate-50 border-t border-slate-100 px-6 py-3 text-sm font-medium"></div>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   border:none; cursor:pointer; }
+    .btn-primary:hover { filter:brightness(0.92); }
+    .btn-ghost { display:inline-flex; align-items:center; padding:10px 18px; border-radius:10px;
+                 background:#fff; border:1px solid #E2E8F0; color:#64748B; font-weight:600;
+                 font-size:14px; cursor:pointer; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+
+    .rlist-item { display:flex; align-items:center; gap:8px; padding:8px 14px; cursor:pointer;
+                  font-size:13px; color:#334155; border-radius:6px; margin:2px 6px; }
+    .rlist-item:hover { background:#F4F6F9; }
+    .rlist-item.active { background:#EFF6FF; color:#003ECC; font-weight:600; }
+    .rlist-item i { width:14px; font-size:12px; color:#94A3B8; }
+    .rlist-item.active i { color:#1A62FF; }
+
+    .meta-chip { display:inline-flex; align-items:center; gap:6px; background:#F1F5F9;
+                 color:#334155; padding:5px 10px; border-radius:8px; font-size:12px; }
+    .meta-chip .k { color:#64748B; font-size:11px; }
+    .meta-chip .v { font-weight:600; }
+    .meta-chip.ok  { background:#E6F4EA; color:#065F46; }
+    .meta-chip.bad { background:#FEE2E2; color:#991B1B; }
+
+    .rgroup-header { background:#F8FAFC; color:#475569; font-weight:700; font-size:11px;
+                     text-transform:uppercase; letter-spacing:.06em; padding:10px 20px; }
+    .rtotal-row { background:#F8FAFC; font-weight:700; }
+
+    .num { text-align:right; font-variant-numeric: tabular-nums; }
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+
+    /* Drillable rows look clickable */
+    .drillable { cursor: pointer; }
+    .drillable:hover { background: #EFF6FF; }
+    .drillable td:first-child { position: relative; }
+    .drillable td:first-child::before {
+        content:"\f0da"; font-family:"Font Awesome 6 Free"; font-weight:900;
+        color:#94A3B8; margin-right:6px; opacity:.6; font-size:10px;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE                                                        */
+/* ============================================================ */
+const state = {
+    catalog: [],
+    current: null,
+    params: {},
+    drill: null,  // last drill spec (for CSV export)
+};
+
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtMoney(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+}
+function fmtDate(iso) {
+    if (!iso) return '';
+    return String(iso).slice(0, 10);
+}
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function debounce(fn, ms = 300) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+async function req(url, opts = {}) {
+    const r = await fetch(url, { credentials:'same-origin', headers:{'Content-Type':'application/json'}, ...opts });
+    return r.json();
+}
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function daysAgo(n) {
+    const d = new Date(); d.setDate(d.getDate() - n);
+    return d.toISOString().slice(0,10);
+}
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    const cat = await req('/reports/api/catalog');
+    if (!cat.ok) return;
+    state.catalog = cat.catalog;
+
+    const list = document.getElementById('reportList');
+    list.innerHTML = state.catalog.map(r => `
+        <div class="rlist-item" data-key="${escapeHtml(r.key)}" onclick="selectReport('${r.key}')">
+            <i class="fa-solid fa-file-lines"></i>
+            <span>${escapeHtml(r.title)}</span>
+        </div>
+    `).join('');
+
+    const picker = document.getElementById('reportPicker');
+    picker.innerHTML = state.catalog.map(r =>
+        `<option value="${escapeHtml(r.key)}">${escapeHtml(r.title)}</option>`
+    ).join('');
+    picker.addEventListener('change', () => selectReport(picker.value));
+
+    if (state.catalog.length) selectReport(state.catalog[0].key);
+})();
+
+/* ============================================================ */
+/* REPORT SELECTION                                             */
+/* ============================================================ */
+function selectReport(key) {
+    const meta = state.catalog.find(r => r.key === key);
+    if (!meta) return;
+    state.current = meta;
+    state.params  = {};
+
+    document.querySelectorAll('.rlist-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.key === key);
+    });
+    document.getElementById('reportPicker').value = key;
+    document.getElementById('reportTitle').textContent = meta.title;
+    document.getElementById('reportSubtitle').textContent = '';
+    document.getElementById('reportTbody').innerHTML =
+        `<tr><td class="text-center text-ink-muted py-12 text-sm">Press Run to load.</td></tr>`;
+    document.getElementById('reportThead').innerHTML =
+        `<tr><th class="text-left px-5 py-3">—</th></tr>`;
+    document.getElementById('totalsBar').classList.add('hidden');
+    document.getElementById('metaBar').classList.add('hidden');
+
+    renderParams(meta);
+}
+
+/* ============================================================ */
+/* PARAMS                                                       */
+/* ============================================================ */
+function renderParams(meta) {
+    const wrap = document.getElementById('paramContainer');
+    wrap.innerHTML = '';
+    const p = meta.params || [];
+
+    if (p.includes('from')) {
+        state.params.from = daysAgo(30);
+        wrap.insertAdjacentHTML('beforeend', paramInput('from', 'From', 'date', state.params.from));
+    }
+    if (p.includes('to')) {
+        state.params.to = todayStr();
+        wrap.insertAdjacentHTML('beforeend', paramInput('to', 'To', 'date', state.params.to));
+    }
+    if (p.includes('as_of')) {
+        state.params.as_of = todayStr();
+        wrap.insertAdjacentHTML('beforeend', paramInput('as_of', 'As of', 'date', state.params.as_of));
+    }
+    if (p.includes('year')) {
+        state.params.year = String(new Date().getFullYear());
+        wrap.insertAdjacentHTML('beforeend', paramInput('year', 'Year', 'number', state.params.year));
+    }
+    if (p.includes('account_id')) {
+        state.params.account_id = '';
+        wrap.insertAdjacentHTML('beforeend', `
+            <div class="min-w-[200px]">
+              <label class="lbl">Account</label>
+              <button type="button" onclick="openAccountPicker()" class="inp text-left flex items-center justify-between">
+                <span id="accountLabel">— Select —</span>
+                <i class="fa-solid fa-chevron-down text-ink-muted"></i>
+              </button>
+            </div>
+        `);
+    }
+    if (p.includes('member_id')) {
+        state.params.member_id = '';
+        wrap.insertAdjacentHTML('beforeend', `
+            <div class="min-w-[200px]">
+              <label class="lbl">Member</label>
+              <button type="button" onclick="openMemberPicker()" class="inp text-left flex items-center justify-between">
+                <span id="memberLabel">— Select —</span>
+                <i class="fa-solid fa-chevron-down text-ink-muted"></i>
+              </button>
+            </div>
+        `);
+    }
+}
+
+function paramInput(name, label, type, value) {
+    return `
+        <div class="min-w-[140px]">
+          <label class="lbl">${escapeHtml(label)}</label>
+          <input type="${type}" class="inp param-input" data-name="${escapeHtml(name)}"
+                 value="${escapeHtml(value)}">
+        </div>
+    `;
+}
+
+document.addEventListener('input', e => {
+    if (e.target.classList.contains('param-input')) {
+        state.params[e.target.dataset.name] = e.target.value;
+    }
+});
+
+/* ============================================================ */
+/* RUN                                                          */
+/* ============================================================ */
+async function runReport() {
+    if (!state.current) return;
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(state.params)) {
+        if (v === '' || v === null || v === undefined) continue;
+        if (k.startsWith('_')) continue;
+        qs.set(k, v);
+    }
+    const url = `/reports/api/run?report=${encodeURIComponent(state.current.key)}&${qs}`;
+    document.getElementById('reportTbody').innerHTML =
+        `<tr><td class="text-center text-ink-muted py-12 text-sm"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Running…</td></tr>`;
+
+    const data = await req(url);
+    if (!data.ok) {
+        document.getElementById('reportTbody').innerHTML =
+            `<tr><td class="text-center text-red-500 py-12 text-sm">${escapeHtml(data.error || 'Failed')}</td></tr>`;
+        return;
+    }
+    renderReport(data);
+}
+
+/* ============================================================ */
+/* RENDER                                                       */
+/* ============================================================ */
+function renderReport(data) {
+    const cols = data.columns || [];
+    const title = data.title || data.report;
+    document.getElementById('reportTitle').textContent = title;
+
+    const meta = data.meta || {};
+    const parts = [];
+    if (meta.from)  parts.push(`From ${fmtDate(meta.from)}`);
+    if (meta.to)    parts.push(`To ${fmtDate(meta.to)}`);
+    if (meta.as_of) parts.push(`As of ${fmtDate(meta.as_of)}`);
+    document.getElementById('reportSubtitle').textContent = parts.join(' · ');
+
+    document.getElementById('reportThead').innerHTML =
+        `<tr>${cols.map(c =>
+            `<th class="${c.align === 'right' ? 'text-right' : 'text-left'} px-5 py-3 font-semibold">${escapeHtml(c.label)}</th>`
+        ).join('')}</tr>`;
+
+    const tbody = document.getElementById('reportTbody');
+    tbody.innerHTML = '';
+
+    if (data.groups && data.groups.length) {
+        for (const g of data.groups) {
+            tbody.insertAdjacentHTML('beforeend',
+                `<tr><td colspan="${cols.length}" class="rgroup-header">${escapeHtml(g.label)}</td></tr>`);
+            for (const row of (g.rows || [])) {
+                tbody.insertAdjacentHTML('beforeend', rowHtml(row, cols));
+            }
+            if (g.totals) {
+                tbody.insertAdjacentHTML('beforeend', totalsRowHtml(g.totals, cols));
+            }
+        }
+    } else {
+        const rows = data.rows || [];
+        if (!rows.length) {
+            tbody.innerHTML = `<tr><td colspan="${cols.length}" class="text-center text-ink-muted py-12 text-sm">
+                No data for this period.
+            </td></tr>`;
+        } else {
+            for (const row of rows) {
+                tbody.insertAdjacentHTML('beforeend', rowHtml(row, cols));
+            }
+        }
+    }
+
+    if (data.totals && Object.keys(data.totals).length) {
+        document.getElementById('totalsBar').classList.remove('hidden');
+        document.getElementById('totalsBar').innerHTML = Object.entries(data.totals)
+            .map(([k, v]) => {
+                const label = cols.find(c => c.key === k)?.label || k;
+                return `<span class="mr-6"><span class="text-ink-muted">${escapeHtml(label)}:</span> <span class="font-bold">${fmtMoney(v)}</span></span>`;
+            }).join('');
+    } else {
+        document.getElementById('totalsBar').classList.add('hidden');
+    }
+
+    const chipWrap = document.getElementById('metaChips');
+    const metaBar  = document.getElementById('metaBar');
+    const entries  = Object.entries(meta).filter(([k]) => k !== 'error');
+    if (entries.length) {
+        metaBar.classList.remove('hidden');
+        chipWrap.innerHTML = entries.map(([k, v]) => {
+            if (typeof v === 'boolean') {
+                return `<span class="meta-chip ${v ? 'ok' : 'bad'}"><span class="v">${escapeHtml(k)}: ${v ? '✓' : '✗'}</span></span>`;
+            }
+            const val = typeof v === 'number' ? fmtMoney(v) : escapeHtml(String(v));
+            return `<span class="meta-chip"><span class="k">${escapeHtml(k)}:</span><span class="v">${val}</span></span>`;
+        }).join('');
+    } else {
+        metaBar.classList.add('hidden');
+    }
+}
+
+function rowHtml(row, cols) {
+    const drillable = row._drill ? 'drillable' : '';
+    const drillAttr = row._drill
+        ? `data-drill='${escapeHtml(JSON.stringify(row._drill))}' onclick="openDrillFromRow(this)"`
+        : '';
+    return `<tr class="hover:bg-slate-50 transition ${drillable}" ${drillAttr}>${cols.map(c => {
+        let v = row[c.key];
+        let cls = c.align === 'right' ? 'text-right num' : 'text-left';
+        if (c.type === 'money')  v = fmtMoney(v);
+        else if (c.type === 'number') v = fmtNum(v);
+        else if (c.type === 'date')   v = fmtDate(v);
+        else v = escapeHtml(v ?? '');
+        return `<td class="px-5 py-2.5 ${cls} text-sm">${v}</td>`;
+    }).join('')}</tr>`;
+}
+
+function totalsRowHtml(totals, cols) {
+    return `<tr class="rtotal-row">${cols.map(c => {
+        const v = totals[c.key];
+        const cls = c.align === 'right' ? 'text-right num' : 'text-left';
+        if (v === undefined) {
+            return `<td class="px-5 py-2.5 ${cls} text-sm">${c === cols[0] ? 'TOTAL' : ''}</td>`;
+        }
+        const formatted = c.type === 'money' ? fmtMoney(v) : (typeof v === 'number' ? fmtNum(v) : escapeHtml(String(v)));
+        return `<td class="px-5 py-2.5 ${cls} text-sm">${formatted}</td>`;
+    }).join('')}</tr>`;
+}
+
+/* ============================================================ */
+/* DRILL                                                        */
+/* ============================================================ */
+function openDrillFromRow(tr) {
+    const raw = tr.getAttribute('data-drill');
+    if (!raw) return;
+    let spec;
+    try { spec = JSON.parse(raw); } catch { return; }
+    openDrill(spec);
+}
+
+async function openDrill(spec) {
+    state.drill = spec;
+    document.getElementById('drillModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    document.getElementById('drillTitle').textContent = spec.title || 'Details';
+    document.getElementById('drillSubtitle').textContent = '';
+    document.getElementById('drillMetaBar').classList.add('hidden');
+    document.getElementById('drillTotalsBar').classList.add('hidden');
+    document.getElementById('drillThead').innerHTML = '';
+    document.getElementById('drillTbody').innerHTML =
+        `<tr><td class="text-center text-ink-muted py-16 text-sm">
+            <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading details…
+        </td></tr>`;
+
+    const url = `/reports/api/drill?d=${encodeURIComponent(JSON.stringify(spec))}`;
+    const data = await req(url);
+    if (!data.ok) {
+        document.getElementById('drillTbody').innerHTML =
+            `<tr><td class="text-center text-red-500 py-16 text-sm">${escapeHtml(data.error || 'Failed')}</td></tr>`;
+        return;
+    }
+    renderDrill(data);
+}
+
+function renderDrill(data) {
+    const cols = data.columns || [];
+    const rows = data.rows || [];
+    document.getElementById('drillTitle').textContent = data.title || 'Details';
+    document.getElementById('drillSubtitle').textContent = `${rows.length} row${rows.length === 1 ? '' : 's'}`;
+
+    document.getElementById('drillThead').innerHTML =
+        `<tr>${cols.map(c =>
+            `<th class="${c.align === 'right' ? 'text-right' : 'text-left'} px-5 py-3 font-semibold">${escapeHtml(c.label)}</th>`
+        ).join('')}</tr>`;
+
+    const tbody = document.getElementById('drillTbody');
+    if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="${cols.length}" class="text-center text-ink-muted py-12 text-sm">
+            No matching entries.
+        </td></tr>`;
+    } else {
+        tbody.innerHTML = rows.map(row => rowHtml(row, cols)).join('');
+    }
+
+    if (data.totals && Object.keys(data.totals).length) {
+        document.getElementById('drillTotalsBar').classList.remove('hidden');
+        document.getElementById('drillTotalsBar').innerHTML = Object.entries(data.totals)
+            .map(([k, v]) => {
+                const label = cols.find(c => c.key === k)?.label || k;
+                return `<span class="mr-6"><span class="text-ink-muted">${escapeHtml(label)}:</span> <span class="font-bold">${fmtMoney(v)}</span></span>`;
+            }).join('');
+    } else {
+        document.getElementById('drillTotalsBar').classList.add('hidden');
+    }
+}
+
+function closeDrill() {
+    document.getElementById('drillModal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+function exportDrillCSV() {
+    if (!state.drill) return;
+    // build a CSV from the current table contents
+    const cols = Array.from(document.querySelectorAll('#drillThead th')).map(th => th.textContent.trim());
+    const rows = Array.from(document.querySelectorAll('#drillTbody tr')).map(tr =>
+        Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim())
+    );
+    const lines = [cols.join(',')].concat(rows.map(r =>
+        r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
+    ));
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `drill_${(state.drill.title || 'details').replace(/\W+/g, '_')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+/* ============================================================ */
+/* CSV EXPORT                                                   */
+/* ============================================================ */
+function exportCSV() {
+    if (!state.current) return;
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(state.params)) {
+        if (v === '' || v === null || v === undefined) continue;
+        if (k.startsWith('_')) continue;
+        qs.set(k, v);
+    }
+    window.location.href = `/reports/api/export?report=${encodeURIComponent(state.current.key)}&${qs}`;
+}
+
+/* ============================================================ */
+/* ACCOUNT PICKER                                               */
+/* ============================================================ */
+async function openAccountPicker() {
+    document.getElementById('accountPickerModal').classList.remove('hidden');
+    const list = document.getElementById('accountList');
+    list.innerHTML = `<div class="text-center text-ink-muted py-6"><i class="fa-solid fa-circle-notch fa-spin"></i></div>`;
+    const data = await req('/reports/api/accounts');
+    if (!data.ok) { list.innerHTML = `<div class="p-3 text-red-500">Failed</div>`; return; }
+    list.innerHTML = data.accounts.map(a => `
+        <div class="p-3 hover:bg-page cursor-pointer" onclick="pickAccount('${a.id}', '${escapeHtml(a.code)} · ${escapeHtml(a.name)}')">
+            <div class="font-medium">${escapeHtml(a.code)} · ${escapeHtml(a.name)}</div>
+            <div class="text-xs text-ink-muted">${escapeHtml(a.category)} · Balance ${fmtMoney(a.balance)}</div>
+        </div>
+    `).join('');
+}
+function closeAccountPicker() { document.getElementById('accountPickerModal').classList.add('hidden'); }
+function pickAccount(id, label) {
+    state.params.account_id = id;
+    document.getElementById('accountLabel').textContent = label;
+    closeAccountPicker();
+}
+
+/* ============================================================ */
+/* MEMBER PICKER                                                */
+/* ============================================================ */
+function openMemberPicker() {
+    document.getElementById('memberPickerModal').classList.remove('hidden');
+    searchMembers('');
+}
+function closeMemberPicker() { document.getElementById('memberPickerModal').classList.add('hidden'); }
+async function searchMembers(q) {
+    const list = document.getElementById('memberList');
+    list.innerHTML = `<div class="text-center text-ink-muted py-6"><i class="fa-solid fa-circle-notch fa-spin"></i></div>`;
+    const data = await req('/reports/api/members/search?q=' + encodeURIComponent(q));
+    if (!data.ok) { list.innerHTML = `<div class="p-3 text-red-500">Failed</div>`; return; }
+    list.innerHTML = data.members.map(m => `
+        <div class="p-3 hover:bg-page cursor-pointer" onclick="pickMember('${m.id}', '${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)} · ${escapeHtml(m.member_id)}')">
+            <div class="font-medium">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</div>
+            <div class="text-xs text-ink-muted">ID ${escapeHtml(m.member_id)} · ${escapeHtml(m.phone || '')}</div>
+        </div>
+    `).join('') || `<div class="p-3 text-ink-muted text-sm">No matches.</div>`;
+}
+document.getElementById('memberSearch').addEventListener('input', debounce(e => searchMembers(e.target.value.trim()), 300));
+function pickMember(id, label) {
+    state.params.member_id = id;
+    document.getElementById('memberLabel').textContent = label;
+    closeMemberPicker();
+}
+
+/* ============================================================ */
+/* ESC KEY                                                      */
+/* ============================================================ */
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        if (!document.getElementById('drillModal').classList.contains('hidden')) return closeDrill();
+        if (!document.getElementById('memberPickerModal').classList.contains('hidden')) return closeMemberPicker();
+        if (!document.getElementById('accountPickerModal').classList.contains('hidden')) return closeAccountPicker();
+    }
+});
+</script>
+{% endblock %}

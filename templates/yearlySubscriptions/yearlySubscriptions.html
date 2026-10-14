@@ -1,0 +1,771 @@
+{% extends "base.html" %}
+{% block title %}Yearly Subscriptions — SACCO Pro{% endblock %}
+{% block page_title %}Yearly Subscriptions{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- KPI CARDS                                                     -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Collected</p>
+        <p id="kpiCollected" class="text-2xl font-bold mt-1 text-success">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+        <i class="fa-solid fa-coins"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      Rate: <span id="kpiRate" class="font-semibold text-ink">—</span>
+    </p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Outstanding</p>
+        <p id="kpiOutstanding" class="text-2xl font-bold mt-1 text-warning">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+        <i class="fa-solid fa-hourglass-half"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Due: <span id="kpiDue" class="font-semibold text-ink">—</span></p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Fully Paid</p>
+        <p id="kpiPaid" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      <span id="kpiPending" class="font-semibold text-ink">0</span> pending ·
+      <span id="kpiPartial" class="font-semibold text-ink">0</span> partial
+    </p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Waived</p>
+        <p id="kpiWaived" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
+        <i class="fa-solid fa-hand-holding-heart"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Total records: <span id="kpiTotal" class="font-semibold text-ink">—</span></p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TOOLBAR                                                       -->
+<!-- ============================================================ -->
+<div class="flex flex-wrap items-center gap-3 mb-5">
+  <div class="relative flex-1 min-w-[220px] max-w-md">
+    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft text-sm"></i>
+    <input id="searchInput" placeholder="Search member name, ID or phone…"
+           class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-brand bg-white">
+  </div>
+  <select id="yearFilter" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+    <option value="">Loading…</option>
+  </select>
+  <select id="statusFilter" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+    <option value="">All statuses</option>
+    <option value="pending">Pending</option>
+    <option value="partial">Partial</option>
+    <option value="paid">Paid</option>
+    <option value="overdue">Overdue</option>
+    <option value="waived">Waived</option>
+    <option value="cancelled">Cancelled</option>
+  </select>
+  <button onclick="openBulkCreate()"
+          class="ml-auto inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-page text-ink-muted hover:text-ink text-sm font-semibold shadow-sm transition">
+    <i class="fa-solid fa-layer-group"></i> Bulk create year
+  </button>
+  <button onclick="openCreateModal()"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-white text-sm font-semibold shadow-sm transition">
+    <i class="fa-solid fa-plus"></i> New Subscription
+  </button>
+</div>
+
+<!-- ============================================================ -->
+<!-- TABLE                                                        -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Member</th>
+          <th class="text-left px-5 py-3 font-semibold">Year</th>
+          <th class="text-right px-5 py-3 font-semibold">Due</th>
+          <th class="text-right px-5 py-3 font-semibold">Paid</th>
+          <th class="text-right px-5 py-3 font-semibold">Balance</th>
+          <th class="text-left px-5 py-3 font-semibold">Source</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+          <th class="px-5 py-3"></th>
+        </tr>
+      </thead>
+      <tbody id="subsTable" class="divide-y divide-slate-100">
+        <tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+    <span id="pageInfo">—</span>
+    <div class="flex gap-1">
+      <button id="prevBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+      <button id="nextBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- CREATE MODAL                                                  -->
+<!-- ============================================================ -->
+<div id="createModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-base">New Subscription</h3>
+      <button onclick="closeCreateModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form id="createForm" class="p-6 space-y-5">
+      <div>
+        <label class="lbl">Member *</label>
+        <input type="text" id="memberSearch" placeholder="Type name, ID, or phone…"
+               class="inp" autocomplete="off">
+        <select name="member_id" id="memberPicker" size="4"
+                class="inp mt-2 h-32 hidden"></select>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Year *</label>
+          <input name="year" type="number" min="2000" max="2100" class="inp" id="createYear">
+        </div>
+        <div>
+          <label class="lbl">Amount due</label>
+          <input name="amount_due" type="number" min="0" step="1" class="inp" placeholder="From settings">
+        </div>
+      </div>
+      <div>
+        <label class="lbl">Notes</label>
+        <textarea name="notes" rows="2" class="inp"></textarea>
+      </div>
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeCreateModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" class="btn-primary" id="createSubmit">
+          <i class="fa-solid fa-plus mr-2"></i>Create
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PAY MODAL                                                     -->
+<!-- ============================================================ -->
+<div id="payModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div>
+        <h3 class="font-bold text-base">Record Payment</h3>
+        <p id="payLabel" class="text-xs text-ink-muted mt-0.5">—</p>
+      </div>
+      <button onclick="closePayModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form id="payForm" class="p-6 space-y-5">
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm space-y-1">
+        <div class="flex justify-between"><span class="text-ink-muted">Due</span><span id="payDue">—</span></div>
+        <div class="flex justify-between"><span class="text-ink-muted">Paid</span><span id="payPaid">—</span></div>
+        <div class="flex justify-between font-bold pt-1 border-t border-slate-200 mt-1"><span>Balance</span><span id="payBalance">—</span></div>
+      </div>
+      <div>
+        <label class="lbl">Amount *</label>
+        <input name="amount" type="number" min="1" step="1" required class="inp">
+      </div>
+      <div>
+        <label class="lbl">Method</label>
+        <div class="grid grid-cols-2 gap-3 p-1 bg-slate-100 rounded-xl">
+          <button type="button" data-method="cash" class="pm-btn py-2.5 rounded-lg text-sm font-semibold bg-white shadow-sm text-brand transition">
+            <i class="fa-solid fa-money-bill-wave mr-2"></i>Cash
+          </button>
+          <button type="button" data-method="online" class="pm-btn py-2.5 rounded-lg text-sm font-semibold text-ink-muted transition">
+            <i class="fa-solid fa-mobile-screen-button mr-2"></i>Online
+          </button>
+          <input type="hidden" name="method" id="payMethod" value="cash">
+        </div>
+      </div>
+      <div id="payOnlineBlock" class="hidden grid grid-cols-2 gap-3">
+        <div>
+          <label class="lbl">Provider</label>
+          <select name="provider" class="inp">
+            <option value="MTN">MTN</option>
+            <option value="AIRTEL">Airtel</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Phone</label>
+          <input name="phone" class="inp" placeholder="+256…">
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closePayModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" class="btn-primary" id="paySubmit">
+          <i class="fa-solid fa-circle-plus mr-2"></i>Record
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- BULK CREATE MODAL                                             -->
+<!-- ============================================================ -->
+<div id="bulkModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-base">Bulk create year</h3>
+      <button onclick="closeBulkModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <div class="p-6 space-y-4">
+      <div class="rounded-xl border border-warning/20 bg-warning/5 p-3 text-xs text-ink">
+        <i class="fa-solid fa-circle-info text-warning mr-1"></i>
+        Creates a subscription record for every active member who doesn't have one for the chosen year.
+        Amount defaults to the institution's annual subscription fee.
+      </div>
+      <div>
+        <label class="lbl">Year</label>
+        <input id="bulkYear" type="number" min="2000" max="2100" class="inp">
+      </div>
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button onclick="closeBulkModal()" class="btn-ghost">Cancel</button>
+        <button onclick="submitBulk()" class="btn-primary" id="bulkSubmit">
+          <i class="fa-solid fa-layer-group mr-2"></i>Create
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- DETAIL DRAWER                                                 -->
+<!-- ============================================================ -->
+<div id="detailModal" class="hidden fixed inset-0 z-[75] flex items-stretch justify-center"
+     style="background:rgba(0,0,0,.5); backdrop-filter: blur(2px);">
+  <div class="bg-white w-full h-full flex flex-col">
+    <div class="flex items-center justify-between px-8 py-5 border-b border-slate-100 bg-white sticky top-0 z-10">
+      <div class="flex items-center gap-4">
+        <button onclick="closeDetailModal()" class="w-10 h-10 rounded-xl hover:bg-page flex items-center justify-center text-ink-muted">
+          <i class="fa-solid fa-arrow-left text-lg"></i>
+        </button>
+        <div>
+          <h3 class="font-bold text-lg" id="dtlTitle">—</h3>
+          <p class="text-xs text-ink-muted mt-0.5" id="dtlSubtitle">—</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2" id="dtlActions"></div>
+    </div>
+    <div class="flex-1 overflow-y-auto p-8 bg-page">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1 space-y-5">
+          <div class="rounded-2xl bg-gradient-to-br from-brand to-brand-dark text-white p-6 shadow-md">
+            <p class="text-xs uppercase tracking-wider opacity-80">Year</p>
+            <p id="dtlYear" class="text-3xl font-extrabold mt-1">—</p>
+            <div class="mt-4 text-xs opacity-90 space-y-1">
+              <div class="flex justify-between"><span>Due</span><span id="dtlDue">—</span></div>
+              <div class="flex justify-between"><span>Paid</span><span id="dtlPaid">—</span></div>
+              <div class="flex justify-between font-semibold"><span>Balance</span><span id="dtlBalance">—</span></div>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 text-sm space-y-2">
+            <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1">Member</p>
+            <p class="font-semibold" id="dtlMemberName">—</p>
+            <p class="text-xs text-ink-muted" id="dtlMemberId">—</p>
+            <p class="text-xs text-ink-muted" id="dtlMemberPhone">—</p>
+            <p class="text-xs text-ink-muted" id="dtlMemberEmail">—</p>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 text-sm space-y-2">
+            <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1">Details</p>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Status</span><span id="dtlStatus">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Source</span><span id="dtlSource">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Due date</span><span id="dtlDueDate">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Last payment</span><span id="dtlLastPay">—</span></div>
+          </div>
+        </div>
+        <div class="lg:col-span-2">
+          <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h4 class="text-sm font-bold">Payment History</h4>
+              <span class="text-xs text-ink-muted" id="dtlPayCount">—</span>
+            </div>
+            <div class="overflow-x-auto max-h-[500px]">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider sticky top-0 text-[11px]">
+                  <tr>
+                    <th class="text-left px-5 py-2.5 font-semibold">Date</th>
+                    <th class="text-left px-5 py-2.5 font-semibold">Method</th>
+                    <th class="text-right px-5 py-2.5 font-semibold">Amount</th>
+                    <th class="text-left px-5 py-2.5 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="dtlPayments" class="divide-y divide-slate-100">
+                  <tr><td colspan="4" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; transition:all .15s; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   transition:.15s; border:none; cursor:pointer; }
+    .btn-primary:hover { filter:brightness(0.92); }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { display:inline-flex; align-items:center; padding:10px 18px; border-radius:10px;
+                 background:#fff; border:1px solid #E2E8F0;
+                 color:#64748B; font-weight:600; font-size:14px; cursor:pointer; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .s-pending    { background:#FEF3C7; color:#92400E; }
+    .s-partial    { background:#DBEAFE; color:#1E40AF; }
+    .s-paid       { background:#E6F4EA; color:#065F46; }
+    .s-overdue    { background:#FEE2E2; color:#991B1B; }
+    .s-waived     { background:#EDE9FE; color:#6D28D9; }
+    .s-cancelled  { background:#E2E8F0; color:#334155; }
+    .member-avatar  { width:36px; height:36px; border-radius:50%;
+                      background:linear-gradient(135deg,#1A62FF,#003ECC);
+                      color:#fff; display:inline-flex; align-items:center; justify-content:center;
+                      font-weight:700; font-size:13px; flex-shrink:0; }
+    .action-btn { display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600;
+                  padding:6px 12px; border-radius:8px; border:1px solid transparent; cursor:pointer; transition:.15s; }
+    .action-pay    { background:#1A62FF; color:#fff; }
+    .action-pay:hover { background:#003ECC; }
+    .action-waive  { background:#EDE9FE; color:#6D28D9; }
+    .action-waive:hover { background:#DDD6FE; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE                                                        */
+/* ============================================================ */
+const state = { page: 1, per_page: 20, q: '', status: '', year: null, total: 0 };
+let currentSubId = null;
+let currentSub = null;
+
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtCompact(n) {
+    n = Number(n || 0);
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return String(n);
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
+}
+function initials(f, l) { return ((f || '?')[0] + (l || '')[0] || '?').toUpperCase(); }
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function debounce(fn, ms = 300) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        ...opts,
+    });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, status: r.status, body };
+}
+
+/* ============================================================ */
+/* BOOT                                                         */
+/* ============================================================ */
+(async function init() {
+    await loadYears();
+    await Promise.all([loadStats(), loadList()]);
+})();
+
+async function loadYears() {
+    const { ok, body } = await req('/subscriptions/api/years');
+    if (!ok || !body.ok) return;
+    const sel = document.getElementById('yearFilter');
+    const cur = body.current;
+    state.year = cur;
+    sel.innerHTML = body.years.map(y =>
+        `<option value="${y}" ${y === cur ? 'selected' : ''}>${y}</option>`
+    ).join('');
+    document.getElementById('createYear').value = cur;
+    document.getElementById('bulkYear').value = cur;
+}
+
+/* ============================================================ */
+/* STATS                                                        */
+/* ============================================================ */
+async function loadStats() {
+    const { ok, body } = await req(`/subscriptions/api/stats?year=${state.year}`);
+    if (!ok || !body.ok) return;
+    const s = body.stats;
+    document.getElementById('kpiCollected').textContent  = fmtCompact(s.total_paid);
+    document.getElementById('kpiRate').textContent       = s.collection_rate + '%';
+    document.getElementById('kpiOutstanding').textContent= fmtCompact(s.total_outstanding);
+    document.getElementById('kpiDue').textContent        = fmtCompact(s.total_due);
+    document.getElementById('kpiPaid').textContent       = s.paid;
+    document.getElementById('kpiPending').textContent    = s.pending;
+    document.getElementById('kpiPartial').textContent    = s.partial;
+    document.getElementById('kpiWaived').textContent     = s.waived;
+    document.getElementById('kpiTotal').textContent      = s.total;
+}
+
+/* ============================================================ */
+/* LIST                                                         */
+/* ============================================================ */
+async function loadList() {
+    const tbody = document.getElementById('subsTable');
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const qs = new URLSearchParams({
+        page: state.page, per_page: state.per_page,
+        q: state.q, status: state.status, year: state.year,
+    });
+    const { ok, body } = await req('/subscriptions/api/list?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-500 py-10 text-sm">Load failed</td></tr>`;
+        return;
+    }
+    state.total = body.total;
+    if (!body.subscriptions.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No subscriptions for ${state.year}.</td></tr>`;
+    } else {
+        tbody.innerHTML = body.subscriptions.map(s => {
+            const m = s.members || {};
+            const due = Number(s.amount_due || 0);
+            const paid = Number(s.amount_paid || 0);
+            const balance = due - paid;
+            return `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-3">
+                  <div class="member-avatar">${initials(m.first_name, m.last_name)}</div>
+                  <div>
+                    <div class="font-semibold text-ink">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</div>
+                    <div class="text-xs text-ink-muted">ID ${escapeHtml(m.member_id || '')}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-5 py-3 font-mono text-xs">${s.subscription_year}</td>
+              <td class="px-5 py-3 text-right font-medium">${fmtNum(due)} <span class="text-xs text-ink-muted">${escapeHtml(s.currency)}</span></td>
+              <td class="px-5 py-3 text-right text-success font-medium">${fmtNum(paid)}</td>
+              <td class="px-5 py-3 text-right font-medium ${balance > 0 ? 'text-warning' : ''}">${fmtNum(balance)}</td>
+              <td class="px-5 py-3 text-xs text-ink-muted">${escapeHtml(s.source)}</td>
+              <td class="px-5 py-3"><span class="pill s-${s.status}">${escapeHtml(s.status)}</span></td>
+              <td class="px-5 py-3 text-right">
+                <button onclick="openDetail('${s.id}')"
+                        class="w-8 h-8 rounded-lg hover:bg-page text-ink-muted hover:text-brand transition">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+              </td>
+            </tr>`;
+        }).join('');
+    }
+
+    const from = state.total ? (state.page - 1) * state.per_page + 1 : 0;
+    const to   = Math.min(state.page * state.per_page, state.total);
+    document.getElementById('pageInfo').textContent =
+        state.total ? `${from}–${to} of ${state.total}` : '0 results';
+    document.getElementById('prevBtn').disabled = state.page <= 1;
+    document.getElementById('nextBtn').disabled = to >= state.total;
+}
+
+document.getElementById('prevBtn').onclick = () => { if (state.page > 1) { state.page--; loadList(); } };
+document.getElementById('nextBtn').onclick = () => {
+    if (state.page * state.per_page < state.total) { state.page++; loadList(); }
+};
+document.getElementById('searchInput').addEventListener('input', debounce(e => {
+    state.q = e.target.value.trim(); state.page = 1; loadList();
+}, 350));
+document.getElementById('statusFilter').addEventListener('change', e => {
+    state.status = e.target.value; state.page = 1; loadList();
+});
+document.getElementById('yearFilter').addEventListener('change', e => {
+    state.year = Number(e.target.value); state.page = 1;
+    loadStats(); loadList();
+});
+
+/* ============================================================ */
+/* CREATE                                                       */
+/* ============================================================ */
+function openCreateModal() {
+    document.getElementById('createForm').reset();
+    document.getElementById('createYear').value = state.year;
+    document.getElementById('memberPicker').classList.add('hidden');
+    document.getElementById('memberPicker').innerHTML = '';
+    document.getElementById('memberSearch').value = '';
+    document.getElementById('createModal').classList.remove('hidden');
+}
+function closeCreateModal() { document.getElementById('createModal').classList.add('hidden'); }
+
+document.getElementById('memberSearch').addEventListener('input', debounce(async e => {
+    const q = e.target.value.trim();
+    const picker = document.getElementById('memberPicker');
+    if (!q) { picker.classList.add('hidden'); return; }
+    const { ok, body } = await req(
+        `/subscriptions/api/members/search?q=${encodeURIComponent(q)}&year=${state.year}`);
+    if (!ok || !body.ok) return;
+    picker.innerHTML = body.members.map(m =>
+        `<option value="${m.id}">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)} · ID ${escapeHtml(m.member_id)}</option>`
+    ).join('');
+    picker.classList.toggle('hidden', !body.members.length);
+}, 300));
+
+document.getElementById('createForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    const mid = d.member_id || document.getElementById('memberPicker').value;
+    if (!mid) { showToast('Please select a member', false); return; }
+
+    const payload = {
+        member_id: mid,
+        year: Number(d.year),
+        amount_due: d.amount_due || null,
+        notes: d.notes || null,
+    };
+
+    const btn = document.getElementById('createSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Creating…';
+
+    const { ok, body } = await req('/subscriptions/api/create', {
+        method: 'POST', body: JSON.stringify(payload),
+    });
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Create';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Create failed', false); return; }
+    closeCreateModal();
+    showToast('Subscription created', true);
+    loadList(); loadStats();
+});
+
+/* ============================================================ */
+/* BULK CREATE                                                  */
+/* ============================================================ */
+function openBulkCreate() {
+    document.getElementById('bulkYear').value = state.year;
+    document.getElementById('bulkModal').classList.remove('hidden');
+}
+function closeBulkModal() { document.getElementById('bulkModal').classList.add('hidden'); }
+async function submitBulk() {
+    const year = Number(document.getElementById('bulkYear').value);
+    const btn = document.getElementById('bulkSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Working…';
+
+    const { ok, body } = await req('/subscriptions/api/bulk-create', {
+        method: 'POST', body: JSON.stringify({ year }),
+    });
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-layer-group mr-2"></i>Create';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Bulk create failed', false); return; }
+    closeBulkModal();
+    showToast(body.created > 0 ? `${body.created} subscriptions created` : 'Nothing to do', true);
+    loadList(); loadStats();
+}
+
+/* ============================================================ */
+/* PAY                                                          */
+/* ============================================================ */
+function openPayModal(sub) {
+    currentSub = sub;
+    document.getElementById('payLabel').textContent =
+        `Year ${sub.subscription_year} · ${sub.members?.first_name || ''} ${sub.members?.last_name || ''}`;
+    const due = Number(sub.amount_due || 0);
+    const paid = Number(sub.amount_paid || 0);
+    document.getElementById('payDue').textContent     = fmtNum(due);
+    document.getElementById('payPaid').textContent    = fmtNum(paid);
+    document.getElementById('payBalance').textContent = fmtNum(due - paid);
+
+    const form = document.getElementById('payForm');
+    form.reset();
+    form.elements['amount'].value = Math.max(0, due - paid);
+    setPayMethod('cash');
+    document.getElementById('payModal').classList.remove('hidden');
+}
+function closePayModal() { document.getElementById('payModal').classList.add('hidden'); }
+
+function setPayMethod(m) {
+    document.getElementById('payMethod').value = m;
+    document.querySelectorAll('.pm-btn').forEach(b => {
+        const on = b.dataset.method === m;
+        b.classList.toggle('bg-white', on);
+        b.classList.toggle('shadow-sm', on);
+        b.classList.toggle('text-brand', on);
+        b.classList.toggle('text-ink-muted', !on);
+    });
+    document.getElementById('payOnlineBlock').classList.toggle('hidden', m !== 'online');
+}
+document.querySelectorAll('.pm-btn').forEach(b =>
+    b.addEventListener('click', () => setPayMethod(b.dataset.method)));
+
+document.getElementById('payForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    if (d.method === 'online' && (!d.phone || !d.phone.trim())) {
+        showToast('Phone required for online', false); return;
+    }
+    const payload = { amount: Number(d.amount), method: d.method };
+    if (d.method === 'online') { payload.provider = d.provider; payload.phone = d.phone; }
+
+    const btn = document.getElementById('paySubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Processing…';
+
+    const { ok, body } = await req(`/subscriptions/api/${currentSub.id}/pay`, {
+        method: 'POST', body: JSON.stringify(payload),
+    });
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-circle-plus mr-2"></i>Record';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Payment failed', false); return; }
+    closePayModal();
+    if (body.pending) {
+        showToast('Waiting for approval on phone…', true);
+    } else {
+        showToast('Payment recorded', true);
+    }
+    loadList(); loadStats();
+    if (currentSubId) refreshDetail();
+});
+
+/* ============================================================ */
+/* DETAIL                                                       */
+/* ============================================================ */
+async function openDetail(id) {
+    currentSubId = id;
+    document.getElementById('detailModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    await refreshDetail();
+}
+function closeDetailModal() {
+    document.getElementById('detailModal').classList.add('hidden');
+    document.body.style.overflow = '';
+    currentSubId = null; currentSub = null;
+}
+
+async function refreshDetail() {
+    if (!currentSubId) return;
+    const { ok, body } = await req(`/subscriptions/api/${currentSubId}`);
+    if (!ok || !body.ok) { showToast('Load failed', false); return; }
+    const s = body.subscription;
+    currentSub = s;
+    const m = s.members || {};
+    const due = Number(s.amount_due || 0);
+    const paid = Number(s.amount_paid || 0);
+
+    document.getElementById('dtlTitle').textContent    = `Year ${s.subscription_year}`;
+    document.getElementById('dtlSubtitle').textContent = `${m.first_name || ''} ${m.last_name || ''} · ID ${m.member_id || ''}`;
+    document.getElementById('dtlYear').textContent     = s.subscription_year;
+    document.getElementById('dtlDue').textContent      = fmtNum(due);
+    document.getElementById('dtlPaid').textContent     = fmtNum(paid);
+    document.getElementById('dtlBalance').textContent  = fmtNum(due - paid);
+    document.getElementById('dtlMemberName').textContent  = `${m.first_name || ''} ${m.last_name || ''}`;
+    document.getElementById('dtlMemberId').textContent    = m.member_id || '';
+    document.getElementById('dtlMemberPhone').textContent = m.phone || '';
+    document.getElementById('dtlMemberEmail').textContent = m.email || '';
+    document.getElementById('dtlStatus').textContent      = s.status;
+    document.getElementById('dtlSource').textContent      = s.source;
+    document.getElementById('dtlDueDate').textContent     = fmtDate(s.due_date);
+    document.getElementById('dtlLastPay').textContent     = fmtDate(s.last_payment_at);
+
+    document.getElementById('dtlPayCount').textContent = `${body.payments.length} entries`;
+    document.getElementById('dtlPayments').innerHTML = body.payments.map(t => `
+        <tr>
+          <td class="px-5 py-2.5 text-xs text-ink-muted">${fmtDate(t.created_at)}</td>
+          <td class="px-5 py-2.5 text-xs">${escapeHtml(t.method)}${t.provider ? ' · '+escapeHtml(t.provider) : ''}</td>
+          <td class="px-5 py-2.5 text-right text-xs font-medium">${fmtNum(t.amount)}</td>
+          <td class="px-5 py-2.5"><span class="pill s-${t.status === 'completed' ? 'paid' : t.status}">${escapeHtml(t.status)}</span></td>
+        </tr>
+    `).join('') || `<tr><td colspan="4" class="text-center text-ink-muted py-8 text-xs">No payments.</td></tr>`;
+
+    // Actions
+    const wrap = document.getElementById('dtlActions');
+    const parts = [];
+    if (s.status !== 'paid' && s.status !== 'waived' && s.status !== 'cancelled') {
+        parts.push(`<button onclick="openPayModal(currentSub)" class="btn-primary text-xs">
+            <i class="fa-solid fa-circle-plus mr-2"></i>Record payment
+        </button>`);
+    }
+    if (s.status !== 'paid' && s.status !== 'waived' && s.status !== 'cancelled') {
+        parts.push(`<button onclick="waiveSub()" class="action-btn action-waive">
+            <i class="fa-solid fa-hand-holding-heart"></i>Waive
+        </button>`);
+    }
+    wrap.innerHTML = parts.join('');
+}
+
+async function waiveSub() {
+    const reason = prompt('Reason for waiving this subscription?');
+    if (!reason) return;
+    const { ok, body } = await req(`/subscriptions/api/${currentSubId}/waive`, {
+        method: 'POST', body: JSON.stringify({ reason }),
+    });
+    if (!ok || !body.ok) { showToast(body.error || 'Waive failed', false); return; }
+    showToast('Waived', true);
+    refreshDetail(); loadList(); loadStats();
+}
+
+/* ============================================================ */
+/* ESC                                                          */
+/* ============================================================ */
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        const modals = ['bulkModal','payModal','createModal'];
+        for (const m of modals) {
+            const el = document.getElementById(m);
+            if (!el.classList.contains('hidden')) { el.classList.add('hidden'); return; }
+        }
+        if (!document.getElementById('detailModal').classList.contains('hidden')) closeDetailModal();
+    }
+});
+</script>
+{% endblock %}

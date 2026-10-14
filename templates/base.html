@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}SACCO Pro{% endblock %}</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+    theme: {
+        extend: {
+            colors: {
+                navy:    { DEFAULT: '#0A192F', dark: '#071739', deep: '#050F26' },
+                brand:   { DEFAULT: '#1A62FF', dark: '#003ECC', light: '#3B82F6' },
+                ink:     { DEFAULT: '#1E293B', muted: '#64748B', soft: '#94A3B8' },
+                page:    '#F4F6F9',
+                success: { DEFAULT: '#10B981', bg: '#E6F4EA' },
+                warning: { DEFAULT: '#F59E0B', bg: '#FEF3C7' },
+                danger:  { DEFAULT: '#EF4444', bg: '#FEE2E2' },
+                accent:  { DEFAULT: '#8B5CF6' },
+            },
+            fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        }
+    }
+};
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    body { font-family: 'Inter', sans-serif; }
+
+    /* Sidebar scrollbar */
+    .sidebar-scroll::-webkit-scrollbar { width: 6px; }
+    .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+    .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+    /* Sidebar nav item base */
+    .nav-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: 9px 14px; border-radius: 8px;
+        font-size: 13px; font-weight: 500;
+        color: #E2E8F0; transition: all .15s ease;
+        cursor: pointer;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .nav-item.active {
+        background: #1A62FF; color: #fff;
+        box-shadow: 0 4px 12px rgba(26,98,255,0.35);
+    }
+    .nav-item i { width: 16px; text-align: center; font-size: 14px; }
+
+    /* Group header */
+    .nav-group-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 10px 14px 6px; margin-top: 8px;
+        font-size: 10px; font-weight: 700;
+        color: #64748B; letter-spacing: 0.08em;
+        text-transform: uppercase; cursor: pointer;
+        user-select: none;
+    }
+    .nav-group-header:hover { color: #94A3B8; }
+    .nav-group-header .chev { transition: transform .2s ease; font-size: 10px; }
+    .nav-group.collapsed .chev { transform: rotate(-90deg); }
+    .nav-group.collapsed .nav-group-items { display: none; }
+
+    /* Badge */
+    .nav-badge {
+        margin-left: auto;
+        background: #1A62FF; color: #fff;
+        font-size: 10px; font-weight: 700;
+        padding: 2px 7px; border-radius: 999px;
+        line-height: 1.4;
+    }
+
+    /* Collapsed sidebar (desktop) */
+    @media (min-width: 1024px) {
+        .sidebar-collapsed .sidebar-label,
+        .sidebar-collapsed .nav-badge,
+        .sidebar-collapsed .nav-group-header .label,
+        .sidebar-collapsed .nav-group-header .chev,
+        .sidebar-collapsed .brand-text { display: none; }
+        .sidebar-collapsed { width: 72px !important; }
+        .sidebar-collapsed .nav-item { justify-content: center; padding: 10px; }
+        .sidebar-collapsed .nav-group-header { justify-content: center; padding: 10px 0; }
+        .sidebar-collapsed .nav-group-items { display: block !important; }
+    }
+</style>
+</head>
+<body class="bg-page text-ink min-h-screen antialiased">
+
+<!-- Mobile overlay -->
+<div id="sidebarOverlay" onclick="toggleSidebar()" class="hidden fixed inset-0 bg-black/50 z-40 lg:hidden"></div>
+
+<div class="flex min-h-screen">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside id="sidebar"
+           class="sidebar-scroll fixed lg:sticky top-0 left-0 z-50 h-screen w-64 flex-shrink-0
+                  bg-navy text-slate-200 flex flex-col
+                  -translate-x-full lg:translate-x-0 transition-all duration-300 overflow-y-auto">
+
+        <!-- Brand -->
+        <div class="flex items-center gap-3 px-5 py-5 border-b border-white/5">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-dark
+                        flex items-center justify-center text-white shadow-lg shadow-brand/30 flex-shrink-0">
+                <i class="fa-solid fa-cube text-lg"></i>
+            </div>
+            <div class="brand-text leading-tight">
+                <p class="font-extrabold text-white text-[15px]">SACCO<span class="text-brand">Pro</span></p>
+                <p class="text-[9px] text-slate-400 tracking-wider uppercase">Cooperative &amp; SACCO<br>Management System</p>
+            </div>
+        </div>
+
+        <!-- Nav -->
+        <nav class="flex-1 px-3 py-3 space-y-0.5">
+
+            <!-- MAIN -->
+            <div class="nav-group">
+                <div class="nav-group-header" onclick="toggleGroup(this)">
+                    <span class="label">Main</span>
+                    <i class="fa-solid fa-chevron-up chev"></i>
+                </div>
+                <div class="nav-group-items space-y-0.5">
+                    <a href="{{ url_for('auth.dashboard') }}"
+                       class="nav-item {% if request.endpoint == 'auth.dashboard' %}active{% endif %}">
+                        <i class="fa-solid fa-house"></i>
+                        <span class="sidebar-label">Dashboard</span>
+                    </a>
+                    <!-- MAIN 
+                    <a href="#" class="nav-item">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <span class="sidebar-label">Global Search</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fa-regular fa-bell"></i>
+                        <span class="sidebar-label">Notifications</span>
+                        <span class="nav-badge">3</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fa-regular fa-square-check"></i>
+                        <span class="sidebar-label">Tasks / Approvals</span>
+                        <span class="nav-badge">6</span>
+                    </a>-->
+                </div>
+            </div> 
+
+            <!-- MEMBERS & CLIENTS -->
+            <div class="nav-group">
+                <div class="nav-group-header" onclick="toggleGroup(this)">
+                    <span class="label">Members &amp; Clients</span>
+                    <i class="fa-solid fa-chevron-up chev"></i>
+                </div>
+                <div class="nav-group-items space-y-0.5">
+                    <a href="{{ url_for('members.page') }}"
+                        class="nav-item {% if request.endpoint == 'members.page' %}active{% endif %}">
+                            <i class="fa-regular fa-user"></i>
+                            <span class="sidebar-label">Members</span>
+                        </a>
+             
+                </div>
+            </div>
+
+            <!-- ACCOUNTS & SAVINGS -->
+            <div class="nav-group">
+                <div class="nav-group-header" onclick="toggleGroup(this)">
+                    <span class="label">Accounts &amp; Savings</span>
+                    <i class="fa-solid fa-chevron-up chev"></i>
+                </div>
+                <div class="nav-group-items space-y-0.5">
+                    <a href="{{ url_for('savings.page') }}"
+                        class="nav-item {% if request.endpoint == 'savings.page' %}active{% endif %}">
+                            <i class="fa-solid fa-wallet"></i>
+                            <span class="sidebar-label">Savings Accounts</span>
+                        </a>
+                    <a href="{{ url_for('fixed.page') }}"
+                        class="nav-item {% if request.endpoint == 'fixed.page' %}active{% endif %}">
+                            <i class="fa-regular fa-square-check"></i>
+                            <span class="sidebar-label">Fixed Deposits</span>
+                        </a>
+                   
+                </div>
+            </div>
+
+            <!-- LOANS & CREDIT -->
+            <div class="nav-group">
+                <div class="nav-group-header" onclick="toggleGroup(this)">
+                    <span class="label">Loans &amp; Credit</span>
+                    <i class="fa-solid fa-chevron-up chev"></i>
+                </div>
+                <div class="nav-group-items space-y-0.5">
+                    <a href="{{ url_for('loan_applications.page') }}"
+                        class="nav-item {% if request.endpoint == 'loan_applications.page' %}active{% endif %}">
+                            <i class="fa-regular fa-file-lines"></i>
+                            <span class="sidebar-label">Loan Applications</span>
+                        </a>
+                   <a href="{{ url_for('loan_portfolio.page') }}"
+                        class="nav-item {% if request.endpoint == 'loan_portfolio.page' %}active{% endif %}">
+                            <i class="fa-solid fa-briefcase"></i>
+                            <span class="sidebar-label">Loan Portfolio</span>
+                        </a>
+                                         
+                    <a href="{{ url_for('repayments.page') }}"
+                        class="nav-item {% if request.endpoint == 'repayments.page' %}active{% endif %}">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            <span class="sidebar-label">Repayments</span>
+                        </a>
+                                            <a href="{{ url_for('loan_products.page') }}"
+                        class="nav-item {% if request.endpoint == 'loan_products.page' %}active{% endif %}">
+                            <i class="fa-solid fa-box"></i>
+                            <span class="sidebar-label">Loan Products</span>
+                        </a>
+                </div>
+            </div>
+
+            <!-- SUBSCRIPTIONS & SHARES -->
+            <div class="nav-group">
+                <div class="nav-group-header" onclick="toggleGroup(this)">
+                    <span class="label">Subscriptions &amp; Shares</span>
+                    <i class="fa-solid fa-chevron-up chev"></i>
+                </div>
+                <div class="nav-group-items space-y-0.5">
+                    <a href="{{ url_for('yearly_subscriptions.page') }}"
+                    class="nav-item {% if request.endpoint == 'yearly_subscriptions.page' %}active{% endif %}">
+                        <i class="fa-solid fa-coins"></i>
+                        <span class="sidebar-label">Yearly Subscriptions</span>
+                    </a>
+                  <a href="{{ url_for('shares.page') }}"
+                    class="nav-item {% if request.endpoint == 'shares.page' %}active{% endif %}">
+                        <i class="fa-solid fa-chart-pie"></i>
+                        <span class="sidebar-label">Shares Management</span>
+                    </a>
+                    <a href="{{ url_for('dividends.page') }}"
+                        class="nav-item {% if request.endpoint == 'dividends.page' %}active{% endif %}">
+                            <i class="fa-solid fa-hand-holding-dollar"></i>
+                            <span class="sidebar-label">Dividends Management</span>
+                        </a>
+                </div>
+            </div>
+
+            <!-- FINANCIALS & REPORTS -->
+            <div class="nav-group">
+                <div class="nav-group-header" onclick="toggleGroup(this)">
+                    <span class="label">Financials &amp; Reports</span>
+                    <i class="fa-solid fa-chevron-up chev"></i>
+                </div>
+                <div class="nav-group-items space-y-0.5">
+                    <a href="{{ url_for('accounts.page') }}"
+                        class="nav-item {% if request.endpoint == 'accounts.page' %}active{% endif %}">
+                            <i class="fa-solid fa-book"></i>
+                            <span class="sidebar-label">Accounts</span>
+                        </a>
+                    <a href="{{ url_for('financial_reports.page') }}"
+                        class="nav-item {% if request.endpoint == 'financial_reports.page' %}active{% endif %}">
+                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                            <span class="sidebar-label">Financial Reports</span>
+                        </a>
+                    <a href="#" class="nav-item"><i class="fa-solid fa-file-lines"></i><span class="sidebar-label">Statements</span></a>
+                </div>
+            </div>
+
+            <!-- SETTINGS -->
+            <div class="nav-group">
+                <div class="nav-group-header" onclick="toggleGroup(this)">
+                    <span class="label">Settings</span>
+                    <i class="fa-solid fa-chevron-up chev"></i>
+                </div>
+                <div class="nav-group-items space-y-0.5">
+                    <a href="{{ url_for('institution_settings.page') }}"
+                        class="nav-item {% if request.endpoint == 'institution_settings.page' %}active{% endif %}">
+                            <i class="fa-solid fa-gear"></i>
+                            <span class="sidebar-label">Institution Settings</span>
+                        </a>
+                                            <a href="#" class="nav-item"><i class="fa-solid fa-user-shield"></i><span class="sidebar-label">Users &amp; Permissions</span></a>
+                    <a href="#" onclick="logout(event)" class="nav-item text-red-300 hover:text-red-200 hover:bg-red-500/10">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span class="sidebar-label">Logout</span>
+                    </a>
+                </div>
+            </div>
+
+        </nav>
+    </aside>
+
+    <!-- ============ MAIN ============ -->
+    <div class="flex-1 flex flex-col min-w-0">
+
+        <!-- Topbar -->
+        <header class="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 lg:px-8 py-3 flex items-center gap-4">
+            <button onclick="toggleSidebar()" class="lg:hidden text-ink-muted hover:text-ink">
+                <i class="fa-solid fa-bars text-lg"></i>
+            </button>
+            <button onclick="toggleCollapse()" class="hidden lg:inline-flex text-ink-muted hover:text-ink">
+                <i class="fa-solid fa-bars-staggered text-lg"></i>
+            </button>
+
+            <h1 class="text-base lg:text-lg font-bold">{% block page_title %}Dashboard{% endblock %}</h1>
+
+            <div class="ml-auto flex items-center gap-3">
+                <div class="hidden sm:flex items-center gap-2 bg-page rounded-lg px-3 py-2 w-64">
+                    <i class="fa-solid fa-magnifying-glass text-ink-soft text-sm"></i>
+                    <input type="text" placeholder="Search…  Ctrl + K"
+                           class="bg-transparent outline-none text-sm w-full placeholder:text-ink-soft">
+                </div>
+                <button class="relative w-9 h-9 rounded-lg hover:bg-page flex items-center justify-center text-ink-muted">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-danger"></span>
+                </button>
+                <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
+                    <div id="avatar" class="w-9 h-9 rounded-full bg-brand text-white flex items-center justify-center font-bold text-sm">?</div>
+                    <div class="hidden md:block leading-tight">
+                        <p id="userName" class="text-xs font-semibold">Loading…</p>
+                        <p id="userRole" class="text-[10px] text-ink-muted uppercase tracking-wider">—</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <main class="flex-1 p-4 lg:p-8">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="hidden fixed top-5 right-5 z-[60] px-5 py-3 rounded-xl shadow-lg text-sm font-medium"></div>
+
+<script>
+/* Sidebar toggles */
+function toggleSidebar() {
+    const sb = document.getElementById('sidebar');
+    const ov = document.getElementById('sidebarOverlay');
+    sb.classList.toggle('-translate-x-full');
+    ov.classList.toggle('hidden');
+}
+function toggleCollapse() {
+    document.getElementById('sidebar').classList.toggle('sidebar-collapsed');
+}
+function toggleGroup(header) {
+    header.parentElement.classList.toggle('collapsed');
+}
+
+/* Toast */
+function showToast(msg, ok = true) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'fixed top-5 right-5 z-[60] px-5 py-3 rounded-xl shadow-lg text-sm font-medium ' +
+        (ok ? 'bg-success-bg text-green-800 border border-green-200'
+            : 'bg-danger-bg text-red-800 border border-red-200');
+    clearTimeout(t._t);
+    t._t = setTimeout(() => t.classList.add('hidden'), 4000);
+}
+
+/* Logout */
+async function logout(e) {
+    if (e) e.preventDefault();
+    try {
+        await fetch('/auth/api/logout', {
+            method: 'POST',
+            credentials: 'same-origin',
+        });
+    } catch (_) {}
+    window.location.href = '/auth/';
+}
+
+/* Hydrate current user in topbar */
+(async function hydrateUser() {
+    try {
+        const r = await fetch('/auth/api/me', { credentials: 'same-origin' });
+        if (!r.ok) { window.location.href = '/auth/'; return; }
+        const { user } = await r.json();
+        document.getElementById('userName').textContent = user.full_name || user.email;
+        document.getElementById('userRole').textContent = user.role;
+        document.getElementById('avatar').textContent =
+            (user.full_name || user.email || '?').trim()[0].toUpperCase();
+    } catch (_) {}
+})();
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

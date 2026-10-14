@@ -1,0 +1,1208 @@
+{% extends "base.html" %}
+{% block title %}Savings Accounts — SACCO Pro{% endblock %}
+{% block page_title %}Savings Accounts{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- STAT CARDS                                                    -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Savings</p>
+        <p id="statTotalBalance" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+        <i class="fa-solid fa-wallet"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Across all savings accounts</p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Accounts</p>
+        <p id="statAccounts" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+        <i class="fa-solid fa-building-columns"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      <span id="statActiveAccounts" class="text-success font-semibold">0</span> active
+    </p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Deposits (30d)</p>
+        <p id="statDeposits30d" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
+        <i class="fa-solid fa-arrow-trend-up"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Last 30 days</p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Pending Withdrawals</p>
+        <p id="statPendingWr" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+        <i class="fa-solid fa-hourglass-half"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Awaiting approval</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TABS                                                          -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm mb-5">
+  <div class="flex border-b border-slate-100">
+    <button data-tab="accounts"
+            class="tab-btn px-5 py-3.5 text-sm font-semibold border-b-2 border-brand text-brand">
+      <i class="fa-solid fa-wallet mr-2"></i>Accounts
+    </button>
+    <button data-tab="withdrawals"
+            class="tab-btn px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink">
+      <i class="fa-solid fa-money-bill-transfer mr-2"></i>Withdrawal Requests
+      <span id="tabPendingBadge" class="hidden ml-2 text-[10px] font-bold bg-warning text-white rounded-full px-2 py-0.5">0</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TAB: ACCOUNTS                                                 -->
+<!-- ============================================================ -->
+<section id="tab-accounts">
+  <div class="flex flex-wrap items-center gap-3 mb-5">
+    <div class="relative flex-1 min-w-[240px] max-w-md">
+      <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft text-sm"></i>
+      <input id="searchInput" placeholder="Search member name, ID, phone or account number…"
+             class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-brand bg-white">
+    </div>
+    <button onclick="openWithdrawPicker()"
+            class="ml-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-ink-muted hover:text-ink text-sm font-semibold shadow-sm transition">
+      <i class="fa-solid fa-minus"></i> New Withdrawal
+    </button>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+          <tr>
+            <th class="text-left px-5 py-3 font-semibold">Member</th>
+            <th class="text-left px-5 py-3 font-semibold">Account No.</th>
+            <th class="text-left px-5 py-3 font-semibold">Phone</th>
+            <th class="text-right px-5 py-3 font-semibold">Balance</th>
+            <th class="text-left px-5 py-3 font-semibold">Status</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="accountsTable" class="divide-y divide-slate-100">
+          <tr><td colspan="6" class="text-center text-ink-muted py-10 text-sm">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+      <span id="pageInfo">—</span>
+      <div class="flex gap-1">
+        <button id="prevBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+        <button id="nextBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- TAB: WITHDRAWALS                                              -->
+<!-- ============================================================ -->
+<section id="tab-withdrawals" class="hidden">
+  <div class="flex flex-wrap items-center gap-3 mb-5">
+    <select id="wrStatusFilter" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+      <option value="">All statuses</option>
+      <option value="pending">Pending</option>
+      <option value="approved">Approved</option>
+      <option value="paid">Paid</option>
+      <option value="rejected">Rejected</option>
+    </select>
+    <select id="wrSourceFilter" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+      <option value="">All sources</option>
+      <option value="admin">Admin-initiated</option>
+      <option value="member">Member-initiated</option>
+    </select>
+    <button onclick="openWithdrawPicker()"
+            class="ml-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-white text-sm font-semibold shadow-sm transition">
+      <i class="fa-solid fa-plus"></i> New Withdrawal
+    </button>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+          <tr>
+            <th class="text-left px-5 py-3 font-semibold">Requested</th>
+            <th class="text-left px-5 py-3 font-semibold">Member</th>
+            <th class="text-left px-5 py-3 font-semibold">Account</th>
+            <th class="text-right px-5 py-3 font-semibold">Amount</th>
+            <th class="text-left px-5 py-3 font-semibold">Method</th>
+            <th class="text-left px-5 py-3 font-semibold">Source</th>
+            <th class="text-left px-5 py-3 font-semibold">Status</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="wrTable" class="divide-y divide-slate-100">
+          <tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- DEPOSIT MODAL (z-90, layered above drawer)                    -->
+<!-- ============================================================ -->
+<div id="depositModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div>
+        <h3 class="font-bold text-base">New Deposit</h3>
+        <p class="text-xs text-ink-muted mt-0.5" id="depAccountLabel">—</p>
+      </div>
+      <button type="button" onclick="closeDepositModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <form id="depositForm" class="p-6 space-y-5">
+      <input type="hidden" name="account_id" id="depAccountId">
+
+      <div>
+        <label class="lbl">Amount *</label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted text-xs font-semibold" id="depCurrencyLabel">UGX</span>
+          <input name="amount" type="number" min="1" step="1" required class="inp pl-14" placeholder="0">
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Narration (optional)</label>
+        <input name="narration" class="inp" placeholder="e.g. Monthly savings">
+      </div>
+
+      <div>
+        <label class="lbl">Payment method</label>
+        <div class="grid grid-cols-2 gap-3 p-1 bg-slate-100 rounded-xl">
+          <button type="button" data-method="cash" class="mth-btn py-2.5 rounded-lg text-sm font-semibold bg-white shadow-sm text-brand transition">
+            <i class="fa-solid fa-money-bill-wave mr-2"></i>Cash
+          </button>
+          <button type="button" data-method="online" class="mth-btn py-2.5 rounded-lg text-sm font-semibold text-ink-muted transition">
+            <i class="fa-solid fa-mobile-screen-button mr-2"></i>Online
+          </button>
+          <input type="hidden" name="method" id="depMethod" value="cash">
+        </div>
+      </div>
+
+      <div id="depOnlineBlock" class="hidden space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="lbl">Provider</label>
+            <select name="provider" class="inp">
+              <option value="MTN">MTN Mobile Money</option>
+              <option value="AIRTEL">Airtel Money</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Mobile money number</label>
+            <input name="phone" class="inp" placeholder="+256…">
+          </div>
+        </div>
+        <p class="text-xs text-ink-muted">
+          <i class="fa-solid fa-circle-info mr-1"></i>
+          Balance is updated only after the customer approves the prompt.
+        </p>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeDepositModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" id="depositSubmit" class="btn-primary">
+          <i class="fa-solid fa-circle-plus mr-2"></i>Record Deposit
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- WITHDRAWAL MODAL (z-90)                                       -->
+<!-- ============================================================ -->
+<div id="withdrawModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div>
+        <h3 class="font-bold text-base">New Withdrawal</h3>
+        <p class="text-xs text-ink-muted mt-0.5" id="wdAccountLabel">—</p>
+      </div>
+      <button type="button" onclick="closeWithdrawModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <form id="withdrawForm" class="p-6 space-y-5">
+      <input type="hidden" name="account_id" id="wdAccountId">
+
+      <div id="wdPickerBlock">
+        <label class="lbl">Account *</label>
+        <select id="wdAccountPicker" class="inp"></select>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-sm">
+        <div class="flex justify-between">
+          <span class="text-ink-muted">Current balance</span>
+          <span id="wdBalance" class="font-semibold">—</span>
+        </div>
+        <div class="flex justify-between mt-1">
+          <span class="text-ink-muted">Pending withdrawals</span>
+          <span id="wdPending" class="font-medium">—</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Amount *</label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted text-xs font-semibold" id="wdCurrencyLabel">UGX</span>
+          <input name="amount" type="number" min="1" step="1" required class="inp pl-14" placeholder="0">
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Reason (optional)</label>
+        <input name="reason" class="inp" placeholder="e.g. School fees withdrawal">
+      </div>
+
+      <div>
+        <label class="lbl">Payout method</label>
+        <div class="grid grid-cols-2 gap-3 p-1 bg-slate-100 rounded-xl">
+          <button type="button" data-method="cash" class="wd-mth-btn py-2.5 rounded-lg text-sm font-semibold bg-white shadow-sm text-brand transition">
+            <i class="fa-solid fa-money-bill-wave mr-2"></i>Cash
+          </button>
+          <button type="button" data-method="online" class="wd-mth-btn py-2.5 rounded-lg text-sm font-semibold text-ink-muted transition">
+            <i class="fa-solid fa-mobile-screen-button mr-2"></i>Online
+          </button>
+          <input type="hidden" name="method" id="wdMethod" value="cash">
+        </div>
+      </div>
+
+      <div id="wdOnlineBlock" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Provider</label>
+          <select name="provider" class="inp">
+            <option value="MTN">MTN Mobile Money</option>
+            <option value="AIRTEL">Airtel Money</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Mobile money number</label>
+          <input name="phone" class="inp" placeholder="+256…">
+        </div>
+      </div>
+
+      <div class="rounded-xl bg-warning/5 border border-warning/20 p-3 text-xs text-ink">
+        <i class="fa-solid fa-circle-info text-warning mr-1"></i>
+        The request is created as <strong>pending</strong>. Balance is only deducted
+        when you mark it as <strong>paid</strong>.
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeWithdrawModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" id="withdrawSubmit" class="btn-primary">
+          <i class="fa-solid fa-paper-plane mr-2"></i>Submit Request
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- BIG ACCOUNT DETAIL DRAWER (z-75)                              -->
+<!-- ============================================================ -->
+<div id="detailModal" class="hidden fixed inset-0 z-[75] flex items-stretch justify-center"
+     style="background:rgba(0,0,0,.5); backdrop-filter: blur(2px);">
+  <div class="bg-white w-full h-full max-w-none flex flex-col">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-8 py-5 border-b border-slate-100 bg-white sticky top-0 z-10">
+      <div class="flex items-center gap-4">
+        <button onclick="closeDetailModal()"
+                class="w-10 h-10 rounded-xl hover:bg-page flex items-center justify-center text-ink-muted">
+          <i class="fa-solid fa-arrow-left text-lg"></i>
+        </button>
+        <div>
+          <h3 class="font-bold text-lg" id="dtlMemberName">—</h3>
+          <p class="text-xs text-ink-muted mt-0.5" id="dtlAccountLine">—</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="exportStatement()" class="btn-ghost text-xs">
+          <i class="fa-solid fa-file-csv mr-2"></i>Export Statement
+        </button>
+        <button onclick="openDepositModalFromDetail()" class="btn-primary text-xs">
+          <i class="fa-solid fa-circle-plus mr-2"></i>Deposit
+        </button>
+        <button onclick="openWithdrawModalFromDetail()" class="btn-primary text-xs"
+                style="background:#F59E0B;">
+          <i class="fa-solid fa-minus mr-2"></i>Withdraw
+        </button>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="flex-1 overflow-y-auto p-8 bg-page">
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+        <!-- Left column: balance + member -->
+        <div class="lg:col-span-1 space-y-5">
+          <div class="rounded-2xl bg-gradient-to-br from-brand to-brand-dark text-white p-6 shadow-md">
+            <p class="text-xs uppercase tracking-wider opacity-80">Available Balance</p>
+            <p id="dtlBalance" class="text-4xl font-extrabold mt-2">—</p>
+            <p class="text-xs opacity-80 mt-3" id="dtlOpenedAt">—</p>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 text-sm space-y-2">
+            <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1">Member</p>
+            <p class="font-mono text-xs text-ink-muted" id="dtlMemberId">—</p>
+            <p class="text-ink-muted text-xs" id="dtlPhone">—</p>
+            <p class="text-ink-muted text-xs" id="dtlEmail">—</p>
+            <hr class="my-2 border-slate-100">
+            <div class="flex justify-between text-xs">
+              <span class="text-ink-muted">Shares</span>
+              <span id="dtlShares" class="font-semibold">—</span>
+            </div>
+            <div class="flex justify-between text-xs">
+              <span class="text-ink-muted">Shares value</span>
+              <span id="dtlSharesValue" class="font-semibold">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right column: transactions + withdrawals -->
+        <div class="lg:col-span-3 space-y-6">
+
+          <!-- Summary chips -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white rounded-2xl p-4 shadow-sm">
+              <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Deposits (this account)</p>
+              <p id="dtlTotalDeposits" class="text-xl font-bold mt-1">—</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 shadow-sm">
+              <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Withdrawals (this account)</p>
+              <p id="dtlTotalWithdrawals" class="text-xl font-bold mt-1">—</p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 shadow-sm">
+              <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Pending withdrawal requests</p>
+              <p id="dtlPendingWr" class="text-xl font-bold mt-1">—</p>
+            </div>
+          </div>
+
+          <!-- Transactions -->
+          <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h4 class="text-sm font-bold">Transaction History</h4>
+              <span id="dtlTxCount" class="text-xs text-ink-muted">—</span>
+            </div>
+            <div class="overflow-x-auto max-h-[420px]">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider sticky top-0 text-[11px]">
+                  <tr>
+                    <th class="text-left px-5 py-2.5 font-semibold">Date</th>
+                    <th class="text-left px-5 py-2.5 font-semibold">Type</th>
+                    <th class="text-left px-5 py-2.5 font-semibold">Method</th>
+                    <th class="text-right px-5 py-2.5 font-semibold">Amount</th>
+                    <th class="text-right px-5 py-2.5 font-semibold">Balance</th>
+                    <th class="text-left px-5 py-2.5 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="txTable" class="divide-y divide-slate-100">
+                  <tr><td colspan="6" class="text-center text-ink-muted py-8">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Withdrawal requests for this account -->
+          <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h4 class="text-sm font-bold">Withdrawal Requests</h4>
+              <button onclick="openWithdrawModalFromDetail()"
+                      class="text-xs font-semibold text-brand hover:underline">
+                <i class="fa-solid fa-plus mr-1"></i>New
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider text-[11px]">
+                  <tr>
+                    <th class="text-left px-5 py-2.5 font-semibold">Requested</th>
+                    <th class="text-right px-5 py-2.5 font-semibold">Amount</th>
+                    <th class="text-left px-5 py-2.5 font-semibold">Method</th>
+                    <th class="text-left px-5 py-2.5 font-semibold">Status</th>
+                    <th class="px-5 py-2.5"></th>
+                  </tr>
+                </thead>
+                <tbody id="dtlWrTable" class="divide-y divide-slate-100">
+                  <tr><td colspan="5" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PAYMENT STATUS MODAL (z-100, above everything)                -->
+<!-- ============================================================ -->
+<div id="payModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+    <div id="payIconWrap" class="w-16 h-16 mx-auto rounded-full bg-brand/10 text-brand flex items-center justify-center mb-4">
+      <i id="payIcon" class="fa-solid fa-mobile-screen-button text-2xl"></i>
+    </div>
+    <h3 id="payTitle" class="font-bold text-lg mb-1">Waiting for approval</h3>
+    <p id="payText" class="text-sm text-ink-muted mb-5">Approve the prompt on the customer's phone.</p>
+    <div id="paySpinner" class="hidden mb-4">
+      <i class="fa-solid fa-circle-notch fa-spin text-brand text-xl"></i>
+    </div>
+    <button onclick="closePayModal()" class="btn-ghost w-full">Close</button>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; transition:all .15s;
+           font-family:inherit; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   transition:.15s; border:none; cursor:pointer; }
+    .btn-primary:hover { background:#003ECC; }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { display:inline-flex; align-items:center; padding:10px 18px; border-radius:10px;
+                 background:#fff; border:1px solid #E2E8F0;
+                 color:#64748B; font-weight:600; font-size:14px; cursor:pointer; transition:.15s; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .pill-active    { background:#E6F4EA; color:#065F46; }
+    .pill-inactive  { background:#FEF3C7; color:#92400E; }
+    .pill-frozen    { background:#FEE2E2; color:#991B1B; }
+    .pill-closed    { background:#E2E8F0; color:#334155; }
+    .member-avatar  { width:36px; height:36px; border-radius:50%;
+                      background:linear-gradient(135deg,#10B981,#047857);
+                      color:#fff; display:inline-flex; align-items:center; justify-content:center;
+                      font-weight:700; font-size:13px; flex-shrink:0; }
+    .tx-pill { display:inline-flex; align-items:center; font-size:10px; font-weight:600;
+               padding:2px 8px; border-radius:999px; text-transform:capitalize; }
+    .tx-completed { background:#E6F4EA; color:#065F46; }
+    .tx-pending   { background:#FEF3C7; color:#92400E; }
+    .tx-failed    { background:#FEE2E2; color:#991B1B; }
+
+    .wr-pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+               padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .wr-pending   { background:#FEF3C7; color:#92400E; }
+    .wr-approved  { background:#DBEAFE; color:#1E40AF; }
+    .wr-paid      { background:#E6F4EA; color:#065F46; }
+    .wr-rejected  { background:#FEE2E2; color:#991B1B; }
+    .wr-cancelled { background:#E2E8F0; color:#334155; }
+
+    .action-btn { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600;
+                  padding:5px 10px; border-radius:8px; border:1px solid transparent; cursor:pointer; transition:.15s; }
+    .action-approve { background:#DBEAFE; color:#1E40AF; }
+    .action-approve:hover { background:#BFDBFE; }
+    .action-pay     { background:#E6F4EA; color:#065F46; }
+    .action-pay:hover { background:#BBF7D0; }
+    .action-reject  { background:#FEE2E2; color:#991B1B; }
+    .action-reject:hover { background:#FECACA; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE                                                        */
+/* ============================================================ */
+const state = {
+    page: 1, per_page: 20, q: '', total: 0,
+    wrStatus: '', wrSource: '',
+};
+let currentAccountId = null;
+let currentAccount = null;
+let accountsCache = [];    // for withdrawal picker
+
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtCompact(n) {
+    n = Number(n || 0);
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return n.toFixed(0);
+}
+function fmtDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, { year:'numeric', month:'short', day:'2-digit',
+                                          hour:'2-digit', minute:'2-digit' });
+}
+function debounce(fn, ms = 300) {
+    let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+function initials(first, last) {
+    return ((first || '?')[0] + (last || '')[0] || '?').toUpperCase();
+}
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        ...opts,
+    });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, status: r.status, body };
+}
+
+/* ============================================================ */
+/* TABS                                                         */
+/* ============================================================ */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            const on = b.dataset.tab === tab;
+            b.classList.toggle('border-brand', on);
+            b.classList.toggle('text-brand', on);
+            b.classList.toggle('border-transparent', !on);
+            b.classList.toggle('text-ink-muted', !on);
+        });
+        document.getElementById('tab-accounts').classList.toggle('hidden', tab !== 'accounts');
+        document.getElementById('tab-withdrawals').classList.toggle('hidden', tab !== 'withdrawals');
+        if (tab === 'withdrawals') loadWithdrawals();
+    });
+});
+
+/* ============================================================ */
+/* STATS                                                        */
+/* ============================================================ */
+async function loadStats() {
+    const { ok, body } = await req('/savings/api/stats');
+    if (!ok || !body.ok) return;
+    const s = body.stats;
+    document.getElementById('statTotalBalance').textContent   = fmtCompact(s.total_balance);
+    document.getElementById('statAccounts').textContent       = fmtCompact(s.total_accounts);
+    document.getElementById('statActiveAccounts').textContent = fmtCompact(s.active_accounts);
+    document.getElementById('statDeposits30d').textContent    = fmtCompact(s.deposits_last_30d);
+    document.getElementById('statPendingWr').textContent      = fmtCompact(s.pending_withdrawals);
+
+    const badge = document.getElementById('tabPendingBadge');
+    if (s.pending_withdrawals > 0) {
+        badge.textContent = s.pending_withdrawals;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
+
+/* ============================================================ */
+/* ACCOUNTS LIST                                                */
+/* ============================================================ */
+async function loadAccounts() {
+    const tbody = document.getElementById('accountsTable');
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const qs = new URLSearchParams({ page: state.page, per_page: state.per_page, q: state.q });
+    const { ok, body } = await req('/savings/api/list?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-10 text-sm">
+            ${escapeHtml(body.error || 'Load failed')}</td></tr>`;
+        return;
+    }
+
+    state.total = body.total;
+    accountsCache = body.accounts || [];
+
+    if (!body.accounts.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No savings accounts yet. They are created automatically when you register members.
+        </td></tr>`;
+    } else {
+        tbody.innerHTML = body.accounts.map(a => {
+            const m = a.members || {};
+            return `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-3">
+                  <div class="member-avatar">${initials(m.first_name, m.last_name)}</div>
+                  <div>
+                    <div class="font-semibold text-ink">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</div>
+                    <div class="text-xs text-ink-muted">ID ${escapeHtml(m.member_id || '')}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-5 py-3 font-mono text-xs text-ink-muted">${escapeHtml(a.account_number)}</td>
+              <td class="px-5 py-3 text-ink-muted">${escapeHtml(m.phone || '')}</td>
+              <td class="px-5 py-3 text-right font-semibold">${fmtNum(a.balance)} <span class="text-xs text-ink-muted">${escapeHtml(a.currency)}</span></td>
+              <td class="px-5 py-3"><span class="pill pill-${a.status || 'active'}">${escapeHtml(a.status || 'active')}</span></td>
+              <td class="px-5 py-3 text-right">
+                <div class="flex justify-end gap-1">
+                  <button onclick="quickDeposit('${a.id}')" title="Deposit"
+                          class="w-8 h-8 rounded-lg hover:bg-page text-ink-muted hover:text-success transition">
+                    <i class="fa-solid fa-circle-plus"></i>
+                  </button>
+                  <button onclick="openDetail('${a.id}')" title="View"
+                          class="w-8 h-8 rounded-lg hover:bg-page text-ink-muted hover:text-brand transition">
+                    <i class="fa-solid fa-chevron-right"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>`;
+        }).join('');
+    }
+
+    const from = state.total ? (state.page - 1) * state.per_page + 1 : 0;
+    const to   = Math.min(state.page * state.per_page, state.total);
+    document.getElementById('pageInfo').textContent =
+        state.total ? `${from}–${to} of ${state.total}` : '0 results';
+    document.getElementById('prevBtn').disabled = state.page <= 1;
+    document.getElementById('nextBtn').disabled = to >= state.total;
+}
+
+document.getElementById('prevBtn').onclick = () => {
+    if (state.page > 1) { state.page--; loadAccounts(); }
+};
+document.getElementById('nextBtn').onclick = () => {
+    if (state.page * state.per_page < state.total) { state.page++; loadAccounts(); }
+};
+document.getElementById('searchInput').addEventListener('input', debounce(e => {
+    state.q = e.target.value.trim();
+    state.page = 1;
+    loadAccounts();
+}, 350));
+
+/* ============================================================ */
+/* WITHDRAWALS LIST                                             */
+/* ============================================================ */
+async function loadWithdrawals() {
+    const tbody = document.getElementById('wrTable');
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const qs = new URLSearchParams();
+    if (state.wrStatus) qs.set('status', state.wrStatus);
+    if (state.wrSource) qs.set('source', state.wrSource);
+
+    const { ok, body } = await req('/savings/api/withdrawals?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-500 py-10 text-sm">
+            ${escapeHtml(body.error || 'Load failed')}</td></tr>`;
+        return;
+    }
+    if (!body.requests.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No withdrawal requests found.
+        </td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = body.requests.map(r => {
+        const m = r.members || {};
+        const a = r.member_accounts || {};
+        return `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="px-5 py-3 text-xs text-ink-muted whitespace-nowrap">${fmtDate(r.created_at)}</td>
+          <td class="px-5 py-3">
+            <div class="font-semibold text-ink text-sm">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</div>
+            <div class="text-xs text-ink-muted">ID ${escapeHtml(m.member_id || '')}</div>
+          </td>
+          <td class="px-5 py-3 font-mono text-xs text-ink-muted">${escapeHtml(a.account_number || '')}</td>
+          <td class="px-5 py-3 text-right font-semibold">${fmtNum(r.amount)} <span class="text-xs text-ink-muted">${escapeHtml(r.currency || '')}</span></td>
+          <td class="px-5 py-3 text-xs">
+            <span class="text-ink-muted">${escapeHtml(r.method || '')}</span>
+            ${r.provider ? `<span class="text-ink-muted"> · ${escapeHtml(r.provider)}</span>` : ''}
+          </td>
+          <td class="px-5 py-3 text-xs text-ink-muted">${escapeHtml(r.source || '')}</td>
+          <td class="px-5 py-3"><span class="wr-pill wr-${r.status}">${escapeHtml(r.status)}</span></td>
+          <td class="px-5 py-3 text-right">
+            <div class="flex justify-end gap-1">
+              ${r.status === 'pending' ? `
+                <button class="action-btn action-approve" onclick="wrAction('${r.id}','approve')">
+                  <i class="fa-solid fa-check"></i>Approve
+                </button>
+                <button class="action-btn action-reject" onclick="wrAction('${r.id}','reject')">
+                  <i class="fa-solid fa-xmark"></i>Reject
+                </button>
+              ` : ''}
+              ${r.status === 'approved' ? `
+                <button class="action-btn action-pay" onclick="wrAction('${r.id}','mark_paid')">
+                  <i class="fa-solid fa-money-bill-wave"></i>Mark Paid
+                </button>
+                <button class="action-btn action-reject" onclick="wrAction('${r.id}','reject')">
+                  <i class="fa-solid fa-xmark"></i>Reject
+                </button>
+              ` : ''}
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+}
+
+document.getElementById('wrStatusFilter').addEventListener('change', e => {
+    state.wrStatus = e.target.value;
+    loadWithdrawals();
+});
+document.getElementById('wrSourceFilter').addEventListener('change', e => {
+    state.wrSource = e.target.value;
+    loadWithdrawals();
+});
+
+async function wrAction(reqId, action) {
+    if (!confirm(`Are you sure you want to ${action.replace('_',' ')} this withdrawal?`)) return;
+
+    const { ok, body } = await req(`/savings/api/withdrawals/${reqId}`, {
+        method: 'PATCH',
+        body:   JSON.stringify({ action }),
+    });
+    if (!ok || !body.ok) {
+        showToast(body.error || 'Action failed', false);
+        return;
+    }
+    showToast(
+        action === 'approve'   ? 'Request approved' :
+        action === 'reject'    ? 'Request rejected' :
+                                 'Marked as paid — balance updated',
+        true,
+    );
+    loadWithdrawals();
+    loadStats();
+    if (currentAccountId) {
+        loadTransactions();
+        loadDetailWithdrawals();
+    }
+}
+
+/* ============================================================ */
+/* DEPOSIT MODAL                                                */
+/* ============================================================ */
+const depositModal = document.getElementById('depositModal');
+
+function quickDeposit(accountId) {
+    const a = accountsCache.find(x => x.id === accountId);
+    if (!a) return;
+    const m = a.members || {};
+    openDepositModal(accountId, a.account_number,
+                     `${m.first_name || ''} ${m.last_name || ''}`, a.currency);
+}
+
+function openDepositModal(accountId, accountNumber, memberName, currency) {
+    document.getElementById('depAccountId').value = accountId;
+    document.getElementById('depAccountLabel').textContent =
+        `${memberName} · ${accountNumber}`;
+    document.getElementById('depCurrencyLabel').textContent = currency || 'UGX';
+    document.getElementById('depositForm').reset();
+    setDepositMethod('cash');
+    depositModal.classList.remove('hidden');
+}
+
+function closeDepositModal() { depositModal.classList.add('hidden'); }
+
+function setDepositMethod(m) {
+    document.getElementById('depMethod').value = m;
+    document.querySelectorAll('.mth-btn').forEach(b => {
+        const on = b.dataset.method === m;
+        b.classList.toggle('bg-white',    on);
+        b.classList.toggle('shadow-sm',   on);
+        b.classList.toggle('text-brand',  on);
+        b.classList.toggle('text-ink-muted', !on);
+    });
+    document.getElementById('depOnlineBlock').classList.toggle('hidden', m !== 'online');
+}
+document.querySelectorAll('.mth-btn').forEach(btn => {
+    btn.addEventListener('click', () => setDepositMethod(btn.dataset.method));
+});
+
+document.getElementById('depositForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    if (d.method === 'online' && (!d.phone || !d.phone.trim())) {
+        showToast('Mobile money number is required', false);
+        return;
+    }
+    const payload = { amount: d.amount, method: d.method, narration: d.narration || null };
+    if (d.method === 'online') { payload.provider = d.provider; payload.phone = d.phone; }
+
+    const btn = document.getElementById('depositSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Processing…';
+
+    const { ok, body } = await req(`/savings/api/${d.account_id}/deposit`, {
+        method: 'POST',
+        body:   JSON.stringify(payload),
+    });
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-circle-plus mr-2"></i>Record Deposit';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Deposit failed', false); return; }
+
+    closeDepositModal();
+    loadAccounts(); loadStats();
+    if (currentAccountId) { loadAccountDetail(); loadTransactions(); }
+
+    if (body.payment?.status === 'pending' && body.payment.deposit_id) {
+        showPayModal(body.payment.deposit_id);
+    } else {
+        showToast('Deposit recorded', true);
+    }
+});
+
+/* ============================================================ */
+/* WITHDRAWAL MODAL                                             */
+/* ============================================================ */
+const withdrawModal = document.getElementById('withdrawModal');
+
+function openWithdrawPicker() {
+    if (!accountsCache.length) {
+        showToast('Load the accounts list first', false);
+        return;
+    }
+    openWithdrawModal(null);
+}
+
+function openWithdrawModal(accountId) {
+    const picker = document.getElementById('wdAccountPicker');
+    picker.innerHTML = accountsCache.map(a => {
+        const m = a.members || {};
+        return `<option value="${a.id}">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)} · ${escapeHtml(a.account_number)} · Bal ${fmtNum(a.balance)}</option>`;
+    }).join('');
+
+    document.getElementById('wdPickerBlock').classList.toggle('hidden', !!accountId);
+    if (accountId) picker.value = accountId;
+
+    picker.onchange = () => refreshWithdrawContext(picker.value);
+    refreshWithdrawContext(picker.value);
+
+    document.getElementById('withdrawForm').reset();
+    document.getElementById('wdAccountId').value = picker.value;
+    setWithdrawMethod('cash');
+    withdrawModal.classList.remove('hidden');
+}
+
+function closeWithdrawModal() { withdrawModal.classList.add('hidden'); }
+
+function refreshWithdrawContext(accountId) {
+    const a = accountsCache.find(x => x.id === accountId);
+    if (!a) {
+        document.getElementById('wdBalance').textContent = '—';
+        document.getElementById('wdPending').textContent = '—';
+        return;
+    }
+    document.getElementById('wdCurrencyLabel').textContent = a.currency || 'UGX';
+    document.getElementById('wdBalance').textContent = fmtNum(a.balance);
+
+    // pending total for this account
+    req(`/savings/api/withdrawals?account_id=${accountId}`).then(({ok, body}) => {
+        if (!ok || !body.ok) return;
+        const pending = (body.requests || [])
+            .filter(r => r.status === 'pending' || r.status === 'approved')
+            .reduce((s, r) => s + Number(r.amount || 0), 0);
+        document.getElementById('wdPending').textContent = fmtNum(pending);
+    });
+
+    document.getElementById('wdAccountId').value = accountId;
+}
+
+function setWithdrawMethod(m) {
+    document.getElementById('wdMethod').value = m;
+    document.querySelectorAll('.wd-mth-btn').forEach(b => {
+        const on = b.dataset.method === m;
+        b.classList.toggle('bg-white',    on);
+        b.classList.toggle('shadow-sm',   on);
+        b.classList.toggle('text-brand',  on);
+        b.classList.toggle('text-ink-muted', !on);
+    });
+    document.getElementById('wdOnlineBlock').classList.toggle('hidden', m !== 'online');
+}
+document.querySelectorAll('.wd-mth-btn').forEach(btn => {
+    btn.addEventListener('click', () => setWithdrawMethod(btn.dataset.method));
+});
+
+document.getElementById('withdrawForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    const accountId = d.account_id || document.getElementById('wdAccountPicker').value;
+    if (!accountId) { showToast('Please select an account', false); return; }
+    if (d.method === 'online' && (!d.phone || !d.phone.trim())) {
+        showToast('Mobile money number is required', false); return;
+    }
+
+    const payload = { amount: d.amount, reason: d.reason || null, method: d.method };
+    if (d.method === 'online') { payload.provider = d.provider; payload.phone = d.phone; }
+
+    const btn = document.getElementById('withdrawSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Submitting…';
+
+    const { ok, body } = await req(`/savings/api/${accountId}/withdraw`, {
+        method: 'POST',
+        body:   JSON.stringify(payload),
+    });
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Submit Request';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Withdrawal request failed', false); return; }
+
+    closeWithdrawModal();
+    showToast('Withdrawal request submitted (pending approval)', true);
+    loadStats();
+    loadWithdrawals();
+    if (currentAccountId) loadDetailWithdrawals();
+});
+
+/* ============================================================ */
+/* DETAIL DRAWER                                                */
+/* ============================================================ */
+async function openDetail(accountId) {
+    currentAccountId = accountId;
+    document.getElementById('detailModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    await loadAccountDetail();
+    loadTransactions();
+    loadDetailWithdrawals();
+}
+
+function closeDetailModal() {
+    document.getElementById('detailModal').classList.add('hidden');
+    document.body.style.overflow = '';
+    currentAccountId = null;
+    currentAccount = null;
+}
+
+async function loadAccountDetail() {
+    if (!currentAccountId) return;
+    const { ok, body } = await req(`/savings/api/${currentAccountId}`);
+    if (!ok || !body.ok) { showToast(body.error || 'Could not load account', false); return; }
+    currentAccount = body.account;
+    const m = currentAccount.members || {};
+
+    document.getElementById('dtlMemberName').textContent = `${m.first_name || ''} ${m.last_name || ''}`;
+    document.getElementById('dtlAccountLine').textContent =
+        `Account ${currentAccount.account_number} · ${currentAccount.currency || 'UGX'}`;
+    document.getElementById('dtlBalance').textContent = fmtNum(currentAccount.balance);
+    document.getElementById('dtlOpenedAt').textContent = currentAccount.opened_at
+        ? 'Opened ' + fmtDate(currentAccount.opened_at) : '';
+    document.getElementById('dtlMemberId').textContent = m.member_id || '—';
+    document.getElementById('dtlPhone').textContent = m.phone || '';
+    document.getElementById('dtlEmail').textContent = m.email || '';
+    document.getElementById('dtlShares').textContent = fmtNum(m.shares_units);
+    document.getElementById('dtlSharesValue').textContent = fmtNum(m.shares_value);
+}
+
+async function loadTransactions() {
+    if (!currentAccountId) return;
+    const tbody = document.getElementById('txTable');
+    const { ok, body } = await req(`/savings/api/${currentAccountId}/transactions?per_page=100`);
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-8 text-xs">
+            ${escapeHtml(body.error || 'Load failed')}</td></tr>`;
+        return;
+    }
+    document.getElementById('dtlTxCount').textContent = `${body.total || 0} entries`;
+
+    let deposits = 0, withdrawals = 0;
+    (body.transactions || []).forEach(t => {
+        if (t.type === 'savings_deposit' && t.status === 'completed') deposits += Number(t.amount || 0);
+        if (t.type === 'savings_withdrawal' && t.status === 'completed') withdrawals += Number(t.amount || 0);
+    });
+    document.getElementById('dtlTotalDeposits').textContent    = fmtNum(deposits);
+    document.getElementById('dtlTotalWithdrawals').textContent = fmtNum(withdrawals);
+
+    if (!body.transactions.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-8 text-xs">
+            No transactions yet.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = body.transactions.map(t => `
+        <tr>
+          <td class="px-5 py-2.5 text-ink-muted whitespace-nowrap text-xs">${escapeHtml(fmtDate(t.created_at))}</td>
+          <td class="px-5 py-2.5 text-xs">${escapeHtml(t.type || '')}</td>
+          <td class="px-5 py-2.5 text-xs text-ink-muted">${escapeHtml(t.method || '')}${t.provider ? ' · ' + escapeHtml(t.provider) : ''}</td>
+          <td class="px-5 py-2.5 text-right font-medium text-xs">${fmtNum(t.amount)}</td>
+          <td class="px-5 py-2.5 text-right text-ink-muted text-xs">${t.balance_after != null ? fmtNum(t.balance_after) : '—'}</td>
+          <td class="px-5 py-2.5"><span class="tx-pill tx-${t.status}">${escapeHtml(t.status)}</span></td>
+        </tr>
+    `).join('');
+}
+
+async function loadDetailWithdrawals() {
+    if (!currentAccountId) return;
+    const tbody = document.getElementById('dtlWrTable');
+    const { ok, body } = await req(`/savings/api/withdrawals?account_id=${currentAccountId}`);
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-red-500 py-8 text-xs">Load failed</td></tr>`;
+        return;
+    }
+    const pending = (body.requests || []).filter(r => r.status === 'pending').length;
+    document.getElementById('dtlPendingWr').textContent = pending;
+
+    if (!body.requests.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-ink-muted py-8 text-xs">No requests.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = body.requests.map(r => `
+        <tr>
+          <td class="px-5 py-2.5 text-xs text-ink-muted whitespace-nowrap">${fmtDate(r.created_at)}</td>
+          <td class="px-5 py-2.5 text-right font-medium text-xs">${fmtNum(r.amount)}</td>
+          <td class="px-5 py-2.5 text-xs text-ink-muted">${escapeHtml(r.method || '')}</td>
+          <td class="px-5 py-2.5"><span class="wr-pill wr-${r.status}">${escapeHtml(r.status)}</span></td>
+          <td class="px-5 py-2.5 text-right">
+            ${r.status === 'pending' ? `
+              <button class="action-btn action-approve" onclick="wrAction('${r.id}','approve')">Approve</button>
+            ` : ''}
+            ${r.status === 'approved' ? `
+              <button class="action-btn action-pay" onclick="wrAction('${r.id}','mark_paid')">Mark Paid</button>
+            ` : ''}
+          </td>
+        </tr>
+    `).join('');
+}
+
+function openDepositModalFromDetail() {
+    if (!currentAccount) return;
+    const m = currentAccount.members || {};
+    openDepositModal(currentAccount.id, currentAccount.account_number,
+                     `${m.first_name || ''} ${m.last_name || ''}`, currentAccount.currency);
+}
+
+function openWithdrawModalFromDetail() {
+    if (!currentAccountId) return;
+    // ensure the account is in the cache
+    if (!accountsCache.find(x => x.id === currentAccountId) && currentAccount) {
+        accountsCache.push(currentAccount);
+    }
+    openWithdrawModal(currentAccountId);
+}
+
+function exportStatement() {
+    if (!currentAccountId) return;
+    window.location.href = `/savings/api/${currentAccountId}/statement`;
+}
+
+/* ============================================================ */
+/* PAYMENT STATUS MODAL                                         */
+/* ============================================================ */
+let _pollTimer = null;
+
+function showPayModal(depositId) {
+    document.getElementById('payModal').classList.remove('hidden');
+    document.getElementById('paySpinner').classList.remove('hidden');
+    document.getElementById('payIconWrap').className =
+        'w-16 h-16 mx-auto rounded-full bg-brand/10 text-brand flex items-center justify-center mb-4';
+    document.getElementById('payIcon').className = 'fa-solid fa-mobile-screen-button text-2xl';
+    document.getElementById('payTitle').textContent = 'Waiting for approval';
+    document.getElementById('payText').textContent  =
+        "Approve the mobile-money prompt on the customer's phone.";
+    startPolling(depositId);
+}
+
+function closePayModal() {
+    document.getElementById('payModal').classList.add('hidden');
+    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+    loadAccounts(); loadStats();
+    if (currentAccountId) { loadAccountDetail(); loadTransactions(); }
+}
+
+function startPolling(depositId) {
+    if (_pollTimer) clearInterval(_pollTimer);
+    let attempts = 0;
+    _pollTimer = setInterval(async () => {
+        attempts++;
+        const { ok, body } = await req(`/savings/api/payment/${depositId}/verify`, { method: 'POST' });
+        if (!ok || !body.ok) {
+            if (attempts >= 30) { clearInterval(_pollTimer); _pollTimer = null; }
+            return;
+        }
+        if (body.status === 'completed') {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('paySpinner').classList.add('hidden');
+            document.getElementById('payIconWrap').className =
+                'w-16 h-16 mx-auto rounded-full bg-success-bg text-success flex items-center justify-center mb-4';
+            document.getElementById('payIcon').className = 'fa-solid fa-circle-check text-2xl';
+            document.getElementById('payTitle').textContent = 'Deposit applied';
+            document.getElementById('payText').textContent  =
+                'New balance: ' + fmtNum(body.deposit?.new_balance);
+            setTimeout(closePayModal, 1600);
+        } else if (body.status === 'failed') {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('paySpinner').classList.add('hidden');
+            document.getElementById('payIconWrap').className =
+                'w-16 h-16 mx-auto rounded-full bg-danger-bg text-danger flex items-center justify-center mb-4';
+            document.getElementById('payIcon').className = 'fa-solid fa-circle-xmark text-2xl';
+            document.getElementById('payTitle').textContent = 'Payment failed';
+            document.getElementById('payText').textContent  = body.reason || 'The payment was not completed.';
+        } else if (attempts >= 30) {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('paySpinner').classList.add('hidden');
+            document.getElementById('payTitle').textContent = 'Still pending';
+            document.getElementById('payText').textContent  =
+                'Timed out waiting. Check the account ledger later.';
+        }
+    }, 4000);
+}
+
+/* ============================================================ */
+/* KEYBOARD                                                     */
+/* ============================================================ */
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        if (!document.getElementById('payModal').classList.contains('hidden')) closePayModal();
+        else if (!withdrawModal.classList.contains('hidden')) closeWithdrawModal();
+        else if (!depositModal.classList.contains('hidden')) closeDepositModal();
+        else if (!document.getElementById('detailModal').classList.contains('hidden')) closeDetailModal();
+    }
+});
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    await Promise.all([loadStats(), loadAccounts()]);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Member Login — SACCO Pro</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        navy:    { DEFAULT: '#0A192F', dark: '#071739', deep: '#050F26' },
+        brand:   { DEFAULT: '#1A62FF', dark: '#003ECC', light: '#3B82F6' },
+        ink:     { DEFAULT: '#1E293B', muted: '#64748B', soft: '#94A3B8' },
+      },
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+    }
+  }
+};
+</script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  body { font-family: 'Inter', sans-serif; }
+
+  /* Ambient gradient backdrop */
+  .bg-hero {
+    background:
+      radial-gradient(circle at 15% 20%, rgba(26,98,255,0.35) 0%, transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(16,185,129,0.28) 0%, transparent 45%),
+      linear-gradient(135deg, #071739 0%, #0A192F 55%, #050F26 100%);
+  }
+
+  /* Elevated input with visible focus */
+  .field-input {
+    width: 100%;
+    padding: 14px 16px 14px 46px;
+    border-radius: 12px;
+    border: 1.5px solid #E2E8F0;
+    background: #F8FAFC;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1E293B;
+    transition: all .15s ease;
+    outline: none;
+  }
+  .field-input::placeholder { color: #94A3B8; font-weight: 400; }
+  .field-input:hover { border-color: #CBD5E1; background: #fff; }
+  .field-input:focus {
+    border-color: #1A62FF;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(26,98,255,0.15);
+  }
+
+  /* Primary CTA — unmistakably a button */
+  .btn-primary-cta {
+    width: 100%;
+    padding: 15px 20px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #1A62FF 0%, #003ECC 100%);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .01em;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all .18s ease;
+    box-shadow:
+      0 10px 24px -8px rgba(26,98,255,0.55),
+      0 2px 6px rgba(0,0,0,0.08),
+      inset 0 1px 0 rgba(255,255,255,0.15);
+    position: relative;
+  }
+  .btn-primary-cta:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 14px 30px -8px rgba(26,98,255,0.65),
+      0 4px 10px rgba(0,0,0,0.10),
+      inset 0 1px 0 rgba(255,255,255,0.20);
+  }
+  .btn-primary-cta:active {
+    transform: translateY(0);
+    box-shadow:
+      0 4px 12px -4px rgba(26,98,255,0.5),
+      inset 0 2px 4px rgba(0,0,0,0.12);
+  }
+  .btn-primary-cta:disabled {
+    opacity: .75;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 6px 16px -6px rgba(26,98,255,0.35);
+  }
+
+  /* Card entrance */
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .card-in { animation: cardIn .45s ease-out both; }
+
+  /* Subtle logo float */
+  @keyframes floatY {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-4px); }
+  }
+  .logo-float { animation: floatY 4s ease-in-out infinite; }
+</style>
+</head>
+
+<body class="min-h-screen flex bg-hero antialiased">
+
+  <!-- ============================================================ -->
+  <!-- LEFT: brand panel (hidden on small screens)                   -->
+  <!-- ============================================================ -->
+  <aside class="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-2xl bg-brand flex items-center justify-center text-white shadow-lg shadow-brand/40">
+        <i class="fa-solid fa-cube text-lg"></i>
+      </div>
+      <div>
+        <p class="text-white font-extrabold text-lg leading-none">SACCO<span class="text-brand">Pro</span></p>
+        <p class="text-[10px] tracking-widest text-slate-300 uppercase mt-0.5">Member Portal</p>
+      </div>
+    </div>
+
+    <div class="relative z-10 max-w-md">
+      <h1 class="text-4xl font-extrabold text-white leading-tight">
+        Your savings,<br>
+        <span class="bg-gradient-to-r from-brand-light to-brand bg-clip-text text-transparent">your future.</span>
+      </h1>
+      <p class="text-slate-300 mt-4 leading-relaxed">
+        Track shares, monitor loans, view dividends and manage your
+        SACCO membership — all in one secure place.
+      </p>
+
+      <div class="mt-8 space-y-3">
+        <div class="flex items-center gap-3 text-slate-200 text-sm">
+          <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+            <i class="fa-solid fa-shield-halved text-emerald-400 text-xs"></i>
+          </div>
+          <span>Bank-grade encryption for every transaction</span>
+        </div>
+        <div class="flex items-center gap-3 text-slate-200 text-sm">
+          <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+            <i class="fa-solid fa-clock-rotate-left text-brand-light text-xs"></i>
+          </div>
+          <span>Real-time balances and statements</span>
+        </div>
+        <div class="flex items-center gap-3 text-slate-200 text-sm">
+          <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+            <i class="fa-solid fa-users text-emerald-400 text-xs"></i>
+          </div>
+          <span>Built for members, by members</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="text-[11px] text-slate-400">&copy; 2026 SACCO Pro Financial Cooperative</p>
+  </aside>
+
+  <!-- ============================================================ -->
+  <!-- RIGHT: login form                                             -->
+  <!-- ============================================================ -->
+  <main class="flex-1 flex items-center justify-center p-6 sm:p-10">
+    <div class="w-full max-w-md card-in">
+
+      <!-- Brand (mobile only) -->
+      <div class="lg:hidden text-center mb-6">
+        <div class="inline-flex w-14 h-14 rounded-2xl bg-brand text-white items-center justify-center shadow-lg shadow-brand/40 logo-float">
+          <i class="fa-solid fa-cube text-2xl"></i>
+        </div>
+        <h2 class="mt-3 text-white font-extrabold text-xl">SACCO<span class="text-brand">Pro</span></h2>
+        <p class="text-slate-400 text-xs mt-1 tracking-widest uppercase">Member Portal</p>
+      </div>
+
+      <!-- Card -->
+      <div class="bg-white rounded-3xl shadow-2xl shadow-black/30 p-8 sm:p-10">
+        <div class="text-center mb-8">
+          <h1 class="text-2xl font-bold text-ink">Welcome back</h1>
+          <p class="text-sm text-ink-muted mt-1">Sign in with your Member ID</p>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast" class="hidden mb-5 p-3 rounded-xl text-xs font-medium"></div>
+
+        <form id="loginForm" class="space-y-5">
+
+          <!-- Identifier -->
+          <div>
+            <label for="identifier"
+                   class="block text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-2">
+              Member ID or Phone
+            </label>
+            <div class="relative">
+              <i class="fa-regular fa-user absolute left-4 top-1/2 -translate-y-1/2 text-ink-soft text-sm pointer-events-none"></i>
+              <input id="identifier" name="identifier" required autocomplete="username"
+                     placeholder="e.g. 12345678"
+                     class="field-input">
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div>
+            <label for="password"
+                   class="block text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-2">
+              Password
+            </label>
+            <div class="relative">
+              <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-ink-soft text-sm pointer-events-none"></i>
+              <input id="password" name="password" type="password" required autocomplete="current-password"
+                     placeholder="Your password"
+                     class="field-input pr-12">
+              <button type="button" onclick="togglePassword()"
+                      aria-label="Toggle password visibility"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg hover:bg-slate-100
+                             flex items-center justify-center text-ink-soft hover:text-ink-muted transition">
+                <i id="pwdIcon" class="fa-regular fa-eye text-sm"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Remember + forget -->
+          <div class="flex items-center justify-between text-xs">
+            <label class="flex items-center gap-2 text-ink-muted cursor-pointer select-none">
+              <input type="checkbox" name="remember"
+                     class="w-4 h-4 rounded border-slate-300 text-brand focus:ring-brand/40">
+              <span class="font-medium">Remember me</span>
+            </label>
+            <a href="#" onclick="event.preventDefault(); showToast('Contact your SACCO office to reset your password.', false);"
+               class="text-brand font-semibold hover:underline">
+              Forgot password?
+            </a>
+          </div>
+
+          <!-- Primary CTA -->
+          <button type="submit" id="submitBtn" class="btn-primary-cta">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span id="submitText">Sign in</span>
+          </button>
+        </form>
+
+        <!-- Divider + secondary hint -->
+        <div class="flex items-center gap-3 mt-7 mb-4">
+          <div class="flex-1 h-px bg-slate-200"></div>
+          <span class="text-[10px] font-semibold tracking-widest uppercase text-ink-soft">Need help?</span>
+          <div class="flex-1 h-px bg-slate-200"></div>
+        </div>
+
+        <p class="text-center text-xs text-ink-muted leading-relaxed">
+          Not a member yet?<br>
+          Visit your SACCO office to register and receive your Member ID.
+        </p>
+      </div>
+
+      <!-- Secure footer note -->
+      <div class="flex items-center justify-center gap-2 mt-5 text-[11px] text-slate-400">
+        <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+        <span>Your information is protected with industry-standard encryption</span>
+      </div>
+    </div>
+  </main>
+
+<script>
+function togglePassword() {
+  const input = document.getElementById('password');
+  const icon  = document.getElementById('pwdIcon');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.className = 'fa-regular fa-eye-slash text-sm';
+  } else {
+    input.type = 'password';
+    icon.className = 'fa-regular fa-eye text-sm';
+  }
+}
+
+function showToast(msg, ok = true) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'mb-5 p-3 rounded-xl text-xs font-medium ' +
+    (ok ? 'bg-green-50 text-green-800 border border-green-200'
+        : 'bg-red-50 text-red-800 border border-red-200');
+  t.classList.remove('hidden');
+  clearTimeout(t._t);
+  if (ok) t._t = setTimeout(() => t.classList.add('hidden'), 4000);
+}
+
+document.getElementById('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f    = e.target;
+  const btn  = document.getElementById('submitBtn');
+  const txt  = document.getElementById('submitText');
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Signing in…</span>';
+
+  const payload = {
+    identifier: f.elements.identifier.value.trim(),
+    password:   f.elements.password.value,
+    remember:   f.elements.remember.checked,
+  };
+
+  try {
+    const r = await fetch('/member/api/login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const body = await r.json();
+
+    if (!r.ok || !body.ok) {
+      showToast(body.error || 'Login failed', false);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i><span id="submitText">Sign in</span>';
+      return;
+    }
+
+    showToast('Welcome! Redirecting…', true);
+    btn.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>Welcome!</span>';
+    setTimeout(() => window.location.href = body.redirect, 500);
+
+  } catch (err) {
+    showToast('Network error. Try again.', false);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i><span id="submitText">Sign in</span>';
+  }
+});
+</script>
+</body>
+</html>

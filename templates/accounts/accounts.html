@@ -1,0 +1,912 @@
+{% extends "base.html" %}
+{% block title %}Accounts — SACCO Pro{% endblock %}
+{% block page_title %}Accounts{% endblock %}
+
+{% block content %}
+
+<!-- KPI CARDS -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Cash Position</p>
+        <p id="kpiCash" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+        <i class="fa-solid fa-vault"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      Bank <span id="kpiBank" class="font-semibold text-ink">—</span> ·
+      Mobile <span id="kpiMobile" class="font-semibold text-ink">—</span>
+    </p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Month Income</p>
+        <p id="kpiMonthIncome" class="text-2xl font-bold mt-1 text-success">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+        <i class="fa-solid fa-arrow-down"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      Expenses <span id="kpiMonthExpense" class="font-semibold text-ink">—</span> ·
+      Net <span id="kpiMonthNet" class="font-semibold text-ink">—</span>
+    </p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Year to Date</p>
+        <p id="kpiYearIncome" class="text-2xl font-bold mt-1 text-success">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+        <i class="fa-solid fa-calendar"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      Expenses <span id="kpiYearExpense" class="font-semibold text-ink">—</span> ·
+      Net <span id="kpiYearNet" class="font-semibold text-ink">—</span>
+    </p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Lifetime Net</p>
+        <p id="kpiLifeNet" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
+        <i class="fa-solid fa-chart-line"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Across all transactions</p>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="bg-white rounded-2xl shadow-sm mb-5">
+  <div class="flex border-b border-slate-100 overflow-x-auto">
+    <button data-tab="feed" class="atab px-5 py-3.5 text-sm font-semibold border-b-2 border-brand text-brand whitespace-nowrap">
+      <i class="fa-solid fa-receipt mr-2"></i>Transactions
+    </button>
+    <button data-tab="chart" class="atab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">
+      <i class="fa-solid fa-sitemap mr-2"></i>Chart of Accounts
+    </button>
+    <button data-tab="expenses" class="atab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">
+      <i class="fa-solid fa-file-invoice-dollar mr-2"></i>Expense Summary
+    </button>
+    <button data-tab="incomes" class="atab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">
+      <i class="fa-solid fa-hand-holding-dollar mr-2"></i>Other Income
+    </button>
+  </div>
+</div>
+
+<!-- TAB: TRANSACTIONS -->
+<section id="tab-feed">
+  <div class="flex flex-wrap items-center gap-3 mb-5">
+    <select id="feedType" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+      <option value="">All types</option>
+      <option value="expense">Expense</option>
+      <option value="income">Income</option>
+      <option value="transfer">Transfer</option>
+    </select>
+    <select id="feedStatus" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+      <option value="">All statuses</option>
+      <option value="completed">Completed</option>
+      <option value="reversed">Reversed</option>
+    </select>
+    <input id="feedFrom" type="date" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+    <input id="feedTo" type="date" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+    <button onclick="exportCSV()" class="ml-auto inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-page text-ink-muted hover:text-ink text-sm font-semibold shadow-sm transition">
+      <i class="fa-solid fa-file-csv"></i> Export
+    </button>
+    <button onclick="openExpenseModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-danger hover:brightness-95 text-white text-sm font-semibold shadow-sm">
+      <i class="fa-solid fa-minus"></i> Record Expense
+    </button>
+    <button onclick="openIncomeModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-success hover:brightness-95 text-white text-sm font-semibold shadow-sm">
+      <i class="fa-solid fa-plus"></i> Record Income
+    </button>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+          <tr>
+            <th class="text-left px-5 py-3 font-semibold">Voucher</th>
+            <th class="text-left px-5 py-3 font-semibold">Date</th>
+            <th class="text-left px-5 py-3 font-semibold">Type</th>
+            <th class="text-left px-5 py-3 font-semibold">Category</th>
+            <th class="text-left px-5 py-3 font-semibold">Payee</th>
+            <th class="text-right px-5 py-3 font-semibold">Amount</th>
+            <th class="text-left px-5 py-3 font-semibold">Method</th>
+            <th class="text-left px-5 py-3 font-semibold">Status</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="feedTable" class="divide-y divide-slate-100">
+          <tr><td colspan="9" class="text-center text-ink-muted py-10 text-sm">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+      <span id="feedPageInfo">—</span>
+      <div class="flex gap-1">
+        <button id="feedPrev" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+        <button id="feedNext" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TAB: CHART OF ACCOUNTS -->
+<section id="tab-chart" class="hidden">
+  <div class="flex items-center gap-3 mb-5">
+    <button onclick="seedAccounts()" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-page text-ink-muted hover:text-ink text-sm font-semibold shadow-sm transition">
+      <i class="fa-solid fa-seedling"></i> Seed defaults
+    </button>
+    <button onclick="openAccountModal()" class="ml-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-white text-sm font-semibold shadow-sm transition">
+      <i class="fa-solid fa-plus"></i> New Account
+    </button>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5" id="chartGrid">
+    <div class="text-center text-ink-muted py-12">Loading…</div>
+  </div>
+</section>
+
+<!-- TAB: EXPENSE SUMMARY -->
+<section id="tab-expenses" class="hidden">
+  <div class="flex items-center gap-3 mb-5">
+    <input id="expFrom" type="date" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+    <input id="expTo" type="date" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+    <button onclick="loadExpenseSummary()" class="btn-primary text-sm">Apply</button>
+    <div class="ml-auto text-sm font-semibold">Total: <span id="expTotal" class="text-danger">—</span></div>
+  </div>
+    <div class="bg-white rounded-2xl p-6 shadow-sm">
+    <div id="expBreakdown" class="space-y-3">
+      <p class="text-ink-muted text-sm">Pick a date range and click Apply.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TAB: OTHER INCOME -->
+<section id="tab-incomes" class="hidden">
+  <div class="flex items-center gap-3 mb-5">
+    <input id="incFrom" type="date" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+    <input id="incTo" type="date" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+    <button onclick="loadIncomeSummary()" class="btn-primary text-sm">Apply</button>
+    <div class="ml-auto text-sm font-semibold">Total: <span id="incTotal" class="text-success">—</span></div>
+  </div>
+  <div class="bg-white rounded-2xl p-6 shadow-sm">
+    <div id="incBreakdown" class="space-y-3">
+      <p class="text-ink-muted text-sm">Pick a date range and click Apply.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- EXPENSE MODAL                                                -->
+<!-- ============================================================ -->
+<div id="expenseModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-base">Record Expense</h3>
+      <button onclick="closeExpenseModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form id="expenseForm" class="p-6 space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Category *</label>
+          <select name="category" required class="inp">
+            <option value="">— Select —</option>
+            <option value="salaries">Salaries & wages</option>
+            <option value="rent">Rent</option>
+            <option value="utilities">Utilities</option>
+            <option value="internet">Internet & telephone</option>
+            <option value="transport">Transport & fuel</option>
+            <option value="office_supplies">Office supplies</option>
+            <option value="marketing">Marketing & promotion</option>
+            <option value="training">Training & development</option>
+            <option value="legal">Legal & professional</option>
+            <option value="audit">Audit fees</option>
+            <option value="insurance">Insurance</option>
+            <option value="repairs">Repairs & maintenance</option>
+            <option value="bank_charges">Bank charges</option>
+            <option value="taxes">Taxes & licences</option>
+            <option value="loan_loss_provision">Loan loss provision</option>
+            <option value="dividend_payout">Dividends paid</option>
+            <option value="capital_expenditure">Capital expenditure</option>
+            <option value="other_operating">Other operating</option>
+            <option value="other_expense">Other expense</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Amount *</label>
+          <input name="amount" type="number" min="1" step="1" required class="inp">
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Expense account *</label>
+        <select name="expense_account_id" id="expAccountPicker" required class="inp"></select>
+      </div>
+
+      <div>
+        <label class="lbl">Pay from *</label>
+        <select name="cash_account_id" id="cashAccountPicker" required class="inp"></select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Payee</label>
+          <input name="payee" class="inp" placeholder="e.g. UMEME, Landlord">
+        </div>
+        <div>
+          <label class="lbl">Reference</label>
+          <input name="reference" class="inp" placeholder="Cheque / invoice #">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Method</label>
+          <select name="method" class="inp">
+            <option value="cash">Cash</option>
+            <option value="bank">Bank</option>
+            <option value="online">Online</option>
+            <option value="internal">Internal</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Date</label>
+          <input name="txn_date" type="date" class="inp" id="expDate">
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Narration</label>
+        <textarea name="narration" rows="2" class="inp"></textarea>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeExpenseModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" class="btn-primary" id="expSubmit" style="background:#EF4444;">
+          <i class="fa-solid fa-minus mr-2"></i>Record Expense
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- INCOME MODAL                                                 -->
+<!-- ============================================================ -->
+<div id="incomeModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-base">Record Other Income</h3>
+      <button onclick="closeIncomeModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form id="incomeForm" class="p-6 space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Category *</label>
+          <select name="category" required class="inp">
+            <option value="">— Select —</option>
+            <option value="grant">Grants</option>
+            <option value="donation">Donations</option>
+            <option value="bank_interest">Bank interest</option>
+            <option value="rental_income">Rental income</option>
+            <option value="dividend_income">Dividend income</option>
+            <option value="asset_sale">Asset sale proceeds</option>
+            <option value="membership_penalty">Membership penalty</option>
+            <option value="misc_income">Miscellaneous income</option>
+            <option value="other_income">Other income</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Amount *</label>
+          <input name="amount" type="number" min="1" step="1" required class="inp">
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Income account *</label>
+        <select name="income_account_id" id="incAccountPicker" required class="inp"></select>
+      </div>
+
+      <div>
+        <label class="lbl">Received into *</label>
+        <select name="cash_account_id" id="cashAccountPicker2" required class="inp"></select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Payer</label>
+          <input name="payer" class="inp" placeholder="Who paid">
+        </div>
+        <div>
+          <label class="lbl">Reference</label>
+          <input name="reference" class="inp">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Method</label>
+          <select name="method" class="inp">
+            <option value="cash">Cash</option>
+            <option value="bank">Bank</option>
+            <option value="online">Online</option>
+            <option value="internal">Internal</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Date</label>
+          <input name="txn_date" type="date" class="inp" id="incDate">
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Narration</label>
+        <textarea name="narration" rows="2" class="inp"></textarea>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeIncomeModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" class="btn-primary" id="incSubmit" style="background:#10B981;">
+          <i class="fa-solid fa-plus mr-2"></i>Record Income
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- NEW ACCOUNT MODAL                                            -->
+<!-- ============================================================ -->
+<div id="accountModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-base">New Account</h3>
+      <button onclick="closeAccountModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form id="accountForm" class="p-6 space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Code *</label>
+          <input name="code" required class="inp" placeholder="e.g. 5210">
+        </div>
+        <div>
+          <label class="lbl">Category *</label>
+          <select name="category" required class="inp">
+            <option value="expense">Expense</option>
+            <option value="income">Income</option>
+            <option value="asset">Asset</option>
+            <option value="liability">Liability</option>
+            <option value="equity">Equity</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="lbl">Name *</label>
+        <input name="name" required class="inp">
+      </div>
+      <div>
+        <label class="lbl">Subcategory</label>
+        <input name="subcategory" class="inp" placeholder="e.g. operating">
+      </div>
+      <div>
+        <label class="lbl">Description</label>
+        <textarea name="description" rows="2" class="inp"></textarea>
+      </div>
+      <div class="flex items-center gap-4 text-xs">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="is_cash_account" class="w-4 h-4 text-brand"> Cash account
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="is_bank_account" class="w-4 h-4 text-brand"> Bank account
+        </label>
+      </div>
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeAccountModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" class="btn-primary" id="accSubmit">
+          <i class="fa-solid fa-plus mr-2"></i>Create
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; transition:all .15s; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   transition:.15s; border:none; cursor:pointer; }
+    .btn-primary:hover { filter:brightness(0.92); }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { display:inline-flex; align-items:center; padding:10px 18px; border-radius:10px;
+                 background:#fff; border:1px solid #E2E8F0;
+                 color:#64748B; font-weight:600; font-size:14px; cursor:pointer; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .t-expense  { background:#FEE2E2; color:#991B1B; }
+    .t-income   { background:#E6F4EA; color:#065F46; }
+    .t-transfer { background:#DBEAFE; color:#1E40AF; }
+    .s-completed { background:#E6F4EA; color:#065F46; }
+    .s-pending   { background:#FEF3C7; color:#92400E; }
+    .s-reversed  { background:#E2E8F0; color:#334155; }
+    .s-cancelled { background:#FEE2E2; color:#991B1B; }
+    .cat-card { background:#fff; border:1px solid #E2E8F0; border-radius:14px; padding:16px; }
+    .cat-card h4 { font-size:12px; text-transform:uppercase; letter-spacing:.06em;
+                   color:#64748B; margin:0 0 10px; }
+    .cat-row { display:flex; justify-content:space-between; padding:8px 0;
+               border-bottom:1px dashed #E2E8F0; font-size:13px; }
+    .cat-row:last-child { border-bottom:none; }
+    .cat-row .code { color:#94A3B8; font-family:monospace; font-size:11px; margin-right:8px; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE                                                        */
+/* ============================================================ */
+const state = {
+    feedPage: 1, feedPerPage: 20, feedType: '', feedStatus: '',
+    feedFrom: '', feedTo: '', feedTotal: 0,
+};
+let allAccounts = [];
+let expenseAccounts = [];
+let incomeAccounts = [];
+let cashAccounts = [];
+
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtCompact(n) {
+    n = Number(n || 0);
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return String(n);
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
+}
+function titleCase(s) { return (s || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); }
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function debounce(fn, ms = 300) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        ...opts,
+    });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, status: r.status, body };
+}
+
+/* ============================================================ */
+/* TABS                                                         */
+/* ============================================================ */
+document.querySelectorAll('.atab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.atab').forEach(b => {
+            const on = b.dataset.tab === tab;
+            b.classList.toggle('border-brand', on);
+            b.classList.toggle('text-brand', on);
+            b.classList.toggle('border-transparent', !on);
+            b.classList.toggle('text-ink-muted', !on);
+        });
+        ['feed','chart','expenses','incomes'].forEach(t => {
+            document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
+        });
+        if (tab === 'chart')    loadChart();
+        if (tab === 'expenses') loadExpenseSummary();
+        if (tab === 'incomes')  loadIncomeSummary();
+    });
+});
+
+/* ============================================================ */
+/* OVERVIEW                                                     */
+/* ============================================================ */
+async function loadOverview() {
+    const { ok, body } = await req('/accounts/api/overview');
+    if (!ok || !body.ok) return;
+    const o = body.overview;
+    document.getElementById('kpiCash').textContent        = fmtCompact(o.cash_on_hand);
+    document.getElementById('kpiBank').textContent        = fmtCompact(o.bank_balance);
+    document.getElementById('kpiMobile').textContent      = fmtCompact(o.mobile_float);
+    document.getElementById('kpiMonthIncome').textContent = fmtCompact(o.month_income);
+    document.getElementById('kpiMonthExpense').textContent= fmtCompact(o.month_expense);
+    document.getElementById('kpiMonthNet').textContent    = fmtCompact(o.month_net);
+    document.getElementById('kpiYearIncome').textContent  = fmtCompact(o.year_income);
+    document.getElementById('kpiYearExpense').textContent = fmtCompact(o.year_expense);
+    document.getElementById('kpiYearNet').textContent     = fmtCompact(o.year_net);
+    document.getElementById('kpiLifeNet').textContent     = fmtCompact(o.lifetime_net);
+}
+
+/* ============================================================ */
+/* FEED                                                         */
+/* ============================================================ */
+async function loadFeed() {
+    const tbody = document.getElementById('feedTable');
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const qs = new URLSearchParams({
+        page: state.feedPage, per_page: state.feedPerPage,
+        type: state.feedType, status: state.feedStatus,
+    });
+    if (state.feedFrom) qs.set('from', state.feedFrom);
+    if (state.feedTo)   qs.set('to',   state.feedTo);
+
+    const { ok, body } = await req('/accounts/api/transactions?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-red-500 py-10 text-sm">Load failed</td></tr>`;
+        return;
+    }
+    state.feedTotal = body.total;
+
+    if (!body.transactions.length) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No transactions yet.</td></tr>`;
+    } else {
+        tbody.innerHTML = body.transactions.map(t => `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3 font-mono text-xs text-ink-muted">${escapeHtml(t.txn_number)}</td>
+              <td class="px-5 py-3 text-xs text-ink-muted">${fmtDate(t.txn_date)}</td>
+              <td class="px-5 py-3"><span class="pill t-${t.type}">${escapeHtml(t.type)}</span></td>
+              <td class="px-5 py-3 text-xs">${escapeHtml(titleCase(t.category))}</td>
+              <td class="px-5 py-3 text-sm">${escapeHtml(t.payee || '—')}</td>
+              <td class="px-5 py-3 text-right font-medium ${t.type === 'expense' ? 'text-danger' : t.type === 'income' ? 'text-success' : ''}">
+                ${t.type === 'expense' ? '-' : t.type === 'income' ? '+' : ''}${fmtNum(t.amount)}
+                <span class="text-xs text-ink-muted">${escapeHtml(t.currency)}</span>
+              </td>
+              <td class="px-5 py-3 text-xs text-ink-muted">${escapeHtml(t.method || '—')}</td>
+              <td class="px-5 py-3"><span class="pill s-${t.status}">${escapeHtml(t.status)}</span></td>
+              <td class="px-5 py-3 text-right">
+                <a href="/accounts/api/transactions/${t.id}/receipt" target="_blank"
+                   class="w-8 h-8 inline-flex items-center justify-center rounded-lg hover:bg-page text-ink-muted hover:text-brand transition">
+                  <i class="fa-solid fa-receipt"></i>
+                </a>
+              </td>
+            </tr>
+        `).join('');
+    }
+
+    const from = state.feedTotal ? (state.feedPage - 1) * state.feedPerPage + 1 : 0;
+    const to   = Math.min(state.feedPage * state.feedPerPage, state.feedTotal);
+    document.getElementById('feedPageInfo').textContent =
+        state.feedTotal ? `${from}–${to} of ${state.feedTotal}` : '0 results';
+    document.getElementById('feedPrev').disabled = state.feedPage <= 1;
+    document.getElementById('feedNext').disabled = to >= state.feedTotal;
+}
+document.getElementById('feedPrev').onclick = () => { if (state.feedPage > 1) { state.feedPage--; loadFeed(); } };
+document.getElementById('feedNext').onclick = () => {
+    if (state.feedPage * state.feedPerPage < state.feedTotal) { state.feedPage++; loadFeed(); }
+};
+['feedType','feedStatus','feedFrom','feedTo'].forEach(id => {
+    document.getElementById(id).addEventListener('change', e => {
+        const k = id.replace('feed', '').toLowerCase();
+        if (k === 'type')   state.feedType = e.target.value;
+        if (k === 'status') state.feedStatus = e.target.value;
+        if (k === 'from')   state.feedFrom = e.target.value;
+        if (k === 'to')     state.feedTo = e.target.value;
+        state.feedPage = 1;
+        loadFeed();
+    });
+});
+function exportCSV() {
+    const qs = new URLSearchParams();
+    if (state.feedType) qs.set('type', state.feedType);
+    if (state.feedFrom) qs.set('from', state.feedFrom);
+    if (state.feedTo)   qs.set('to', state.feedTo);
+    window.location.href = '/accounts/api/export?' + qs.toString();
+}
+
+/* ============================================================ */
+/* CHART OF ACCOUNTS                                            */
+/* ============================================================ */
+async function loadChart() {
+    const grid = document.getElementById('chartGrid');
+    grid.innerHTML = `<div class="text-center text-ink-muted py-12 col-span-2">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</div>`;
+
+    const { ok, body } = await req('/accounts/api/chart');
+    if (!ok || !body.ok) {
+        grid.innerHTML = `<div class="text-center text-red-500 py-12 col-span-2">Load failed</div>`;
+        return;
+    }
+    allAccounts = body.accounts || [];
+    expenseAccounts = allAccounts.filter(a => a.category === 'expense' && a.is_active);
+    incomeAccounts  = allAccounts.filter(a => a.category === 'income'  && a.is_active);
+    cashAccounts    = allAccounts.filter(a =>
+        a.category === 'asset' && (a.is_cash_account || a.is_bank_account) && a.is_active);
+
+    const grouped = body.grouped || {};
+    const order = ['asset', 'liability', 'equity', 'income', 'expense'];
+    const labels = { asset:'Assets', liability:'Liabilities', equity:'Equity',
+                     income:'Income', expense:'Expenses' };
+
+    grid.innerHTML = order.map(cat => {
+        const list = grouped[cat] || [];
+        if (!list.length) return '';
+        return `
+        <div class="cat-card">
+          <h4>${labels[cat]} · ${list.length}</h4>
+          ${list.map(a => `
+              <div class="cat-row">
+                <span><span class="code">${escapeHtml(a.code)}</span>${escapeHtml(a.name)}</span>
+                <span class="font-medium">${fmtNum(a.balance)}</span>
+              </div>
+          `).join('')}
+        </div>`;
+    }).join('') || `<div class="text-center text-ink-muted py-12 col-span-2">
+        No accounts yet. Click <strong>Seed defaults</strong> to create the standard chart.
+    </div>`;
+
+    populateAccountPickers();
+}
+
+function populateAccountPickers() {
+    const expSel = document.getElementById('expAccountPicker');
+    expSel.innerHTML = '<option value="">— Select expense account —</option>' +
+        expenseAccounts.map(a =>
+            `<option value="${a.id}">${escapeHtml(a.code)} · ${escapeHtml(a.name)}</option>`
+        ).join('');
+
+    const incSel = document.getElementById('incAccountPicker');
+    incSel.innerHTML = '<option value="">— Select income account —</option>' +
+        incomeAccounts.map(a =>
+            `<option value="${a.id}">${escapeHtml(a.code)} · ${escapeHtml(a.name)}</option>`
+        ).join('');
+
+    const cashOpts = cashAccounts.map(a =>
+        `<option value="${a.id}">${escapeHtml(a.code)} · ${escapeHtml(a.name)} (${fmtCompact(a.balance)})</option>`
+    ).join('');
+    document.getElementById('cashAccountPicker').innerHTML  = '<option value="">— Select —</option>' + cashOpts;
+    document.getElementById('cashAccountPicker2').innerHTML = '<option value="">— Select —</option>' + cashOpts;
+}
+
+async function seedAccounts() {
+    if (!confirm('Seed the default chart of accounts? Existing accounts are preserved.')) return;
+    const { ok, body } = await req('/accounts/api/seed', { method: 'POST' });
+    if (!ok || !body.ok) { showToast(body.error || 'Seed failed', false); return; }
+    showToast('Default accounts created', true);
+    loadChart();
+    loadOverview();
+}
+
+/* ============================================================ */
+/* EXPENSE / INCOME MODALS                                      */
+/* ============================================================ */
+function openExpenseModal() {
+    document.getElementById('expenseForm').reset();
+    document.getElementById('expDate').value = new Date().toISOString().slice(0,10);
+    populateAccountPickers();
+    document.getElementById('expenseModal').classList.remove('hidden');
+}
+function closeExpenseModal() { document.getElementById('expenseModal').classList.add('hidden'); }
+
+function openIncomeModal() {
+    document.getElementById('incomeForm').reset();
+    document.getElementById('incDate').value = new Date().toISOString().slice(0,10);
+    populateAccountPickers();
+    document.getElementById('incomeModal').classList.remove('hidden');
+}
+function closeIncomeModal() { document.getElementById('incomeModal').classList.add('hidden'); }
+
+document.getElementById('expenseForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    const btn = document.getElementById('expSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Saving…';
+
+    const { ok, body } = await req('/accounts/api/expenses', {
+        method: 'POST', body: JSON.stringify({
+            category: d.category,
+            amount: Number(d.amount),
+            expense_account_id: d.expense_account_id,
+            cash_account_id: d.cash_account_id,
+            method: d.method,
+            payee: d.payee || null,
+            reference: d.reference || null,
+            narration: d.narration || null,
+            txn_date: d.txn_date || null,
+        }),
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-minus mr-2"></i>Record Expense';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Failed', false); return; }
+    closeExpenseModal();
+    showToast(`Expense recorded · ${body.transaction.txn_number}`, true);
+    loadFeed(); loadOverview();
+});
+
+document.getElementById('incomeForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    const btn = document.getElementById('incSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Saving…';
+
+    const { ok, body } = await req('/accounts/api/incomes', {
+        method: 'POST', body: JSON.stringify({
+            category: d.category,
+            amount: Number(d.amount),
+            income_account_id: d.income_account_id,
+            cash_account_id: d.cash_account_id,
+            method: d.method,
+            payer: d.payer || null,
+            reference: d.reference || null,
+            narration: d.narration || null,
+            txn_date: d.txn_date || null,
+        }),
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Record Income';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Failed', false); return; }
+    closeIncomeModal();
+    showToast(`Income recorded · ${body.transaction.txn_number}`, true);
+    loadFeed(); loadOverview();
+});
+
+/* ============================================================ */
+/* NEW ACCOUNT MODAL                                            */
+/* ============================================================ */
+function openAccountModal() {
+    document.getElementById('accountForm').reset();
+    document.getElementById('accountModal').classList.remove('hidden');
+}
+function closeAccountModal() { document.getElementById('accountModal').classList.add('hidden'); }
+
+document.getElementById('accountForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.target;
+    const d = Object.fromEntries(new FormData(form).entries());
+    d.is_cash_account = form.elements['is_cash_account'].checked;
+    d.is_bank_account = form.elements['is_bank_account'].checked;
+
+    const btn = document.getElementById('accSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Creating…';
+
+    const { ok, body } = await req('/accounts/api/accounts', {
+        method: 'POST', body: JSON.stringify(d),
+    });
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Create';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Create failed', false); return; }
+    closeAccountModal();
+    showToast('Account created', true);
+    loadChart();
+});
+
+/* ============================================================ */
+/* SUMMARIES                                                    */
+/* ============================================================ */
+async function loadExpenseSummary() {
+    const wrap = document.getElementById('expBreakdown');
+    wrap.innerHTML = `<div class="text-center text-ink-muted py-8 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</div>`;
+
+    const from = document.getElementById('expFrom').value;
+    const to   = document.getElementById('expTo').value;
+    const qs = new URLSearchParams();
+    if (from) qs.set('from', from);
+    if (to)   qs.set('to',   to);
+
+    const { ok, body } = await req('/accounts/api/summary/expenses?' + qs.toString());
+    if (!ok || !body.ok) { wrap.innerHTML = `<div class="text-red-500 text-sm">Load failed</div>`; return; }
+    document.getElementById('expTotal').textContent = fmtNum(body.total);
+
+    if (!body.items.length) {
+        wrap.innerHTML = `<p class="text-ink-muted text-sm">No expenses in this period.</p>`;
+        return;
+    }
+    const max = Math.max(...body.items.map(i => i.amount), 1);
+    wrap.innerHTML = body.items.map(i => {
+        const pct = (i.amount / max) * 100;
+        return `
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="font-medium">${escapeHtml(titleCase(i.category))}</span>
+            <span class="text-ink-muted">${i.count} txns · <span class="font-semibold text-ink">${fmtNum(i.amount)} ${escapeHtml(i.currency)}</span></span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+            <div class="h-full bg-danger" style="width:${pct}%"></div>
+          </div>
+        </div>`;
+    }).join('');
+}
+
+async function loadIncomeSummary() {
+    const wrap = document.getElementById('incBreakdown');
+    wrap.innerHTML = `<div class="text-center text-ink-muted py-8 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</div>`;
+
+    const from = document.getElementById('incFrom').value;
+    const to   = document.getElementById('incTo').value;
+    const qs = new URLSearchParams();
+    if (from) qs.set('from', from);
+    if (to)   qs.set('to',   to);
+
+    const { ok, body } = await req('/accounts/api/summary/incomes?' + qs.toString());
+    if (!ok || !body.ok) { wrap.innerHTML = `<div class="text-red-500 text-sm">Load failed</div>`; return; }
+    document.getElementById('incTotal').textContent = fmtNum(body.total);
+
+    if (!body.items.length) {
+        wrap.innerHTML = `<p class="text-ink-muted text-sm">No other income in this period.</p>`;
+        return;
+    }
+    const max = Math.max(...body.items.map(i => i.amount), 1);
+    wrap.innerHTML = body.items.map(i => {
+        const pct = (i.amount / max) * 100;
+        return `
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="font-medium">${escapeHtml(titleCase(i.category))}</span>
+            <span class="text-ink-muted">${i.count} txns · <span class="font-semibold text-ink">${fmtNum(i.amount)} ${escapeHtml(i.currency)}</span></span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+            <div class="h-full bg-success" style="width:${pct}%"></div>
+          </div>
+        </div>`;
+    }).join('');
+}
+
+/* ============================================================ */
+/* ESC                                                          */
+/* ============================================================ */
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        ['accountModal','incomeModal','expenseModal'].forEach(id => {
+            const el = document.getElementById(id);
+            if (!el.classList.contains('hidden')) el.classList.add('hidden');
+        });
+    }
+});
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    await Promise.all([loadOverview(), loadFeed(), loadChart()]);
+})();
+</script>
+{% endblock %}

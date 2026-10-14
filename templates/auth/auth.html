@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SACCO Pro — Auth</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+    theme: { extend: { colors: {
+        navy:   { DEFAULT: '#0A192F', dark: '#071739' },
+        brand:  { DEFAULT: '#1A62FF', dark: '#003ECC' },
+        ink:    { DEFAULT: '#1E293B', muted: '#64748B' },
+        page:   '#F4F6F9',
+    }}}
+};
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>body{font-family:'Inter',sans-serif}</style>
+</head>
+<body class="bg-page text-ink min-h-screen antialiased">
+
+<div id="toast" class="hidden fixed top-5 right-5 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium"></div>
+
+{% if view == 'dashboard' %}
+  <!-- ================= DASHBOARD ================= -->
+  <div class="min-h-screen flex">
+      <aside class="w-64 bg-navy text-slate-200 p-6 flex-shrink-0">
+          <div class="flex items-center gap-3 mb-8">
+              <div class="w-9 h-9 rounded-xl bg-brand flex items-center justify-center text-white">
+                  <i class="fa-solid fa-chart-line"></i>
+              </div>
+              <span class="font-extrabold text-white">SACCO <span class="text-brand">Pro</span></span>
+          </div>
+          <nav class="space-y-1 text-sm">
+              <a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-brand-dark text-white font-medium">
+                  <i class="fa-solid fa-gauge w-4"></i> Dashboard
+              </a>
+              <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5">
+                  <i class="fa-solid fa-users w-4"></i> Members
+              </a>
+              <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5">
+                  <i class="fa-solid fa-hand-holding-dollar w-4"></i> Loans
+              </a>
+              <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5">
+                  <i class="fa-solid fa-gear w-4"></i> Settings
+              </a>
+          </nav>
+          <button onclick="logout()" class="mt-8 w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-red-300 hover:bg-red-500/10 text-sm">
+              <i class="fa-solid fa-right-from-bracket w-4"></i> Logout
+          </button>
+      </aside>
+
+      <main class="flex-1 p-8 overflow-y-auto">
+          <header class="flex items-center justify-between mb-8">
+              <div>
+                  <h1 class="text-2xl font-bold">Dashboard</h1>
+                  <p class="text-ink-muted text-sm">Welcome back, <span id="dashName">…</span></p>
+              </div>
+              <div class="flex items-center gap-3">
+                  <span id="dashRole" class="text-xs font-semibold px-3 py-1.5 rounded-full bg-green-100 text-green-700"></span>
+                  <div class="w-10 h-10 rounded-full bg-brand text-white flex items-center justify-center font-bold" id="dashAvatar">?</div>
+              </div>
+          </header>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div class="bg-white rounded-2xl p-6 shadow-sm">
+                  <p class="text-ink-muted text-xs uppercase tracking-wider font-semibold">Organisation</p>
+                  <p class="text-2xl font-bold mt-2" id="dashOrg">—</p>
+              </div>
+              <div class="bg-white rounded-2xl p-6 shadow-sm">
+                  <p class="text-ink-muted text-xs uppercase tracking-wider font-semibold">Your Role</p>
+                  <p class="text-2xl font-bold mt-2" id="dashRole2">—</p>
+              </div>
+              <div class="bg-white rounded-2xl p-6 shadow-sm">
+                  <p class="text-ink-muted text-xs uppercase tracking-wider font-semibold">Members</p>
+                  <p class="text-2xl font-bold mt-2" id="dashMembers">—</p>
+              </div>
+          </div>
+      </main>
+  </div>
+
+{% else %}
+  <!-- ================= AUTH ================= -->
+  <div class="min-h-screen flex flex-col lg:flex-row">
+      <!-- Left visual -->
+      <div class="hidden lg:flex lg:w-7/12 bg-navy-dark relative items-end p-12">
+          <div class="absolute inset-0 bg-gradient-to-br from-navy via-navy-dark to-black"></div>
+          <div class="absolute inset-0 opacity-20" style="background-image:radial-gradient(circle at 30% 20%, #1A62FF 0, transparent 40%), radial-gradient(circle at 70% 80%, #10B981 0, transparent 40%);"></div>
+          <div class="relative z-10 text-white max-w-lg">
+              <div class="flex items-center gap-3 mb-6">
+                  <div class="w-11 h-11 rounded-2xl bg-brand flex items-center justify-center"><i class="fa-solid fa-chart-line"></i></div>
+                  <div>
+                      <p class="font-extrabold text-xl leading-none">SACCO <span class="text-brand">Pro</span></p>
+                      <p class="text-[10px] tracking-widest text-slate-300 uppercase">Financial Cooperative</p>
+                  </div>
+              </div>
+              <h1 class="text-4xl font-extrabold leading-tight">Empowering Your Savings & Financial Freedom</h1>
+              <p class="mt-4 text-slate-300">Manage loans, track dividends and grow your cooperative — all in one secure dashboard.</p>
+          </div>
+      </div>
+
+      <!-- Right form -->
+      <div class="flex-1 flex items-center justify-center p-6 sm:p-10 bg-page">
+          <div class="w-full max-w-md bg-white rounded-2xl shadow-sm p-8">
+
+              <!-- Login -->
+              <div id="loginView">
+                  <h2 class="text-2xl font-bold">Welcome back</h2>
+                  <p class="text-ink-muted text-sm mt-1 mb-6">Log in to your SACCO Pro account.</p>
+                  <form id="loginForm" class="space-y-4">
+                      <div>
+                          <label class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Email</label>
+                          <input name="email" type="email" required class="mt-1.5 w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand/30 focus:border-brand outline-none text-sm">
+                      </div>
+                      <div>
+                          <label class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Password</label>
+                          <input name="password" type="password" required class="mt-1.5 w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand/30 focus:border-brand outline-none text-sm">
+                      </div>
+                      <button class="w-full py-3 rounded-xl bg-brand hover:bg-brand-dark text-white font-semibold text-sm transition shadow-sm">Login</button>
+                  </form>
+                  <p class="text-sm text-center mt-6 text-ink-muted">
+                      No account?
+                      <button onclick="showView('register')" class="text-brand font-semibold hover:underline">Register</button>
+                  </p>
+              </div>
+
+              <!-- Register -->
+              <div id="registerView" class="hidden">
+                  <h2 class="text-2xl font-bold">Create your account</h2>
+                  <p class="text-ink-muted text-sm mt-1 mb-6">Set up your organisation. You'll be its admin.</p>
+                  <form id="registerForm" class="space-y-3.5">
+                      <input name="full_name" required placeholder="Full name" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-brand">
+                      <input name="org_name" required placeholder="Organisation name" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-brand">
+                      <input name="email" type="email" required placeholder="Email" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-brand">
+                      <input name="phone" required placeholder="Phone (e.g. +256 700 000000)" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-brand">
+                      <input name="password" type="password" required minlength="8" placeholder="Password (min 8 chars)" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-brand">
+                      <button class="w-full py-3 rounded-xl bg-brand hover:bg-brand-dark text-white font-semibold text-sm transition shadow-sm">Create account</button>
+                  </form>
+                  <p class="text-sm text-center mt-5 text-ink-muted">
+                      Already registered?
+                      <button onclick="showView('login')" class="text-brand font-semibold hover:underline">Login</button>
+                  </p>
+              </div>
+
+          </div>
+      </div>
+  </div>
+{% endif %}
+
+<script>
+const toast = document.getElementById('toast');
+function showToast(msg, ok=true){
+    toast.textContent = msg;
+    toast.className = 'fixed top-5 right-5 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium ' +
+        (ok ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=>toast.classList.add('hidden'), 4000);
+}
+
+function showView(v){
+    document.getElementById('loginView').classList.toggle('hidden', v!=='login');
+    document.getElementById('registerView').classList.toggle('hidden', v!=='register');
+}
+
+async function postJSON(url, data){
+    const r = await fetch(url, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'same-origin',
+        body: JSON.stringify(data)
+    });
+    return { ok: r.ok, status: r.status, body: await r.json().catch(()=>({})) };
+}
+
+// Login
+const lf = document.getElementById('loginForm');
+if (lf) lf.addEventListener('submit', async e => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(lf));
+    const btn = lf.querySelector('button'); btn.disabled = true; btn.textContent = 'Logging in…';
+    const { ok, body } = await postJSON('/auth/api/login', data);
+    if (ok && body.ok) {
+        showToast('Login successful. Redirecting…', true);
+        setTimeout(()=>window.location.href = body.redirect, 500);
+    } else {
+        showToast(body.error || 'Login failed', false);
+        btn.disabled = false; btn.textContent = 'Login';
+    }
+});
+
+// Register
+const rf = document.getElementById('registerForm');
+if (rf) rf.addEventListener('submit', async e => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(rf));
+    const btn = rf.querySelector('button'); btn.disabled = true; btn.textContent = 'Creating…';
+    const { ok, body } = await postJSON('/auth/api/register', data);
+    if (ok && body.ok) {
+        showToast('Account created! You can log in now.', true);
+        showView('login');
+        rf.reset();
+    } else {
+        showToast(body.error || 'Registration failed', false);
+    }
+    btn.disabled = false; btn.textContent = 'Create account';
+});
+
+async function logout(){
+    await postJSON('/auth/api/logout', {});
+    window.location.href = '/auth/';
+}
+window.logout = logout;
+window.showView = showView;
+
+// Dashboard hydration — single fetch, no reload
+async function hydrateDashboard(){
+    if (!document.getElementById('dashName')) return;
+    const r = await fetch('/auth/api/me', { credentials:'same-origin' });
+    if (!r.ok) { window.location.href = '/auth/'; return; }
+    const { user } = await r.json();
+    document.getElementById('dashName').textContent  = user.full_name || user.email;
+    document.getElementById('dashRole').textContent  = user.role;
+    document.getElementById('dashRole2').textContent = user.role;
+    document.getElementById('dashOrg').textContent   = user.org_name || '—';
+    document.getElementById('dashAvatar').textContent = (user.full_name || user.email || '?')[0].toUpperCase();
+
+    if (user.role === 'admin') {
+        const ar = await fetch('/auth/api/admin/overview', { credentials:'same-origin' });
+        if (ar.ok) {
+            const a = await ar.json();
+            document.getElementById('dashMembers').textContent = a.member_count ?? '—';
+        }
+    }
+}
+hydrateDashboard();
+</script>
+</body>
+</html>

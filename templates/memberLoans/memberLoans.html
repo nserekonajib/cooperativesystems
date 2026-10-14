@@ -1,0 +1,868 @@
+{% extends "memberBase.html" %}
+{% block title %}My Loans — Member Portal{% endblock %}
+{% block page_title %}My Loans{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- TABS                                                          -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm mb-5">
+  <div class="flex border-b border-slate-100 overflow-x-auto">
+    <button data-tab="loans" class="mtab px-5 py-3.5 text-sm font-semibold border-b-2 border-brand text-brand whitespace-nowrap">
+      <i class="fa-solid fa-hand-holding-dollar mr-2"></i>My Loans
+    </button>
+    <button data-tab="applications" class="mtab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">
+      <i class="fa-solid fa-file-lines mr-2"></i>My Applications
+    </button>
+    <button data-tab="products" class="mtab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">
+      <i class="fa-solid fa-box mr-2"></i>Apply
+    </button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TAB: MY LOANS                                                 -->
+<!-- ============================================================ -->
+<section id="tab-loans">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="font-bold text-base">Active & past loans</h3>
+      <p class="text-xs text-ink-muted mt-0.5">Tap a loan to see its schedule and repay.</p>
+    </div>
+    <span id="loansCount" class="text-xs text-ink-muted">—</span>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+          <tr>
+            <th class="text-left px-5 py-3 font-semibold">Loan #</th>
+            <th class="text-right px-5 py-3 font-semibold">Principal</th>
+            <th class="text-right px-5 py-3 font-semibold">Outstanding</th>
+            <th class="text-left px-5 py-3 font-semibold">Disbursed</th>
+            <th class="text-left px-5 py-3 font-semibold">Status</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="loansTable" class="divide-y divide-slate-100">
+          <tr><td colspan="6" class="text-center text-ink-muted py-10 text-sm">
+            <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- TAB: MY APPLICATIONS                                          -->
+<!-- ============================================================ -->
+<section id="tab-applications" class="hidden">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="font-bold text-base">Loan applications</h3>
+      <p class="text-xs text-ink-muted mt-0.5">Every application you've submitted.</p>
+    </div>
+    <button onclick="switchTab('products')"
+            class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-brand hover:bg-brand-dark text-white text-sm font-semibold">
+      <i class="fa-solid fa-plus"></i> New Application
+    </button>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+          <tr>
+            <th class="text-left px-5 py-3 font-semibold">App #</th>
+            <th class="text-left px-5 py-3 font-semibold">Product</th>
+            <th class="text-right px-5 py-3 font-semibold">Requested</th>
+            <th class="text-right px-5 py-3 font-semibold">Approved</th>
+            <th class="text-left px-5 py-3 font-semibold">Status</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="appsTable" class="divide-y divide-slate-100">
+          <tr><td colspan="6" class="text-center text-ink-muted py-10 text-sm">
+            <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- TAB: PRODUCTS (Apply)                                        -->
+<!-- ============================================================ -->
+<section id="tab-products" class="hidden">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="font-bold text-base">Available loan products</h3>
+      <p class="text-xs text-ink-muted mt-0.5">Pick a product to start an application.</p>
+    </div>
+  </div>
+  <div id="productsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="text-center text-ink-muted py-10 col-span-3">
+      <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- DETAIL DRAWER                                                 -->
+<!-- ============================================================ -->
+<div id="detailModal" class="hidden fixed inset-0 z-[75] flex items-stretch justify-center"
+     style="background:rgba(0,0,0,.5); backdrop-filter: blur(2px);">
+  <div class="bg-white w-full h-full flex flex-col">
+    <div class="flex items-center justify-between px-8 py-5 border-b border-slate-100 bg-white sticky top-0 z-10">
+      <div class="flex items-center gap-4">
+        <button onclick="closeDetail()" class="w-10 h-10 rounded-xl hover:bg-page flex items-center justify-center text-ink-muted">
+          <i class="fa-solid fa-arrow-left text-lg"></i>
+        </button>
+        <div>
+          <h3 class="font-bold text-lg" id="dtlTitle">—</h3>
+          <p class="text-xs text-ink-muted mt-0.5" id="dtlSubtitle">—</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2" id="dtlActions"></div>
+    </div>
+    <div class="flex-1 overflow-y-auto p-8 bg-page">
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div class="lg:col-span-1 space-y-5">
+          <div class="rounded-2xl bg-gradient-to-br from-brand to-brand-dark text-white p-6 shadow-md">
+            <p class="text-xs uppercase tracking-wider opacity-80">Outstanding</p>
+            <p id="dtlOutstanding" class="text-3xl font-extrabold mt-2">—</p>
+            <div class="mt-4 text-xs opacity-90 space-y-1">
+              <div class="flex justify-between"><span>Principal</span><span id="dtlOutPrincipal">—</span></div>
+              <div class="flex justify-between"><span>Interest</span><span id="dtlOutInterest">—</span></div>
+              <div class="flex justify-between"><span>Penalties</span><span id="dtlOutPenalties">—</span></div>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 text-sm space-y-2">
+            <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1">Terms</p>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Rate</span><span id="dtlRate">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Term</span><span id="dtlTerm">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Frequency</span><span id="dtlFreq">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Disbursed</span><span id="dtlDisbursed">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Maturity</span><span id="dtlMaturity">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Status</span><span id="dtlStatus">—</span></div>
+          </div>
+        </div>
+        <div class="lg:col-span-3 space-y-5">
+          <div class="bg-white rounded-2xl border border-slate-100">
+            <div class="flex border-b border-slate-100">
+              <button data-dtab="repayments" class="dtab px-4 py-3 text-sm font-semibold border-b-2 border-brand text-brand whitespace-nowrap">Repayments</button>
+              <button data-dtab="schedule" class="dtab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">Schedule</button>
+            </div>
+            <div data-dpanel="repayments" class="dpanel p-5">
+              <div class="overflow-x-auto max-h-[520px]">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider sticky top-0 text-[11px]">
+                    <tr>
+                      <th class="text-left px-3 py-2.5 font-semibold">Date</th>
+                      <th class="text-left px-3 py-2.5 font-semibold">Receipt</th>
+                      <th class="text-right px-3 py-2.5 font-semibold">Amount</th>
+                      <th class="text-right px-3 py-2.5 font-semibold">Interest</th>
+                      <th class="text-right px-3 py-2.5 font-semibold">Principal</th>
+                      <th class="px-3 py-2.5"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="dtlRepayments" class="divide-y divide-slate-100">
+                    <tr><td colspan="6" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div data-dpanel="schedule" class="dpanel hidden p-5">
+              <div class="overflow-x-auto max-h-[520px]">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider sticky top-0 text-[11px]">
+                    <tr>
+                      <th class="text-left px-3 py-2.5 font-semibold">#</th>
+                      <th class="text-right px-3 py-2.5 font-semibold">Payment</th>
+                      <th class="text-right px-3 py-2.5 font-semibold">Principal</th>
+                      <th class="text-right px-3 py-2.5 font-semibold">Interest</th>
+                      <th class="text-right px-3 py-2.5 font-semibold">Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dtlSchedule" class="divide-y divide-slate-100">
+                    <tr><td colspan="5" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- APPLY MODAL                                                  -->
+<!-- ============================================================ -->
+<div id="applyModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div>
+        <h3 class="font-bold text-base" id="applyTitle">Apply for a loan</h3>
+        <p class="text-xs text-ink-muted mt-0.5" id="applyProductLine">—</p>
+      </div>
+      <button onclick="closeApplyModal()"
+              class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form id="applyForm" class="p-6 space-y-4">
+      <input type="hidden" name="product_id" id="applyProductId">
+      <div>
+        <label class="lbl">Requested amount *</label>
+        <input name="requested_amount" id="applyAmount" type="number" min="1" step="1" required class="inp">
+        <p class="text-xs text-ink-muted mt-1" id="applyLimits">—</p>
+      </div>
+      <div>
+        <label class="lbl">Term (months) *</label>
+        <input name="requested_term_months" id="applyTerm" type="number" min="1" max="600" required class="inp">
+      </div>
+      <div>
+        <label class="lbl">Purpose</label>
+        <textarea name="purpose" rows="2" class="inp" placeholder="Short reason for the loan"></textarea>
+      </div>
+
+      <!-- Eligibility preview -->
+      <div id="eligBox" class="hidden rounded-xl border border-brand/10 bg-brand/5 p-3 text-xs space-y-1"></div>
+
+      <button type="button" onclick="checkEligibility()" class="text-xs font-semibold text-brand hover:underline">
+        <i class="fa-solid fa-play mr-1"></i>Check eligibility
+      </button>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeApplyModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" id="applySubmit" class="btn-primary">
+          <i class="fa-solid fa-paper-plane mr-2"></i>Submit application
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- REPAY MODAL (ONLINE ONLY)                                     -->
+<!-- ============================================================ -->
+<div id="repayModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div>
+        <h3 class="font-bold text-base">Repay loan</h3>
+        <p class="text-xs text-ink-muted mt-0.5" id="repayLoanLine">—</p>
+      </div>
+      <button onclick="closeRepayModal()"
+              class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form id="repayForm" class="p-6 space-y-4">
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm space-y-1">
+        <div class="flex justify-between"><span class="text-ink-muted">Outstanding principal</span><span id="rpOutP">—</span></div>
+        <div class="flex justify-between"><span class="text-ink-muted">Outstanding interest</span><span id="rpOutI">—</span></div>
+        <div class="flex justify-between"><span class="text-ink-muted">Penalties</span><span id="rpOutPen">—</span></div>
+        <div class="flex justify-between font-bold pt-1 border-t border-slate-200 mt-1">
+          <span>Total outstanding</span><span id="rpTotal">—</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Amount *</label>
+        <input name="amount" id="rpAmount" type="number" min="1" step="1" required class="inp">
+        <button type="button" onclick="fillFullOutstanding()" class="text-xs text-brand font-semibold mt-1 hover:underline">
+          Pay full outstanding
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="lbl">Provider *</label>
+          <select name="provider" class="inp">
+            <option value="MTN">MTN</option>
+            <option value="AIRTEL">Airtel</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Mobile money number *</label>
+          <input name="phone" class="inp" placeholder="+256…">
+        </div>
+      </div>
+
+      <div class="rounded-xl bg-brand/5 border border-brand/10 p-3 text-xs text-brand-dark flex items-start gap-2">
+        <i class="fa-solid fa-circle-info mt-0.5"></i>
+        <span>Approve the prompt on your phone to complete the repayment.</span>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeRepayModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" id="repaySubmit" class="btn-primary">
+          <i class="fa-solid fa-paper-plane mr-2"></i>Repay
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- STATUS MODAL                                                  -->
+<!-- ============================================================ -->
+<div id="statusModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+    <div id="statusIconWrap" class="w-16 h-16 mx-auto rounded-full bg-brand/10 text-brand flex items-center justify-center mb-4">
+      <i id="statusIcon" class="fa-solid fa-mobile-screen-button text-2xl"></i>
+    </div>
+    <h3 id="statusTitle" class="font-bold text-lg mb-1">Waiting for approval</h3>
+    <p id="statusText" class="text-sm text-ink-muted mb-5">Approve the prompt on your phone.</p>
+    <div id="statusSpinner" class="hidden mb-4">
+      <i class="fa-solid fa-circle-notch fa-spin text-brand text-xl"></i>
+    </div>
+    <button onclick="closeStatusModal()" class="btn-ghost w-full">Close</button>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; transition:all .15s; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   border:none; cursor:pointer; }
+    .btn-primary:hover { filter:brightness(0.92); }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                 border-radius:10px; background:#fff; border:1px solid #E2E8F0;
+                 color:#64748B; font-weight:600; font-size:14px; cursor:pointer; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .s-draft       { background:#F1F5F9; color:#475569; }
+    .s-submitted   { background:#DBEAFE; color:#1E40AF; }
+    .s-under_review{ background:#EDE9FE; color:#6D28D9; }
+    .s-approved    { background:#E6F4EA; color:#065F46; }
+    .s-rejected    { background:#FEE2E2; color:#991B1B; }
+    .s-disbursed   { background:#D1FAE5; color:#065F46; }
+    .s-active      { background:#E6F4EA; color:#065F46; }
+    .s-closed      { background:#E2E8F0; color:#334155; }
+    .s-cancelled   { background:#FEF3C7; color:#92400E; }
+    .s-overdue     { background:#FEE2E2; color:#991B1B; }
+    .s-completed   { background:#E6F4EA; color:#065F46; }
+    .s-pending     { background:#FEF3C7; color:#92400E; }
+    .s-failed      { background:#FEE2E2; color:#991B1B; }
+    .prod-card { background:#fff; border:1px solid #E2E8F0; border-radius:16px; padding:20px; cursor:pointer;
+                 transition:.15s; }
+    .prod-card:hover { border-color:#1A62FF; box-shadow:0 4px 12px rgba(26,98,255,.08); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE                                                        */
+/* ============================================================ */
+let currentLoanId = null;
+let currentLoan   = null;
+let _pollTimer    = null;
+
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
+}
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials:'same-origin',
+        headers:{'Content-Type':'application/json'},
+        ...opts,
+    });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, body };
+}
+
+/* ============================================================ */
+/* TABS                                                         */
+/* ============================================================ */
+function switchTab(tab) {
+    document.querySelectorAll('.mtab').forEach(b => {
+        const on = b.dataset.tab === tab;
+        b.classList.toggle('border-brand', on);
+        b.classList.toggle('text-brand', on);
+        b.classList.toggle('border-transparent', !on);
+        b.classList.toggle('text-ink-muted', !on);
+    });
+    ['loans','applications','products'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
+    });
+    if (tab === 'applications') loadApplications();
+    if (tab === 'products')     loadProducts();
+}
+document.querySelectorAll('.mtab').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+/* ============================================================ */
+/* MY LOANS                                                     */
+/* ============================================================ */
+async function loadLoans() {
+    const tbody = document.getElementById('loansTable');
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const { ok, body } = await req('/member/loans/api/loans?per_page=50');
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-10 text-sm">Load failed</td></tr>`;
+        return;
+    }
+    document.getElementById('loansCount').textContent = `${body.total} loans`;
+
+    if (!body.loans.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No loans yet.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = body.loans.map(l => {
+        const outstanding = Number(l.outstanding_principal || 0)
+            + Number(l.outstanding_interest || 0)
+            + Number(l.outstanding_penalties || 0);
+        return `
+            <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="openLoan('${l.id}')">
+              <td class="px-5 py-3 font-mono text-xs text-ink-muted">${escapeHtml(l.loan_number)}</td>
+              <td class="px-5 py-3 text-right">${fmtNum(l.principal_amount)}</td>
+              <td class="px-5 py-3 text-right font-semibold">${fmtNum(outstanding)}</td>
+              <td class="px-5 py-3 text-xs text-ink-muted">${fmtDate(l.disbursed_at)}</td>
+              <td class="px-5 py-3"><span class="pill s-${l.status}">${escapeHtml(l.status)}</span></td>
+              <td class="px-5 py-3 text-right">
+                <i class="fa-solid fa-chevron-right text-ink-muted"></i>
+              </td>
+            </tr>`;
+    }).join('');
+}
+
+/* ============================================================ */
+/* MY APPLICATIONS                                              */
+/* ============================================================ */
+async function loadApplications() {
+    const tbody = document.getElementById('appsTable');
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const { ok, body } = await req('/member/loans/api/applications?per_page=50');
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-10 text-sm">Load failed</td></tr>`;
+        return;
+    }
+    if (!body.applications.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No applications yet.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = body.applications.map(a => {
+        const prod = a.loan_products || {};
+        return `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3 font-mono text-xs text-ink-muted">${escapeHtml(a.app_number)}</td>
+              <td class="px-5 py-3 text-xs">
+                <div class="font-medium">${escapeHtml(prod.name || '')}</div>
+                <div class="text-ink-muted">${escapeHtml(prod.category || '')}</div>
+              </td>
+              <td class="px-5 py-3 text-right">${fmtNum(a.requested_amount)} <span class="text-xs text-ink-muted">${escapeHtml(a.currency)}</span></td>
+              <td class="px-5 py-3 text-right">
+                ${a.approved_amount ? fmtNum(a.approved_amount) : '—'}
+              </td>
+              <td class="px-5 py-3"><span class="pill s-${a.status}">${escapeHtml(a.status)}</span></td>
+              <td class="px-5 py-3 text-xs text-ink-muted">${fmtDate(a.submitted_at)}</td>
+            </tr>`;
+    }).join('');
+}
+
+/* ============================================================ */
+/* PRODUCTS (Apply)                                             */
+/* ============================================================ */
+async function loadProducts() {
+    const grid = document.getElementById('productsGrid');
+    grid.innerHTML = `<div class="col-span-3 text-center text-ink-muted py-10">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</div>`;
+
+    const { ok, body } = await req('/member/loans/api/products');
+    if (!ok || !body.ok) {
+        grid.innerHTML = `<div class="col-span-3 text-center text-red-500 py-10">Load failed</div>`;
+        return;
+    }
+    if (!body.products.length) {
+        grid.innerHTML = `<div class="col-span-3 text-center text-ink-muted py-10">
+            No active loan products available right now.</div>`;
+        return;
+    }
+    grid.innerHTML = body.products.map(p => `
+        <div class="prod-card" onclick="openApplyModal('${p.id}')">
+          <div class="flex items-start justify-between mb-2">
+            <div>
+              <p class="font-bold text-sm">${escapeHtml(p.name)}</p>
+              <p class="text-[11px] text-ink-muted uppercase tracking-wider">${escapeHtml(p.category || '')}</p>
+            </div>
+            <span class="text-xs font-semibold text-brand">
+              ${p.interest_rate_percent}% ${escapeHtml(p.interest_period || '')}
+            </span>
+          </div>
+          <p class="text-xs text-ink-muted line-clamp-2 mb-3">${escapeHtml(p.description || '')}</p>
+          <div class="text-xs space-y-1">
+            <div class="flex justify-between"><span class="text-ink-muted">Amount</span><span>${fmtNum(p.min_amount)} – ${p.max_amount ? fmtNum(p.max_amount) : '∞'}</span></div>
+            <div class="flex justify-between"><span class="text-ink-muted">Term</span><span>${p.min_term_months} – ${p.max_term_months} mo</span></div>
+            <div class="flex justify-between"><span class="text-ink-muted">Repayment</span><span>${escapeHtml(p.repayment_frequency || '')}</span></div>
+          </div>
+          <button class="mt-4 w-full py-2 rounded-lg bg-brand text-white text-xs font-semibold">
+            Apply
+          </button>
+        </div>
+    `).join('');
+}
+
+/* ============================================================ */
+/* APPLY MODAL                                                  */
+/* ============================================================ */
+let productsCache = [];
+
+async function openApplyModal(productId) {
+    // ensure products are loaded
+    if (!productsCache.length) {
+        const { ok, body } = await req('/member/loans/api/products');
+        if (ok && body.ok) productsCache = body.products;
+    }
+    const p = productsCache.find(x => x.id === productId);
+    if (!p) { showToast('Product not found', false); return; }
+
+    document.getElementById('applyTitle').textContent       = `Apply · ${p.name}`;
+    document.getElementById('applyProductLine').textContent = `${p.interest_rate_percent}% ${p.interest_period || ''} · ${p.repayment_frequency}`;
+    document.getElementById('applyProductId').value         = p.id;
+    document.getElementById('applyLimits').textContent      = `Amount range: ${fmtNum(p.min_amount)} – ${p.max_amount ? fmtNum(p.max_amount) : 'no cap'}`;
+
+    document.getElementById('applyAmount').value = Math.round(p.min_amount || 0);
+    document.getElementById('applyTerm').value   = Math.min(p.max_term_months || 12, Math.max(p.min_term_months || 1, 12));
+    document.getElementById('eligBox').classList.add('hidden');
+
+    document.getElementById('applyModal').classList.remove('hidden');
+}
+function closeApplyModal() { document.getElementById('applyModal').classList.add('hidden'); }
+
+async function checkEligibility() {
+    const pid  = document.getElementById('applyProductId').value;
+    const amt  = document.getElementById('applyAmount').value;
+    const term = document.getElementById('applyTerm').value;
+
+    const { ok, body } = await req('/member/loans/api/eligibility-check', {
+        method:'POST', body: JSON.stringify({
+            product_id: pid,
+            requested_amount: Number(amt),
+            requested_term_months: Number(term),
+        }),
+    });
+    const box = document.getElementById('eligBox');
+    if (!ok || !body.ok) {
+        box.classList.remove('hidden');
+        box.innerHTML = `<div class="text-red-500">${escapeHtml(body.error || 'Failed')}</div>`;
+        return;
+    }
+    box.classList.remove('hidden');
+    box.innerHTML = (body.eligibility || []).map(r => `
+        <div class="flex items-center gap-2">
+          <i class="fa-solid ${r.ok ? 'fa-circle-check text-success' : 'fa-circle-xmark text-danger'}"></i>
+          <span>${escapeHtml(r.message || r.rule)}</span>
+        </div>
+    `).join('');
+}
+
+document.getElementById('applyForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    const d = Object.fromEntries(new FormData(f).entries());
+
+    const btn = document.getElementById('applySubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Submitting…';
+
+    const { ok, body } = await req('/member/loans/api/apply', {
+        method:'POST', body: JSON.stringify({
+            product_id: d.product_id,
+            requested_amount: Number(d.requested_amount),
+            requested_term_months: Number(d.requested_term_months),
+            purpose: d.purpose || null,
+        }),
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Submit application';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Submit failed', false); return; }
+    closeApplyModal();
+    showToast(`Application ${body.application.app_number} submitted`, true);
+    switchTab('applications');
+});
+
+/* ============================================================ */
+/* LOAN DETAIL DRAWER                                           */
+/* ============================================================ */
+function switchDTab(tab) {
+    document.querySelectorAll('.dtab').forEach(b => {
+        const on = b.dataset.dtab === tab;
+        b.classList.toggle('border-brand', on);
+        b.classList.toggle('text-brand', on);
+        b.classList.toggle('border-transparent', !on);
+        b.classList.toggle('text-ink-muted', !on);
+    });
+    document.querySelectorAll('.dpanel').forEach(p => {
+        p.classList.toggle('hidden', p.dataset.dpanel !== tab);
+    });
+}
+document.querySelectorAll('.dtab').forEach(btn => {
+    btn.addEventListener('click', () => switchDTab(btn.dataset.dtab));
+});
+
+async function openLoan(id) {
+    currentLoanId = id;
+    document.getElementById('detailModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    const { ok, body } = await req(`/member/loans/api/loans/${id}`);
+    if (!ok || !body.ok) { showToast(body.error || 'Load failed', false); return; }
+    currentLoan = body.loan;
+    const l = currentLoan;
+
+    document.getElementById('dtlTitle').textContent    = l.loan_number;
+    document.getElementById('dtlSubtitle').textContent = `${l.currency} · ${l.status}`;
+
+    document.getElementById('dtlOutstanding').textContent = fmtNum(l.total_outstanding);
+    document.getElementById('dtlOutPrincipal').textContent = fmtNum(l.outstanding_principal);
+    document.getElementById('dtlOutInterest').textContent  = fmtNum(l.outstanding_interest);
+    document.getElementById('dtlOutPenalties').textContent = fmtNum(l.outstanding_penalties);
+
+    document.getElementById('dtlRate').textContent      = `${l.interest_rate_percent}% ${l.interest_method}`;
+    document.getElementById('dtlTerm').textContent      = `${l.term_months} months`;
+    document.getElementById('dtlFreq').textContent      = l.repayment_frequency;
+    document.getElementById('dtlDisbursed').textContent = fmtDate(l.disbursed_at);
+    document.getElementById('dtlMaturity').textContent  = fmtDate(l.maturity_date);
+    document.getElementById('dtlStatus').textContent    = l.status;
+
+    // actions
+    const wrap = document.getElementById('dtlActions');
+    const parts = [];
+    if (l.status === 'active' || l.status === 'overdue') {
+        parts.push(`<button onclick="openRepayModal()" class="btn-primary text-xs">
+            <i class="fa-solid fa-mobile-screen-button mr-2"></i>Repay online</button>`);
+    }
+    wrap.innerHTML = parts.join('');
+
+    loadLoanRepayments();
+    loadLoanSchedule();
+}
+function closeDetail() {
+    document.getElementById('detailModal').classList.add('hidden');
+    document.body.style.overflow = '';
+    currentLoanId = null; currentLoan = null;
+}
+
+async function loadLoanRepayments() {
+    if (!currentLoanId) return;
+    const tbody = document.getElementById('dtlRepayments');
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>`;
+    const { ok, body } = await req(`/member/loans/api/loans/${currentLoanId}/repayments?per_page=100`);
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-8 text-xs">Load failed</td></tr>`;
+        return;
+    }
+    if (!body.repayments.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-8 text-xs">No repayments yet.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = body.repayments.map(r => {
+        const a = (r.repayment_allocations || [{}])[0];
+        return `
+            <tr>
+              <td class="px-3 py-2.5 text-xs text-ink-muted">${fmtDate(r.paid_at || r.created_at)}</td>
+              <td class="px-3 py-2.5 text-xs font-mono">${escapeHtml(r.receipt_number)}</td>
+              <td class="px-3 py-2.5 text-right text-xs font-medium">${fmtNum(r.amount)}</td>
+              <td class="px-3 py-2.5 text-right text-xs text-success">${fmtNum(a.to_interest)}</td>
+              <td class="px-3 py-2.5 text-right text-xs">${fmtNum(a.to_principal)}</td>
+              <td class="px-3 py-2.5 text-right">
+                <a href="/member/loans/api/repayments/${r.id}/receipt" target="_blank"
+                   class="w-7 h-7 inline-flex items-center justify-center rounded-lg hover:bg-page text-ink-muted hover:text-brand">
+                  <i class="fa-solid fa-receipt text-xs"></i>
+                </a>
+              </td>
+            </tr>`;
+    }).join('');
+}
+
+async function loadLoanSchedule() {
+    if (!currentLoanId) return;
+    const tbody = document.getElementById('dtlSchedule');
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>`;
+    const { ok, body } = await req(`/member/loans/api/loans/${currentLoanId}/schedule`);
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-red-500 py-8 text-xs">Load failed</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = body.schedule.map(r => `
+        <tr>
+          <td class="px-3 py-2.5 text-xs text-ink-muted">${r.period}</td>
+          <td class="px-3 py-2.5 text-right text-xs">${fmtNum(r.payment)}</td>
+          <td class="px-3 py-2.5 text-right text-xs text-ink-muted">${fmtNum(r.principal)}</td>
+          <td class="px-3 py-2.5 text-right text-xs text-success">${fmtNum(r.interest)}</td>
+          <td class="px-3 py-2.5 text-right text-xs text-ink-muted">${fmtNum(r.balance)}</td>
+        </tr>
+    `).join('');
+}
+
+/* ============================================================ */
+/* REPAY MODAL                                                  */
+/* ============================================================ */
+function openRepayModal() {
+    if (!currentLoan) return;
+    const l = currentLoan;
+    document.getElementById('repayLoanLine').textContent = l.loan_number;
+    document.getElementById('rpOutP').textContent   = fmtNum(l.outstanding_principal);
+    document.getElementById('rpOutI').textContent   = fmtNum(l.outstanding_interest);
+    document.getElementById('rpOutPen').textContent = fmtNum(l.outstanding_penalties);
+    document.getElementById('rpTotal').textContent  = fmtNum(l.total_outstanding);
+    document.getElementById('rpAmount').value = Math.round(Number(l.total_outstanding || 0));
+    document.getElementById('repayModal').classList.remove('hidden');
+}
+function closeRepayModal() { document.getElementById('repayModal').classList.add('hidden'); }
+function fillFullOutstanding() {
+    if (!currentLoan) return;
+    document.getElementById('rpAmount').value = Math.round(Number(currentLoan.total_outstanding || 0));
+}
+
+document.getElementById('repayForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    const d = Object.fromEntries(new FormData(f).entries());
+    if (!d.phone || !d.phone.trim()) { showToast('Mobile number required', false); return; }
+
+    const btn = document.getElementById('repaySubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Processing…';
+
+    const { ok, body } = await req(`/member/loans/api/loans/${currentLoanId}/pay`, {
+        method:'POST', body: JSON.stringify({
+            amount:   Number(d.amount),
+            method:   'online',
+            provider: d.provider,
+            phone:    d.phone,
+        }),
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Repay';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Payment failed', false); return; }
+    closeRepayModal();
+    if (body.pending && body.payment.deposit_id) {
+        showStatusModal(body.payment.deposit_id);
+    } else {
+        showToast('Repayment submitted', true);
+        openLoan(currentLoanId);
+        loadLoans();
+    }
+});
+
+/* ============================================================ */
+/* STATUS MODAL                                                 */
+/* ============================================================ */
+function showStatusModal(depositId) {
+    document.getElementById('statusModal').classList.remove('hidden');
+    document.getElementById('statusSpinner').classList.remove('hidden');
+    document.getElementById('statusIconWrap').className =
+        'w-16 h-16 mx-auto rounded-full bg-brand/10 text-brand flex items-center justify-center mb-4';
+    document.getElementById('statusIcon').className = 'fa-solid fa-mobile-screen-button text-2xl';
+    document.getElementById('statusTitle').textContent = 'Waiting for approval';
+    document.getElementById('statusText').textContent  = 'Approve the prompt on your phone.';
+    startPolling(depositId);
+}
+function closeStatusModal() {
+    document.getElementById('statusModal').classList.add('hidden');
+    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+    loadLoans();
+    if (currentLoanId) {
+        openLoan(currentLoanId);
+    }
+}
+function startPolling(depositId) {
+    if (_pollTimer) clearInterval(_pollTimer);
+    let attempts = 0;
+    _pollTimer = setInterval(async () => {
+        attempts++;
+        const { ok, body } = await req(`/member/loans/api/payment/${depositId}/verify`, { method: 'POST' });
+        if (!ok || !body.ok) {
+            if (attempts >= 30) { clearInterval(_pollTimer); _pollTimer = null; }
+            return;
+        }
+        if (body.status === 'completed') {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('statusSpinner').classList.add('hidden');
+            document.getElementById('statusIconWrap').className =
+                'w-16 h-16 mx-auto rounded-full bg-success-bg text-success flex items-center justify-center mb-4';
+            document.getElementById('statusIcon').className = 'fa-solid fa-circle-check text-2xl';
+            document.getElementById('statusTitle').textContent = 'Repayment received';
+            document.getElementById('statusText').textContent  = 'Your loan balance has been updated.';
+            setTimeout(closeStatusModal, 1800);
+        } else if (body.status === 'failed') {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('statusSpinner').classList.add('hidden');
+            document.getElementById('statusIconWrap').className =
+                'w-16 h-16 mx-auto rounded-full bg-danger-bg text-danger flex items-center justify-center mb-4';
+            document.getElementById('statusIcon').className = 'fa-solid fa-circle-xmark text-2xl';
+            document.getElementById('statusTitle').textContent = 'Payment failed';
+            document.getElementById('statusText').textContent  = body.reason || 'The payment was not completed.';
+        } else if (attempts >= 30) {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('statusSpinner').classList.add('hidden');
+            document.getElementById('statusTitle').textContent = 'Still pending';
+            document.getElementById('statusText').textContent  = 'Timed out. Check your loan later.';
+        }
+    }, 4000);
+}
+
+/* ============================================================ */
+/* ESC                                                          */
+/* ============================================================ */
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        const modals = ['statusModal','repayModal','applyModal'];
+        for (const mid of modals) {
+            const el = document.getElementById(mid);
+            if (!el.classList.contains('hidden')) { el.classList.add('hidden'); return; }
+        }
+        if (!document.getElementById('detailModal').classList.contains('hidden')) closeDetail();
+    }
+});
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    await loadLoans();
+})();
+</script>
+{% endblock %}

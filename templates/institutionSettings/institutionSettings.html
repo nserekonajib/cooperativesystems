@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+{% block title %}Institution Settings — SACCO Pro{% endblock %}
+{% block page_title %}Institution Settings{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl">
+
+  <!-- Tabs -->
+  <div class="bg-white rounded-2xl shadow-sm mb-6">
+    <div class="flex border-b border-slate-200 overflow-x-auto">
+      <button data-tab="profile"
+              class="tab-btn px-5 py-3.5 text-sm font-semibold border-b-2 border-brand text-brand whitespace-nowrap">
+        <i class="fa-regular fa-building mr-2"></i>Institution Profile
+      </button>
+      <button data-tab="financial"
+              class="tab-btn px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">
+        <i class="fa-solid fa-coins mr-2"></i>Shares &amp; Fees
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= PROFILE TAB ================= -->
+  <section id="tab-profile" class="tab-panel">
+    <form id="profileForm" class="space-y-6">
+
+      <div class="bg-white rounded-2xl p-6 shadow-sm">
+        <h3 class="font-bold text-base mb-1">Identity</h3>
+        <p class="text-ink-muted text-xs mb-5">Basic information about your institution.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="lbl">Display name</label>
+            <input name="display_name" class="inp" placeholder="e.g. Kampala Teachers SACCO">
+          </div>
+          <div>
+            <label class="lbl">Sector</label>
+            <input name="sector" class="inp" placeholder="SACCO / MFI / Cooperative">
+          </div>
+          <div>
+            <label class="lbl">Registration number</label>
+            <input name="registration_number" class="inp">
+          </div>
+          <div>
+            <label class="lbl">Tax ID / TIN</label>
+            <input name="tax_id" class="inp">
+          </div>
+          <div>
+            <label class="lbl">Founded year</label>
+            <input name="founded_year" type="number" min="1900" max="2100" class="inp">
+          </div>
+          <div>
+            <label class="lbl">Website</label>
+            <input name="website" type="url" class="inp" placeholder="https://">
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-6 shadow-sm">
+        <h3 class="font-bold text-base mb-1">Contact</h3>
+        <p class="text-ink-muted text-xs mb-5">How members can reach you.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="lbl">Support email</label>
+            <input name="support_email" type="email" class="inp">
+          </div>
+          <div>
+            <label class="lbl">Support phone</label>
+            <input name="support_phone" class="inp">
+          </div>
+          <div class="md:col-span-2">
+            <label class="lbl">Address line</label>
+            <input name="address_line" class="inp">
+          </div>
+          <div>
+            <label class="lbl">City</label>
+            <input name="city" class="inp">
+          </div>
+          <div>
+            <label class="lbl">Region / State</label>
+            <input name="region" class="inp">
+          </div>
+          <div>
+            <label class="lbl">Country</label>
+            <input name="country" class="inp">
+          </div>
+          <div>
+            <label class="lbl">Postal code</label>
+            <input name="postal_code" class="inp">
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-6 shadow-sm">
+        <h3 class="font-bold text-base mb-1">Regional &amp; Branding</h3>
+        <p class="text-ink-muted text-xs mb-5">Localisation and appearance.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="lbl">Currency</label>
+            <select name="currency" class="inp">
+              <option value="UGX">UGX — Ugandan Shilling</option>
+              <option value="KES">KES — Kenyan Shilling</option>
+              <option value="TZS">TZS — Tanzanian Shilling</option>
+              <option value="USD">USD — US Dollar</option>
+              <option value="EUR">EUR — Euro</option>
+              <option value="GBP">GBP — British Pound</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Timezone</label>
+            <input name="timezone" class="inp" placeholder="Africa/Kampala">
+          </div>
+          <div class="md:col-span-2">
+            <label class="lbl">Logo URL</label>
+            <input name="logo_url" type="url" class="inp" placeholder="https://…">
+          </div>
+          <div class="md:col-span-2">
+            <label class="lbl">About</label>
+            <textarea name="about" rows="3" class="inp" placeholder="Short description shown to members"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 sticky bottom-4">
+        <button type="button" onclick="loadProfile()" class="btn-ghost">Reset</button>
+        <button type="submit" class="btn-primary" data-save>
+          <i class="fa-solid fa-floppy-disk mr-2"></i>Save Profile
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ================= FINANCIAL TAB ================= -->
+  <section id="tab-financial" class="tab-panel hidden">
+    <form id="financialForm" class="space-y-6">
+
+      <div class="bg-white rounded-2xl p-6 shadow-sm">
+        <h3 class="font-bold text-base mb-1">Minimum Shares for Members</h3>
+        <p class="text-ink-muted text-xs mb-5">
+          Define the minimum shareholding a member must hold to be considered active.
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="lbl">Minimum shares (units)</label>
+            <input name="min_shares" type="number" min="0" step="0.01" class="inp" placeholder="e.g. 100">
+          </div>
+          <div>
+            <label class="lbl">Share price per unit</label>
+            <input name="min_share_price" type="number" min="0" step="0.01" class="inp" placeholder="e.g. 1000">
+          </div>
+          <div>
+            <label class="lbl">Round-up to nearest</label>
+            <input name="share_round_up_to" type="number" min="0" step="0.01" class="inp" placeholder="0 = no round-up">
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-6 shadow-sm">
+        <h3 class="font-bold text-base mb-1">Annual Subscription Fee</h3>
+        <p class="text-ink-muted text-xs mb-5">
+          Recurring yearly fee each member pays to the SACCO.
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="lbl">Annual subscription fee</label>
+            <input name="annual_subscription_fee" type="number" min="0" step="0.01" class="inp" placeholder="e.g. 50000">
+          </div>
+          <div>
+            <label class="lbl">Due month</label>
+            <select name="subscription_due_month" class="inp">
+              <option value="1">January</option>
+              <option value="2">February</option>
+              <option value="3">March</option>
+              <option value="4">April</option>
+              <option value="5">May</option>
+              <option value="6">June</option>
+              <option value="7">July</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-6 shadow-sm">
+        <h3 class="font-bold text-base mb-1">SACCO Fee</h3>
+        <p class="text-ink-muted text-xs mb-5">
+          A percentage or flat fee charged on loans and/or savings.
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="lbl">Fee type</label>
+            <select name="sacco_fee_type" class="inp">
+              <option value="percentage">Percentage (%)</option>
+              <option value="fixed">Fixed amount</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Fee value</label>
+            <input name="sacco_fee_value" type="number" min="0" step="0.01" class="inp" placeholder="e.g. 2.5">
+          </div>
+          <div>
+            <label class="lbl">Applies to</label>
+            <select name="sacco_fee_applies_to" class="inp">
+              <option value="loan">Loans</option>
+              <option value="savings">Savings</option>
+              <option value="both">Loans &amp; Savings</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 sticky bottom-4">
+        <button type="button" onclick="loadFinancial()" class="btn-ghost">Reset</button>
+        <button type="submit" class="btn-primary" data-save>
+          <i class="fa-solid fa-floppy-disk mr-2"></i>Save Financial Rules
+        </button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:10px 14px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:14px; outline:none; background:#fff; transition:all .15s;
+           font-family:inherit; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; padding:10px 20px; border-radius:10px;
+                   background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   box-shadow:0 4px 12px rgba(26,98,255,.25); transition:.15s; }
+    .btn-primary:hover { background:#003ECC; }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { padding:10px 20px; border-radius:10px; background:#fff;
+                 border:1px solid #E2E8F0; color:#64748B; font-weight:600; font-size:14px; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ---------- Tabs ---------- */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            b.classList.remove('border-brand','text-brand');
+            b.classList.add('border-transparent','text-ink-muted');
+        });
+        btn.classList.remove('border-transparent','text-ink-muted');
+        btn.classList.add('border-brand','text-brand');
+
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+        document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+    });
+});
+
+/* ---------- Helpers ---------- */
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        ...opts,
+    });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, body };
+}
+
+function fill(form, data) {
+    Object.entries(data || {}).forEach(([k, v]) => {
+        const el = form.elements.namedItem(k);
+        if (el && v !== null && v !== undefined) el.value = v;
+    });
+}
+
+function formData(form) {
+    const out = {};
+    new FormData(form).forEach((v, k) => {
+        out[k] = v === '' ? null : v;
+    });
+    return out;
+}
+
+function setSaving(btn, on) {
+    if (!btn) return;
+    btn.disabled = on;
+    if (on) {
+        btn._html = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Saving…';
+    } else if (btn._html) {
+        btn.innerHTML = btn._html;
+    }
+}
+
+/* ---------- Profile ---------- */
+const profileForm = document.getElementById('profileForm');
+
+async function loadProfile() {
+    const { ok, body } = await req('/institution-settings/api/profile');
+    if (!ok || !body.ok) return showToast(body.error || 'Failed to load profile', false);
+    profileForm.reset();
+    fill(profileForm, body.profile);
+}
+
+profileForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = profileForm.querySelector('[data-save]');
+    setSaving(btn, true);
+    const { ok, body } = await req('/institution-settings/api/profile', {
+        method: 'PATCH',
+        body: JSON.stringify(formData(profileForm)),
+    });
+    setSaving(btn, false);
+    showToast(body.message || body.error, ok && body.ok);
+});
+
+/* ---------- Financial ---------- */
+const financialForm = document.getElementById('financialForm');
+
+async function loadFinancial() {
+    const { ok, body } = await req('/institution-settings/api/financial');
+    if (!ok || !body.ok) return showToast(body.error || 'Failed to load settings', false);
+    fill(financialForm, body.financial);
+}
+
+financialForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = financialForm.querySelector('[data-save]');
+    setSaving(btn, true);
+    const { ok, body } = await req('/institution-settings/api/financial', {
+        method: 'PATCH',
+        body: JSON.stringify(formData(financialForm)),
+    });
+    setSaving(btn, false);
+    showToast(body.message || body.error, ok && body.ok);
+});
+
+/* ---------- Initial load ---------- */
+loadProfile();
+loadFinancial();
+</script>
+{% endblock %}

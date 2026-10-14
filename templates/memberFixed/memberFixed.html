@@ -1,0 +1,685 @@
+{% extends "memberBase.html" %}
+{% block title %}Fixed Deposits — Member Portal{% endblock %}
+{% block page_title %}Fixed Deposits{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- KPI CARDS                                                     -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Principal</p>
+        <p id="kpiPrincipal" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+        <i class="fa-solid fa-vault"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Across all your FDs</p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Accrued Interest</p>
+        <p id="kpiInterest" class="text-2xl font-bold mt-1 text-success">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+        <i class="fa-solid fa-percent"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Earned but not yet paid</p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Value</p>
+        <p id="kpiValue" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
+        <i class="fa-solid fa-chart-line"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Principal + interest</p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Active</p>
+        <p id="kpiActive" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+        <i class="fa-regular fa-hourglass-half"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      <span id="kpiMatured" class="font-semibold">0</span> matured ·
+      <span id="kpiMaturing30" class="font-semibold text-ink">0</span> due ≤ 30d
+    </p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TABLE                                                         -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+  <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+    <div>
+      <h3 class="font-bold text-base">My fixed deposits</h3>
+      <p class="text-xs text-ink-muted mt-0.5">
+        Fixed deposits are created by your SACCO. Top-ups are online only.
+      </p>
+    </div>
+    <span id="depCount" class="text-xs text-ink-muted">—</span>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">FD Number</th>
+          <th class="text-right px-5 py-3 font-semibold">Principal</th>
+          <th class="text-right px-5 py-3 font-semibold">Interest</th>
+          <th class="text-left px-5 py-3 font-semibold">Progress</th>
+          <th class="text-left px-5 py-3 font-semibold">Maturity</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+          <th class="px-5 py-3"></th>
+        </tr>
+      </thead>
+      <tbody id="depositsTable" class="divide-y divide-slate-100">
+        <tr><td colspan="7" class="text-center text-ink-muted py-10 text-sm">
+          <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+    <span id="pageInfo">—</span>
+    <div class="flex gap-1">
+      <button id="prevBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+      <button id="nextBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- DETAIL DRAWER                                                 -->
+<!-- ============================================================ -->
+<div id="detailModal" class="hidden fixed inset-0 z-[75] flex items-stretch justify-center"
+     style="background:rgba(0,0,0,.5); backdrop-filter: blur(2px);">
+  <div class="bg-white w-full h-full flex flex-col">
+
+    <div class="flex items-center justify-between px-8 py-5 border-b border-slate-100 bg-white sticky top-0 z-10">
+      <div class="flex items-center gap-4">
+        <button onclick="closeDetail()" class="w-10 h-10 rounded-xl hover:bg-page flex items-center justify-center text-ink-muted">
+          <i class="fa-solid fa-arrow-left text-lg"></i>
+        </button>
+        <div>
+          <h3 class="font-bold text-lg" id="dtlTitle">—</h3>
+          <p class="text-xs text-ink-muted mt-0.5" id="dtlSubtitle">—</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2" id="dtlActions"></div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-8 bg-page">
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+        <!-- Left column -->
+        <div class="lg:col-span-1 space-y-5">
+          <div class="rounded-2xl bg-gradient-to-br from-brand to-brand-dark text-white p-6 shadow-md">
+            <p class="text-xs uppercase tracking-wider opacity-80">Total Value</p>
+            <p id="dtlTotal" class="text-3xl font-extrabold mt-2">—</p>
+            <div class="mt-4 text-xs opacity-90 space-y-1">
+              <div class="flex justify-between"><span>Principal</span><span id="dtlPrincipal">—</span></div>
+              <div class="flex justify-between"><span>Interest</span><span id="dtlInterest">—</span></div>
+            </div>
+          </div>
+
+          <!-- Progress toward target (hidden if no target) -->
+          <div id="dtlProgressCard" class="bg-white rounded-2xl border border-slate-100 p-5">
+            <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-3">Progress to Target</p>
+            <div class="flex justify-between text-xs mb-2">
+              <span class="text-ink-muted" id="dtlProgressLabel">—</span>
+              <span class="font-bold text-brand" id="dtlProgressPct">—</span>
+            </div>
+            <div class="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
+              <div id="dtlProgressBar" class="h-full bg-brand transition-all duration-500" style="width:0%"></div>
+            </div>
+            <p class="text-xs text-ink-muted mt-3" id="dtlTargetLabel">—</p>
+          </div>
+
+          <!-- Terms -->
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 text-sm space-y-2">
+            <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1">Terms</p>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Start</span><span id="dtlStart">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Maturity</span><span id="dtlMaturity">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Period</span><span id="dtlPeriod">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Rate</span><span id="dtlRate">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Type</span><span id="dtlType">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Status</span><span id="dtlStatus">—</span></div>
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div class="lg:col-span-3 space-y-5">
+          <!-- Maturity banner -->
+          <div id="dtlMaturityBanner" class="hidden bg-success-bg text-success rounded-2xl p-4 text-sm flex items-center gap-3">
+            <i class="fa-solid fa-circle-check text-lg"></i>
+            <div>
+              <p class="font-bold">Deposit matured</p>
+              <p class="text-xs opacity-90">
+                Please visit your SACCO counter to collect your principal and interest.
+              </p>
+            </div>
+          </div>
+
+          <!-- Schedule -->
+          <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h4 class="text-sm font-bold">Interest Schedule</h4>
+              <span class="text-xs text-ink-muted" id="dtlScheduleCount">—</span>
+            </div>
+            <div class="overflow-x-auto max-h-[280px]">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider sticky top-0 text-[11px]">
+                  <tr>
+                    <th class="text-left px-5 py-2.5 font-semibold">As of</th>
+                    <th class="text-right px-5 py-2.5 font-semibold">Months</th>
+                    <th class="text-right px-5 py-2.5 font-semibold">Accrued interest</th>
+                    <th class="text-right px-5 py-2.5 font-semibold">Projected total</th>
+                  </tr>
+                </thead>
+                <tbody id="dtlSchedule" class="divide-y divide-slate-100">
+                  <tr><td colspan="4" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Transactions -->
+          <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h4 class="text-sm font-bold">Transaction History</h4>
+              <a id="dtlStatementLink" href="#" class="text-xs text-brand font-semibold hover:underline">
+                <i class="fa-solid fa-file-csv mr-1"></i>Export CSV
+              </a>
+            </div>
+            <div class="overflow-x-auto max-h-[420px]">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider sticky top-0 text-[11px]">
+                  <tr>
+                    <th class="text-left px-5 py-2.5 font-semibold">Date</th>
+                    <th class="text-left px-5 py-2.5 font-semibold">Type</th>
+                    <th class="text-left px-5 py-2.5 font-semibold">Method</th>
+                    <th class="text-right px-5 py-2.5 font-semibold">Amount</th>
+                    <th class="text-right px-5 py-2.5 font-semibold">Total after</th>
+                    <th class="text-left px-5 py-2.5 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="dtlTx" class="divide-y divide-slate-100">
+                  <tr><td colspan="6" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TOP-UP MODAL (ONLINE ONLY)                                    -->
+<!-- ============================================================ -->
+<div id="topupModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div>
+        <h3 class="font-bold text-base">Top up fixed deposit</h3>
+        <p class="text-xs text-ink-muted mt-0.5" id="topupFdLabel">—</p>
+      </div>
+      <button onclick="closeTopupModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form id="topupForm" class="p-6 space-y-4">
+      <div>
+        <label class="lbl">Amount *</label>
+        <input name="amount" type="number" min="1" step="1" required class="inp" placeholder="0">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="lbl">Provider *</label>
+          <select name="provider" class="inp">
+            <option value="MTN">MTN</option>
+            <option value="AIRTEL">Airtel</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Mobile number *</label>
+          <input name="phone" class="inp" placeholder="+256…">
+        </div>
+      </div>
+      <div class="rounded-xl bg-brand/5 border border-brand/10 p-3 text-xs text-brand-dark flex items-start gap-2">
+        <i class="fa-solid fa-circle-info mt-0.5"></i>
+        <span>Approve the prompt on your phone to complete the top-up.</span>
+      </div>
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeTopupModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" id="topupSubmit" class="btn-primary">
+          <i class="fa-solid fa-paper-plane mr-2"></i>Top up
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- STATUS MODAL                                                  -->
+<!-- ============================================================ -->
+<div id="statusModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+    <div id="statusIconWrap" class="w-16 h-16 mx-auto rounded-full bg-brand/10 text-brand flex items-center justify-center mb-4">
+      <i id="statusIcon" class="fa-solid fa-mobile-screen-button text-2xl"></i>
+    </div>
+    <h3 id="statusTitle" class="font-bold text-lg mb-1">Waiting for approval</h3>
+    <p id="statusText" class="text-sm text-ink-muted mb-5">Approve the prompt on your phone.</p>
+    <div id="statusSpinner" class="hidden mb-4">
+      <i class="fa-solid fa-circle-notch fa-spin text-brand text-xl"></i>
+    </div>
+    <button onclick="closeStatusModal()" class="btn-ghost w-full">Close</button>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   border:none; cursor:pointer; }
+    .btn-primary:hover { filter:brightness(0.92); }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                 border-radius:10px; background:#fff; border:1px solid #E2E8F0;
+                 color:#64748B; font-weight:600; font-size:14px; cursor:pointer; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .s-active     { background:#E6F4EA; color:#065F46; }
+    .s-matured    { background:#FEF3C7; color:#92400E; }
+    .s-withdrawn  { background:#E2E8F0; color:#334155; }
+    .s-cancelled  { background:#FEE2E2; color:#991B1B; }
+    .s-completed  { background:#E6F4EA; color:#065F46; }
+    .s-pending    { background:#FEF3C7; color:#92400E; }
+    .s-failed     { background:#FEE2E2; color:#991B1B; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE                                                        */
+/* ============================================================ */
+const state = { page: 1, per_page: 20, total: 0 };
+let currentDepositId = null;
+let currentDeposit   = null;
+let _pollTimer       = null;
+
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
+}
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+async function req(url, opts = {}) {
+    const r = await fetch(url, { credentials:'same-origin',
+        headers:{'Content-Type':'application/json'}, ...opts });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, body };
+}
+
+/* ============================================================ */
+/* SUMMARY                                                      */
+/* ============================================================ */
+async function loadSummary() {
+    const { ok, body } = await req('/member/fixed/api/summary');
+    if (!ok || !body.ok) return;
+    const s = body.summary;
+    document.getElementById('kpiPrincipal').textContent = fmtNum(s.total_principal);
+    document.getElementById('kpiInterest').textContent  = fmtNum(s.total_interest);
+    document.getElementById('kpiValue').textContent     = fmtNum(s.total_value);
+    document.getElementById('kpiActive').textContent    = s.active_count;
+    document.getElementById('kpiMatured').textContent   = s.matured_count;
+    document.getElementById('kpiMaturing30').textContent= s.maturing_30d;
+}
+
+/* ============================================================ */
+/* LIST                                                         */
+/* ============================================================ */
+async function loadDeposits() {
+    const tbody = document.getElementById('depositsTable');
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const qs = new URLSearchParams({ page: state.page, per_page: state.per_page });
+    const { ok, body } = await req('/member/fixed/api/deposits?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-red-500 py-10 text-sm">Load failed</td></tr>`;
+        return;
+    }
+    state.total = body.total;
+    document.getElementById('depCount').textContent = `${body.total} deposits`;
+
+    if (!body.deposits.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            You don't have any fixed deposits yet. Your SACCO creates them for you.</td></tr>`;
+    } else {
+        tbody.innerHTML = body.deposits.map(d => {
+            const progress = d.progress_percent || 0;
+            const maturityLabel = d.matured
+                ? `<span class="text-success font-semibold">Matured</span>`
+                : fmtDate(d.maturity_date);
+            return `
+            <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="openDetail('${d.id}')">
+              <td class="px-5 py-3 font-mono text-xs text-ink-muted">${escapeHtml(d.fd_number)}</td>
+              <td class="px-5 py-3 text-right font-medium">${fmtNum(d.principal)} <span class="text-xs text-ink-muted">${escapeHtml(d.currency)}</span></td>
+              <td class="px-5 py-3 text-right text-success">+${fmtNum(d.accrued_interest)}</td>
+              <td class="px-5 py-3">
+                <div class="w-32">
+                  <div class="flex justify-between text-[10px] mb-1">
+                    <span class="text-ink-muted">${progress.toFixed(1)}%</span>
+                    <span class="text-ink-muted">${fmtNum(d.target_amount || 0)}</span>
+                  </div>
+                  <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                    <div class="h-full bg-brand" style="width:${Math.min(100, progress)}%"></div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-5 py-3 text-xs">${maturityLabel}</td>
+              <td class="px-5 py-3"><span class="pill s-${d.status}">${escapeHtml(d.status)}</span></td>
+              <td class="px-5 py-3 text-right">
+                <i class="fa-solid fa-chevron-right text-ink-muted"></i>
+              </td>
+            </tr>`;
+        }).join('');
+    }
+
+    const from = state.total ? (state.page - 1) * state.per_page + 1 : 0;
+    const to   = Math.min(state.page * state.per_page, state.total);
+    document.getElementById('pageInfo').textContent =
+        state.total ? `${from}–${to} of ${state.total}` : '0 results';
+    document.getElementById('prevBtn').disabled = state.page <= 1;
+    document.getElementById('nextBtn').disabled = to >= state.total;
+}
+document.getElementById('prevBtn').onclick = () => { if (state.page > 1) { state.page--; loadDeposits(); } };
+document.getElementById('nextBtn').onclick = () => {
+    if (state.page * state.per_page < state.total) { state.page++; loadDeposits(); }
+};
+
+/* ============================================================ */
+/* DETAIL DRAWER                                                */
+/* ============================================================ */
+async function openDetail(id) {
+    currentDepositId = id;
+    document.getElementById('detailModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    const { ok, body } = await req(`/member/fixed/api/deposits/${id}`);
+    if (!ok || !body.ok) { showToast(body.error || 'Load failed', false); return; }
+    currentDeposit = body.deposit;
+    const d = currentDeposit;
+
+    document.getElementById('dtlTitle').textContent    = d.fd_number;
+    document.getElementById('dtlSubtitle').textContent = `${d.currency} · ${d.status}`;
+
+    document.getElementById('dtlTotal').textContent     = fmtNum(d.total_value);
+    document.getElementById('dtlPrincipal').textContent = fmtNum(d.principal);
+    document.getElementById('dtlInterest').textContent  = fmtNum(d.accrued_interest);
+
+    document.getElementById('dtlStart').textContent    = fmtDate(d.start_date);
+    document.getElementById('dtlMaturity').textContent = fmtDate(d.maturity_date);
+    document.getElementById('dtlPeriod').textContent   = `${d.period_months} months`;
+    document.getElementById('dtlRate').textContent     = d.interest_enabled
+        ? `${d.interest_rate_percent}% ${d.interest_type}`
+        : 'No interest';
+    document.getElementById('dtlType').textContent     = d.interest_type || '—';
+    document.getElementById('dtlStatus').textContent   = d.status;
+
+    // Progress
+    const target = Number(d.target_amount || 0);
+    const total  = Number(d.total_value || 0);
+    const pct    = target > 0 ? Math.min(100, (total / target) * 100) : 0;
+    if (target > 0) {
+        document.getElementById('dtlProgressCard').classList.remove('hidden');
+        document.getElementById('dtlProgressPct').textContent  = pct.toFixed(1) + '%';
+        document.getElementById('dtlProgressBar').style.width  = pct + '%';
+        document.getElementById('dtlProgressLabel').textContent =
+            `${fmtNum(total)} / ${fmtNum(target)}`;
+        document.getElementById('dtlTargetLabel').textContent =
+            `Target: ${fmtNum(target)} ${d.currency}`;
+    } else {
+        document.getElementById('dtlProgressCard').classList.add('hidden');
+    }
+
+    // Maturity banner
+    const banner = document.getElementById('dtlMaturityBanner');
+    if (d.matured) banner.classList.remove('hidden');
+    else           banner.classList.add('hidden');
+
+    // Statement link
+    document.getElementById('dtlStatementLink').href =
+        `/member/fixed/api/deposits/${d.id}/statement`;
+
+    // Actions: top-up only if active (never a withdraw button)
+    const wrap = document.getElementById('dtlActions');
+    const parts = [];
+    if (d.can_topup) {
+        parts.push(`<button onclick="openTopupModal()" class="btn-primary text-xs">
+            <i class="fa-solid fa-circle-plus mr-2"></i>Top up</button>`);
+    }
+    wrap.innerHTML = parts.join('');
+
+    loadSchedule();
+    loadTransactions();
+}
+
+function closeDetail() {
+    document.getElementById('detailModal').classList.add('hidden');
+    document.body.style.overflow = '';
+    currentDepositId = null;
+    currentDeposit = null;
+}
+
+async function loadSchedule() {
+    if (!currentDepositId) return;
+    const tbody = document.getElementById('dtlSchedule');
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>`;
+
+    const { ok, body } = await req(`/member/fixed/api/deposits/${currentDepositId}/schedule`);
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-red-500 py-8 text-xs">Load failed</td></tr>`;
+        return;
+    }
+    document.getElementById('dtlScheduleCount').textContent = `${body.schedule.length} periods`;
+
+    if (!body.schedule.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-ink-muted py-8 text-xs">No schedule.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = body.schedule.map(s => `
+        <tr>
+          <td class="px-5 py-2.5 text-xs">${fmtDate(s.as_of)}</td>
+          <td class="px-5 py-2.5 text-right text-xs text-ink-muted">${s.months_elapsed}</td>
+          <td class="px-5 py-2.5 text-right text-xs text-success">+${fmtNum(s.accrued_interest)}</td>
+          <td class="px-5 py-2.5 text-right text-xs font-medium">${fmtNum(s.projected_balance)}</td>
+        </tr>
+    `).join('');
+}
+
+async function loadTransactions() {
+    if (!currentDepositId) return;
+    const tbody = document.getElementById('dtlTx');
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>`;
+
+    const { ok, body } = await req(`/member/fixed/api/deposits/${currentDepositId}/transactions?per_page=100`);
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-8 text-xs">Load failed</td></tr>`;
+        return;
+    }
+    if (!body.transactions.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-8 text-xs">No transactions yet.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = body.transactions.map(t => `
+        <tr>
+          <td class="px-5 py-2.5 text-xs text-ink-muted whitespace-nowrap">${fmtDate(t.created_at)}</td>
+          <td class="px-5 py-2.5 text-xs">${escapeHtml(t.type || '')}</td>
+          <td class="px-5 py-2.5 text-xs text-ink-muted">${escapeHtml(t.method || '')}${t.provider ? ' · '+escapeHtml(t.provider) : ''}</td>
+          <td class="px-5 py-2.5 text-right text-xs font-medium">${fmtNum(t.amount)}</td>
+          <td class="px-5 py-2.5 text-right text-xs text-ink-muted">${t.total_after != null ? fmtNum(t.total_after) : '—'}</td>
+          <td class="px-5 py-2.5"><span class="pill s-${t.status}">${escapeHtml(t.status)}</span></td>
+        </tr>
+    `).join('');
+}
+
+/* ============================================================ */
+/* TOP-UP MODAL                                                 */
+/* ============================================================ */
+function openTopupModal() {
+    if (!currentDeposit) return;
+    document.getElementById('topupFdLabel').textContent = currentDeposit.fd_number;
+    document.getElementById('topupForm').reset();
+    document.getElementById('topupModal').classList.remove('hidden');
+}
+function closeTopupModal() { document.getElementById('topupModal').classList.add('hidden'); }
+
+document.getElementById('topupForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    const d = Object.fromEntries(new FormData(f).entries());
+    if (!d.phone || !d.phone.trim()) { showToast('Mobile number required', false); return; }
+
+    const btn = document.getElementById('topupSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Processing…';
+
+    const { ok, body } = await req(`/member/fixed/api/deposits/${currentDepositId}/topup`, {
+        method:'POST',
+        body: JSON.stringify({
+            amount:   Number(d.amount),
+            method:   'online',
+            provider: d.provider,
+            phone:    d.phone,
+        }),
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Top up';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Top-up failed', false); return; }
+    closeTopupModal();
+    if (body.pending && body.payment.deposit_id) {
+        showStatusModal(body.payment.deposit_id);
+    } else {
+        showToast('Top-up submitted', true);
+        loadDeposits(); loadSummary();
+    }
+});
+
+/* ============================================================ */
+/* STATUS MODAL                                                 */
+/* ============================================================ */
+function showStatusModal(depositId) {
+    document.getElementById('statusModal').classList.remove('hidden');
+    document.getElementById('statusSpinner').classList.remove('hidden');
+    document.getElementById('statusIconWrap').className =
+        'w-16 h-16 mx-auto rounded-full bg-brand/10 text-brand flex items-center justify-center mb-4';
+    document.getElementById('statusIcon').className = 'fa-solid fa-mobile-screen-button text-2xl';
+    document.getElementById('statusTitle').textContent = 'Waiting for approval';
+    document.getElementById('statusText').textContent  = 'Approve the prompt on your phone.';
+    startPolling(depositId);
+}
+function closeStatusModal() {
+    document.getElementById('statusModal').classList.add('hidden');
+    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+    loadDeposits(); loadSummary();
+    if (currentDepositId) openDetail(currentDepositId);
+}
+function startPolling(depositId) {
+    if (_pollTimer) clearInterval(_pollTimer);
+    let attempts = 0;
+    _pollTimer = setInterval(async () => {
+        attempts++;
+        const { ok, body } = await req(`/member/fixed/api/payment/${depositId}/verify`, { method: 'POST' });
+        if (!ok || !body.ok) {
+            if (attempts >= 30) { clearInterval(_pollTimer); _pollTimer = null; }
+            return;
+        }
+        if (body.status === 'completed') {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('statusSpinner').classList.add('hidden');
+            document.getElementById('statusIconWrap').className =
+                'w-16 h-16 mx-auto rounded-full bg-success-bg text-success flex items-center justify-center mb-4';
+            document.getElementById('statusIcon').className = 'fa-solid fa-circle-check text-2xl';
+            document.getElementById('statusTitle').textContent = 'Top-up complete';
+            document.getElementById('statusText').textContent  =
+                `New principal: ${fmtNum(body.topup.principal)}`;
+            setTimeout(closeStatusModal, 1800);
+        } else if (body.status === 'failed') {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('statusSpinner').classList.add('hidden');
+            document.getElementById('statusIconWrap').className =
+                'w-16 h-16 mx-auto rounded-full bg-danger-bg text-danger flex items-center justify-center mb-4';
+            document.getElementById('statusIcon').className = 'fa-solid fa-circle-xmark text-2xl';
+            document.getElementById('statusTitle').textContent = 'Payment failed';
+            document.getElementById('statusText').textContent  = body.reason || 'The payment was not completed.';
+        } else if (attempts >= 30) {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('statusSpinner').classList.add('hidden');
+            document.getElementById('statusTitle').textContent = 'Still pending';
+            document.getElementById('statusText').textContent  = 'Timed out. Check your deposits later.';
+        }
+    }, 4000);
+}
+
+/* ============================================================ */
+/* ESC                                                          */
+/* ============================================================ */
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        if (!document.getElementById('statusModal').classList.contains('hidden')) closeStatusModal();
+        else if (!document.getElementById('topupModal').classList.contains('hidden')) closeTopupModal();
+        else if (!document.getElementById('detailModal').classList.contains('hidden')) closeDetail();
+    }
+});
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    await Promise.all([loadSummary(), loadDeposits()]);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,782 @@
+{% extends "base.html" %}
+{% block title %}Dividends — SACCO Pro{% endblock %}
+{% block page_title %}Dividends{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- KPI CARDS                                                     -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Lifetime Distributed</p>
+        <p id="kpiLifetime" class="text-2xl font-bold mt-1 text-success">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+        <i class="fa-solid fa-hand-holding-dollar"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Across all posted runs</p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Runs</p>
+        <p id="kpiRuns" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+        <i class="fa-solid fa-layer-group"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      <span id="kpiPosted" class="text-success font-semibold">0</span> posted ·
+      <span id="kpiApproved" class="font-semibold text-ink">0</span> approved ·
+      <span id="kpiDraft" class="font-semibold text-ink">0</span> draft
+    </p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Latest Year</p>
+        <p id="kpiLatestYear" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
+        <i class="fa-solid fa-calendar"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      Total <span id="kpiLatestTotal" class="font-semibold text-ink">—</span>
+    </p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">YTD Net Surplus</p>
+        <p id="kpiYtdSurplus" class="text-2xl font-bold mt-1 text-brand">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+        <i class="fa-solid fa-chart-line"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      Distributable pool ·
+      <span id="kpiEligibleShares" class="font-semibold text-ink">—</span> eligible shares
+    </p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TOOLBAR                                                       -->
+<!-- ============================================================ -->
+<div class="flex flex-wrap items-center gap-3 mb-5">
+  <select id="statusFilter" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+    <option value="">All statuses</option>
+    <option value="draft">Draft</option>
+    <option value="approved">Approved</option>
+    <option value="posted">Posted</option>
+    <option value="reversed">Reversed</option>
+    <option value="cancelled">Cancelled</option>
+  </select>
+  <button onclick="exportLatest()" class="ml-auto inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-page text-ink-muted hover:text-ink text-sm font-semibold shadow-sm transition">
+    <i class="fa-solid fa-file-csv"></i> Export
+  </button>
+  <button onclick="openDeclareModal()"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-white text-sm font-semibold shadow-sm transition">
+    <i class="fa-solid fa-plus"></i> Declare Dividend
+  </button>
+</div>
+
+<!-- ============================================================ -->
+<!-- RUNS TABLE                                                    -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Run #</th>
+          <th class="text-left px-5 py-3 font-semibold">Year</th>
+          <th class="text-left px-5 py-3 font-semibold">Basis</th>
+          <th class="text-right px-5 py-3 font-semibold">Rate</th>
+          <th class="text-right px-5 py-3 font-semibold">Total</th>
+          <th class="text-right px-5 py-3 font-semibold">Recipients</th>
+          <th class="text-left px-5 py-3 font-semibold">Payout</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+          <th class="px-5 py-3"></th>
+        </tr>
+      </thead>
+      <tbody id="runsTable" class="divide-y divide-slate-100">
+        <tr><td colspan="9" class="text-center text-ink-muted py-10 text-sm">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+    <span id="pageInfo">—</span>
+    <div class="flex gap-1">
+      <button id="prevBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+      <button id="nextBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- DECLARE MODAL                                                 -->
+<!-- ============================================================ -->
+<div id="declareModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl z-10">
+      <h3 class="font-bold text-base">Declare Dividend</h3>
+      <button onclick="closeDeclareModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form id="declareForm" class="p-6 space-y-5">
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Financial year *</label>
+          <input name="financial_year" type="number" min="2000" max="2100" required class="inp" id="d_year">
+        </div>
+        <div>
+          <label class="lbl">Basis *</label>
+          <select name="basis" id="d_basis" class="inp" onchange="toggleBasis()">
+            <option value="percent_of_profit">Percent of year's net surplus</option>
+            <option value="per_share">Per share (amount × units)</option>
+            <option value="percent_of_value">Percent of share value</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Percent of profit -->
+      <div id="basis_profit">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="lbl">Percent of net surplus to declare *</label>
+            <input name="declare_percent" id="d_dpct" type="number" min="0.01" max="100" step="0.01" value="80" class="inp">
+          </div>
+          <div class="rounded-xl bg-page p-3 text-xs">
+            <p class="text-ink-muted">YTD net surplus</p>
+            <p class="font-bold text-base mt-1" id="d_ytd_surplus">—</p>
+            <p class="text-ink-muted mt-2">The remaining % stays in retained earnings.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Per share -->
+      <div id="basis_per_share" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Rate per share *</label>
+          <input name="rate_per_share" id="d_rate" type="number" min="0" step="0.01" class="inp">
+        </div>
+      </div>
+
+      <!-- Percent of value -->
+      <div id="basis_percent" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Percent of share value *</label>
+          <input name="percent_of_value" id="d_pct" type="number" min="0" max="100" step="0.001" class="inp">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Minimum shares (units)</label>
+          <input name="min_shares_units" id="d_minsh" type="number" min="0" step="0.0001" value="0" class="inp">
+        </div>
+        <div>
+          <label class="lbl">Payout mode *</label>
+          <select name="payout_mode" id="d_mode" class="inp">
+            <option value="to_savings">Credit to savings</option>
+            <option value="reinvest_shares">Reinvest into shares</option>
+            <option value="cash_payout">Cash payout</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Notes</label>
+        <textarea name="notes" rows="2" class="inp" placeholder="AGM resolution reference, etc."></textarea>
+      </div>
+
+      <!-- Preview -->
+      <div class="rounded-xl border border-brand/10 bg-brand/5 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-xs font-bold text-brand-dark uppercase tracking-wider">Preview</p>
+          <button type="button" onclick="runPreview()" class="text-xs font-semibold text-brand hover:underline">
+            <i class="fa-solid fa-play mr-1"></i>Compute
+          </button>
+        </div>
+        <div id="previewBox" class="text-sm space-y-2">
+          <p class="text-ink-muted text-xs">Click Compute to preview the distribution.</p>
+        </div>
+        <div id="previewTable" class="hidden max-h-56 overflow-y-auto mt-3 border-t border-brand/10 pt-3"></div>
+      </div>
+
+      <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+        <label class="flex items-center gap-2 text-xs cursor-pointer">
+          <input type="checkbox" name="approve_now" id="d_approve" class="w-4 h-4 text-brand">
+          Approve immediately
+        </label>
+        <div class="flex gap-3">
+          <button type="button" onclick="closeDeclareModal()" class="btn-ghost">Cancel</button>
+          <button type="submit" id="declareSubmit" class="btn-primary">
+            <i class="fa-solid fa-plus mr-2"></i>Declare
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- RUN DETAIL DRAWER                                             -->
+<!-- ============================================================ -->
+<div id="detailModal" class="hidden fixed inset-0 z-[75] flex items-stretch justify-center"
+     style="background:rgba(0,0,0,.5); backdrop-filter: blur(2px);">
+  <div class="bg-white w-full h-full flex flex-col">
+    <div class="flex items-center justify-between px-8 py-5 border-b border-slate-100 bg-white sticky top-0 z-10">
+      <div class="flex items-center gap-4">
+        <button onclick="closeDetail()" class="w-10 h-10 rounded-xl hover:bg-page flex items-center justify-center text-ink-muted">
+          <i class="fa-solid fa-arrow-left text-lg"></i>
+        </button>
+        <div>
+          <h3 class="font-bold text-lg" id="dtlTitle">—</h3>
+          <p class="text-xs text-ink-muted mt-0.5" id="dtlSubtitle">—</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2" id="dtlActions"></div>
+    </div>
+    <div class="flex-1 overflow-y-auto p-8 bg-page">
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div class="lg:col-span-1 space-y-5">
+          <div class="rounded-2xl bg-gradient-to-br from-brand to-brand-dark text-white p-6 shadow-md">
+            <p class="text-xs uppercase tracking-wider opacity-80">Total Dividend</p>
+            <p id="dtlTotal" class="text-3xl font-extrabold mt-2">—</p>
+            <div class="mt-4 text-xs opacity-90 space-y-1">
+              <div class="flex justify-between"><span>Year</span><span id="dtlYear">—</span></div>
+              <div class="flex justify-between"><span>Recipients</span><span id="dtlRecipients">—</span></div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 text-sm space-y-2">
+            <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1">Terms</p>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Basis</span><span id="dtlBasis">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Rate</span><span id="dtlRate">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Min shares</span><span id="dtlMinShares">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Payout</span><span id="dtlMode">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Status</span><span id="dtlStatus">—</span></div>
+          </div>
+
+          <!-- Profit-basis breakdown (hidden unless percent_of_profit) -->
+          <div id="dtlProfitBlock" class="hidden bg-white rounded-2xl border border-slate-100 p-5 text-sm space-y-2">
+            <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1">Profit Split</p>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Net surplus</span><span id="dtlNetSurplus" class="font-semibold">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Declare %</span><span id="dtlDeclarePercent" class="font-semibold">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Declared</span><span id="dtlDeclared" class="font-semibold text-brand">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Retained</span><span id="dtlRetained" class="font-semibold">—</span></div>
+            <hr class="my-2 border-slate-100">
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Eligible shares</span><span id="dtlEligibleShares" class="font-semibold">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Dividend / share</span><span id="dtlDPS" class="font-bold text-brand">—</span></div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-3 space-y-5">
+          <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h4 class="text-sm font-bold">Payments</h4>
+              <span class="text-xs text-ink-muted" id="dtlPayCount">—</span>
+            </div>
+            <div class="overflow-x-auto max-h-[520px]">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider sticky top-0 text-[11px]">
+                  <tr>
+                    <th class="text-left px-5 py-2.5 font-semibold">Member</th>
+                    <th class="text-right px-5 py-2.5 font-semibold">Shares</th>
+                    <th class="text-right px-5 py-2.5 font-semibold">Dividend</th>
+                    <th class="text-left px-5 py-2.5 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="dtlPayments" class="divide-y divide-slate-100">
+                  <tr><td colspan="4" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   border:none; cursor:pointer; }
+    .btn-primary:hover { filter:brightness(0.92); }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { display:inline-flex; align-items:center; padding:10px 18px; border-radius:10px;
+                 background:#fff; border:1px solid #E2E8F0; color:#64748B; font-weight:600;
+                 font-size:14px; cursor:pointer; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .s-draft      { background:#F1F5F9; color:#475569; }
+    .s-approved   { background:#DBEAFE; color:#1E40AF; }
+    .s-posted     { background:#E6F4EA; color:#065F46; }
+    .s-reversed   { background:#FEE2E2; color:#991B1B; }
+    .s-cancelled  { background:#E2E8F0; color:#334155; }
+    .s-pending    { background:#FEF3C7; color:#92400E; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE                                                        */
+/* ============================================================ */
+const state = { page: 1, per_page: 20, status: '', total: 0 };
+let currentRunId = null;
+let currentRun   = null;
+let lastPreview  = null;
+
+/* ============================================================ */
+/* FORMATTERS                                                   */
+/* ============================================================ */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtShares(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+}
+function fmtCompact(n) {
+    n = Number(n || 0);
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return String(n);
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
+}
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials:'same-origin',
+        headers:{'Content-Type':'application/json'},
+        ...opts,
+    });
+    return r.json();
+}
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+document.getElementById('d_year').value = new Date().getFullYear();
+
+/* ============================================================ */
+/* STATS + LIST                                                 */
+/* ============================================================ */
+async function loadStats() {
+    const data = await req('/dividends/api/stats');
+    if (!data.ok) return;
+    const s = data.stats;
+    document.getElementById('kpiLifetime').textContent    = fmtCompact(s.lifetime_total);
+    document.getElementById('kpiRuns').textContent        = s.total_runs;
+    document.getElementById('kpiPosted').textContent      = s.posted_runs;
+    document.getElementById('kpiApproved').textContent    = s.approved_runs;
+    document.getElementById('kpiDraft').textContent       = s.draft_runs;
+    document.getElementById('kpiLatestYear').textContent  = s.latest_year || '—';
+    document.getElementById('kpiLatestTotal').textContent = fmtCompact(s.latest_total);
+}
+
+async function loadYtd() {
+    // Pull the income statement YTD so the KPI and modal always reflect reality
+    const data = await req(`/reports/api/run?report=income_statement_ytd`);
+    if (!data || !data.ok) return;
+    const net = Number(data.totals?.net || 0);
+    const cur = data.org?.currency || 'UGX';
+    document.getElementById('kpiYtdSurplus').textContent = fmtCompact(net);
+    document.getElementById('kpiYtdSurplus').title       = fmtNum(net) + ' ' + cur;
+
+    // Eligible shares (active members, current share count)
+    const shares = await req('/dividends/api/eligible-shares');
+    if (shares && shares.ok) {
+        document.getElementById('kpiEligibleShares').textContent = fmtCompact(shares.total_shares);
+    }
+}
+
+async function loadRuns() {
+    const tbody = document.getElementById('runsTable');
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const qs = new URLSearchParams({ page: state.page, per_page: state.per_page, status: state.status });
+    const data = await req('/dividends/api/runs?' + qs.toString());
+    if (!data.ok) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-red-500 py-10 text-sm">Load failed</td></tr>`;
+        return;
+    }
+    state.total = data.total;
+    if (!data.runs.length) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No dividend runs yet.</td></tr>`;
+    } else {
+        tbody.innerHTML = data.runs.map(r => {
+            let basisLabel;
+            if (r.basis === 'per_share') {
+                basisLabel = `${fmtNum(r.rate_per_share)} / share`;
+            } else if (r.basis === 'percent_of_value') {
+                basisLabel = `${r.percent_of_value}% of value`;
+            } else {
+                basisLabel = `${r.declare_percent}% of profit`;
+            }
+            return `
+            <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="openDetail('${r.id}')">
+              <td class="px-5 py-3 font-mono text-xs text-ink-muted">${escapeHtml(r.run_number)}</td>
+              <td class="px-5 py-3 text-sm font-medium">${r.financial_year}</td>
+              <td class="px-5 py-3 text-xs">${escapeHtml(r.basis)}</td>
+              <td class="px-5 py-3 text-right text-xs">${basisLabel}</td>
+              <td class="px-5 py-3 text-right font-semibold">${fmtNum(r.total_dividend)} <span class="text-xs text-ink-muted">${escapeHtml(r.currency)}</span></td>
+              <td class="px-5 py-3 text-right text-sm">${r.total_recipients}</td>
+              <td class="px-5 py-3 text-xs text-ink-muted">${escapeHtml(r.payout_mode)}</td>
+              <td class="px-5 py-3"><span class="pill s-${r.status}">${escapeHtml(r.status)}</span></td>
+              <td class="px-5 py-3 text-right">
+                <button onclick="event.stopPropagation();openDetail('${r.id}')" class="w-8 h-8 rounded-lg hover:bg-page text-ink-muted hover:text-brand">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+              </td>
+            </tr>`;
+        }).join('');
+    }
+    const from = state.total ? (state.page - 1) * state.per_page + 1 : 0;
+    const to   = Math.min(state.page * state.per_page, state.total);
+    document.getElementById('pageInfo').textContent = state.total ? `${from}–${to} of ${state.total}` : '0 results';
+    document.getElementById('prevBtn').disabled = state.page <= 1;
+    document.getElementById('nextBtn').disabled = to >= state.total;
+}
+
+document.getElementById('prevBtn').onclick = () => { if (state.page > 1) { state.page--; loadRuns(); } };
+document.getElementById('nextBtn').onclick = () => {
+    if (state.page * state.per_page < state.total) { state.page++; loadRuns(); }
+};
+document.getElementById('statusFilter').addEventListener('change', e => {
+    state.status = e.target.value; state.page = 1; loadRuns();
+});
+
+/* ============================================================ */
+/* DECLARE MODAL                                                */
+/* ============================================================ */
+function openDeclareModal() {
+    document.getElementById('declareForm').reset();
+    document.getElementById('d_year').value = new Date().getFullYear();
+    document.getElementById('d_minsh').value = '0';
+    document.getElementById('d_dpct').value = '80';
+    document.getElementById('d_approve').checked = false;
+    document.getElementById('previewBox').innerHTML =
+        `<p class="text-ink-muted text-xs">Click Compute to preview the distribution.</p>`;
+    document.getElementById('previewTable').classList.add('hidden');
+    lastPreview = null;
+    toggleBasis();
+    document.getElementById('declareModal').classList.remove('hidden');
+}
+function closeDeclareModal() { document.getElementById('declareModal').classList.add('hidden'); }
+
+function toggleBasis() {
+    const b = document.getElementById('d_basis').value;
+    document.getElementById('basis_profit').classList.toggle('hidden', b !== 'percent_of_profit');
+    document.getElementById('basis_per_share').classList.toggle('hidden', b !== 'per_share');
+    document.getElementById('basis_percent').classList.toggle('hidden', b !== 'percent_of_value');
+    if (b === 'percent_of_profit') loadYtdInModal();
+}
+
+async function loadYtdInModal() {
+    const el = document.getElementById('d_ytd_surplus');
+    el.textContent = 'Loading…';
+    const data = await req(`/reports/api/run?report=income_statement_ytd`);
+    if (!data || !data.ok) { el.textContent = '—'; return; }
+    const net = Number(data.totals?.net || 0);
+    const cur = data.org?.currency || 'UGX';
+    el.textContent = fmtNum(net) + ' ' + cur;
+}
+
+async function runPreview() {
+    const form = document.getElementById('declareForm');
+    const f = new FormData(form);
+    const payload = {
+        financial_year: Number(f.get('financial_year')),
+        basis: f.get('basis'),
+        rate_per_share: Number(f.get('rate_per_share') || 0),
+        percent_of_value: Number(f.get('percent_of_value') || 0),
+        declare_percent: Number(f.get('declare_percent') || 0),
+        min_shares_units: Number(f.get('min_shares_units') || 0),
+    };
+    const box = document.getElementById('previewBox');
+    box.innerHTML = `<p class="text-ink-muted text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Computing…</p>`;
+
+    const data = await req('/dividends/api/preview', { method:'POST', body: JSON.stringify(payload) });
+    if (!data.ok) {
+        box.innerHTML = `<p class="text-red-500 text-xs">${escapeHtml(data.error)}</p>`;
+        return;
+    }
+    lastPreview = data.preview;
+    const p = data.preview;
+    const cur = escapeHtml(p.currency);
+
+    if (p.basis === 'percent_of_profit') {
+        box.innerHTML = `
+            <div class="flex justify-between"><span class="text-ink-muted">Net surplus (YTD)</span>
+                <span class="font-semibold">${fmtNum(p.net_surplus)} ${cur}</span></div>
+            <div class="flex justify-between"><span class="text-ink-muted">Declare (${p.declare_percent}%)</span>
+                <span class="font-bold text-brand">${fmtNum(p.declare_amount)} ${cur}</span></div>
+            <div class="flex justify-between"><span class="text-ink-muted">Retained</span>
+                <span class="font-semibold text-ink">${fmtNum(p.retained_amount)} ${cur}</span></div>
+            <div class="flex justify-between border-t border-brand/10 pt-2 mt-2"><span class="text-ink-muted">Eligible shares</span>
+                <span class="font-semibold">${fmtShares(p.eligible_shares)}</span></div>
+            <div class="flex justify-between"><span class="text-ink-muted">Dividend per share</span>
+                <span class="font-bold text-brand">${fmtNum(p.dividend_per_share)}</span></div>
+            <div class="flex justify-between"><span class="text-ink-muted">Recipients</span>
+                <span class="font-semibold">${p.total_recipients}</span></div>
+        `;
+    } else {
+        box.innerHTML = `
+            <div class="flex justify-between"><span class="text-ink-muted">Total dividend</span>
+                <span class="font-bold text-brand">${fmtNum(p.total_dividend)} ${cur}</span></div>
+            <div class="flex justify-between"><span class="text-ink-muted">Recipients</span>
+                <span class="font-semibold">${p.total_recipients}</span></div>
+            <div class="flex justify-between"><span class="text-ink-muted">Share price</span>
+                <span class="font-semibold">${fmtNum(p.share_price)}</span></div>
+        `;
+    }
+
+    // member rows
+    const table = document.getElementById('previewTable');
+    const rows = (p.members || []).slice(0, 25);
+    table.innerHTML = `
+        <table class="w-full text-xs">
+          <thead class="text-ink-muted uppercase tracking-wider">
+            <tr>
+              <th class="text-left py-1.5">Member</th>
+              <th class="text-right py-1.5">Shares</th>
+              <th class="text-right py-1.5">Dividend</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            ${rows.map(m => `
+              <tr>
+                <td class="py-1.5">${escapeHtml(m.member_name)}</td>
+                <td class="py-1.5 text-right text-ink-muted">${fmtShares(m.shares_units)}</td>
+                <td class="py-1.5 text-right font-medium">${fmtNum(m.dividend_amount)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ${p.members.length > 25 ? `<p class="text-xs text-ink-muted mt-2">+ ${p.members.length - 25} more</p>` : ''}
+    `;
+    table.classList.remove('hidden');
+}
+
+document.getElementById('declareForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const payload = {
+        financial_year: Number(f.get('financial_year')),
+        basis: f.get('basis'),
+        rate_per_share: Number(f.get('rate_per_share') || 0),
+        percent_of_value: Number(f.get('percent_of_value') || 0),
+        declare_percent: Number(f.get('declare_percent') || 0),
+        min_shares_units: Number(f.get('min_shares_units') || 0),
+        payout_mode: f.get('payout_mode'),
+        notes: f.get('notes') || null,
+        approve_now: document.getElementById('d_approve').checked,
+    };
+    const btn = document.getElementById('declareSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Saving…';
+
+    const data = await req('/dividends/api/runs', { method:'POST', body: JSON.stringify(payload) });
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Declare';
+
+    if (!data.ok) { showToast(data.error || 'Failed', false); return; }
+    closeDeclareModal();
+    showToast(`Run ${data.run.run_number} created`, true);
+    loadRuns(); loadStats();
+});
+
+/* ============================================================ */
+/* DETAIL                                                       */
+/* ============================================================ */
+async function openDetail(id) {
+    currentRunId = id;
+    document.getElementById('detailModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    const data = await req(`/dividends/api/runs/${id}`);
+    if (!data.ok) { showToast('Load failed', false); return; }
+    currentRun = data.run;
+    const r = data.run;
+
+    document.getElementById('dtlTitle').textContent = r.run_number;
+    document.getElementById('dtlSubtitle').textContent =
+        `Financial year ${r.financial_year} · ${r.status}`;
+    document.getElementById('dtlTotal').textContent = fmtNum(r.total_dividend) + ' ' + r.currency;
+    document.getElementById('dtlYear').textContent = r.financial_year;
+    document.getElementById('dtlRecipients').textContent = r.total_recipients;
+
+    document.getElementById('dtlBasis').textContent = r.basis;
+    if (r.basis === 'per_share') {
+        document.getElementById('dtlRate').textContent = `${fmtNum(r.rate_per_share)} / share`;
+    } else if (r.basis === 'percent_of_value') {
+        document.getElementById('dtlRate').textContent = `${r.percent_of_value}% of value`;
+    } else {
+        document.getElementById('dtlRate').textContent = `${r.declare_percent}% of profit`;
+    }
+    document.getElementById('dtlMinShares').textContent = fmtShares(r.min_shares_units);
+    document.getElementById('dtlMode').textContent = r.payout_mode;
+    document.getElementById('dtlStatus').textContent = r.status;
+
+    // Profit basis extra block
+    const profitBlock = document.getElementById('dtlProfitBlock');
+    if (r.basis === 'percent_of_profit') {
+        profitBlock.classList.remove('hidden');
+        document.getElementById('dtlNetSurplus').textContent    = fmtNum(r.net_surplus_source) + ' ' + r.currency;
+        document.getElementById('dtlDeclarePercent').textContent= r.declare_percent + '%';
+        document.getElementById('dtlDeclared').textContent      = fmtNum(r.total_dividend) + ' ' + r.currency;
+        document.getElementById('dtlRetained').textContent      = fmtNum(r.retained_amount) + ' ' + r.currency;
+        document.getElementById('dtlEligibleShares').textContent= fmtShares(r.eligible_shares);
+        document.getElementById('dtlDPS').textContent           = fmtNum(r.dividend_per_share);
+    } else {
+        profitBlock.classList.add('hidden');
+    }
+
+    document.getElementById('dtlPayCount').textContent = `${data.payments_count} payments`;
+
+    if (data.payments && data.payments.length) {
+        const paymentsRes = await req(`/dividends/api/runs/${id}/payments?per_page=500`);
+        if (paymentsRes.ok) {
+            document.getElementById('dtlPayments').innerHTML = paymentsRes.payments.map(p => {
+                const m = p.members || {};
+                return `
+                <tr>
+                  <td class="px-5 py-2.5">
+                    <div class="text-sm font-medium">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</div>
+                    <div class="text-xs text-ink-muted">ID ${escapeHtml(m.member_id)}</div>
+                  </td>
+                  <td class="px-5 py-2.5 text-right text-xs text-ink-muted">${fmtShares(p.shares_units_at_run)}</td>
+                  <td class="px-5 py-2.5 text-right font-medium">${fmtNum(p.dividend_amount)} <span class="text-xs text-ink-muted">${escapeHtml(p.currency)}</span></td>
+                  <td class="px-5 py-2.5"><span class="pill s-${p.status}">${escapeHtml(p.status)}</span></td>
+                </tr>`;
+            }).join('');
+        }
+    } else {
+        document.getElementById('dtlPayments').innerHTML =
+            `<tr><td colspan="4" class="text-center text-ink-muted py-8 text-xs">No payments yet — this run has not been posted.</td></tr>`;
+    }
+
+    // Actions
+    const wrap = document.getElementById('dtlActions');
+    const parts = [];
+    if (r.status === 'draft') {
+        parts.push(`<button onclick="approveRun()" class="btn-primary text-xs">
+            <i class="fa-solid fa-check mr-2"></i>Approve</button>`);
+        parts.push(`<button onclick="cancelRun()" class="btn-ghost text-xs">Cancel</button>`);
+    } else if (r.status === 'approved') {
+        parts.push(`<button onclick="postRun()" class="btn-primary text-xs">
+            <i class="fa-solid fa-money-bill-transfer mr-2"></i>Post</button>`);
+        parts.push(`<button onclick="cancelRun()" class="btn-ghost text-xs">Cancel</button>`);
+    } else if (r.status === 'posted') {
+        parts.push(`<a href="/dividends/api/runs/${r.id}/receipt" class="btn-ghost text-xs">
+            <i class="fa-solid fa-file-csv mr-2"></i>Export</a>`);
+        parts.push(`<button onclick="reverseRun()" class="btn-primary text-xs" style="background:#EF4444;">
+            <i class="fa-solid fa-rotate-left mr-2"></i>Reverse</button>`);
+    }
+    wrap.innerHTML = parts.join('');
+}
+
+function closeDetail() {
+    document.getElementById('detailModal').classList.add('hidden');
+    document.body.style.overflow = '';
+    currentRunId = null; currentRun = null;
+}
+
+/* ============================================================ */
+/* ACTIONS                                                      */
+/* ============================================================ */
+async function approveRun() {
+    const data = await req(`/dividends/api/runs/${currentRunId}/approve`, { method:'POST' });
+    if (!data.ok) { showToast(data.error, false); return; }
+    showToast('Approved', true);
+    openDetail(currentRunId); loadRuns(); loadStats();
+}
+
+async function cancelRun() {
+    const reason = prompt('Reason for cancelling?') || '';
+    const data = await req(`/dividends/api/runs/${currentRunId}/cancel`, {
+        method:'POST', body: JSON.stringify({ reason }),
+    });
+    if (!data.ok) { showToast(data.error, false); return; }
+    showToast('Cancelled', true);
+    openDetail(currentRunId); loadRuns(); loadStats();
+}
+
+async function postRun() {
+    if (!confirm('Post this dividend? Members will be credited and the ledger will be written. This is not easily reversible.')) return;
+    const data = await req(`/dividends/api/runs/${currentRunId}/post`, { method:'POST' });
+    if (!data.ok) { showToast(data.error || 'Post failed', false); return; }
+    showToast(`Posted ${data.posted_count} payments · ${fmtNum(data.total_amount)}`, true);
+    openDetail(currentRunId); loadRuns(); loadStats();
+}
+
+async function reverseRun() {
+    const reason = prompt('Reason for reversal?');
+    if (!reason) return;
+    if (!confirm('Reverse the entire dividend run? Member balances will be debited.')) return;
+    const data = await req(`/dividends/api/runs/${currentRunId}/reverse`, {
+        method:'POST', body: JSON.stringify({ reason }),
+    });
+    if (!data.ok) { showToast(data.error || 'Reverse failed', false); return; }
+    showToast(`Reversed ${data.reversed_count} payments`, true);
+    openDetail(currentRunId); loadRuns(); loadStats();
+}
+
+function exportLatest() {
+    if (!currentRunId) { showToast('Open a run to export its CSV', false); return; }
+    window.location.href = `/dividends/api/runs/${currentRunId}/receipt`;
+}
+
+/* ============================================================ */
+/* ESC                                                          */
+/* ============================================================ */
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        const modals = ['declareModal'];
+        for (const m of modals) {
+            const el = document.getElementById(m);
+            if (!el.classList.contains('hidden')) { el.classList.add('hidden'); return; }
+        }
+        if (!document.getElementById('detailModal').classList.contains('hidden')) closeDetail();
+    }
+});
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    await Promise.all([loadStats(), loadRuns(), loadYtd()]);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,764 @@
+{% extends "base.html" %}
+{% block title %}Shares Management — SACCO Pro{% endblock %}
+{% block page_title %}Shares Management{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- KPI CARDS                                                     -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Share Value</p>
+        <p id="kpiTotalValue" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+        <i class="fa-solid fa-chart-pie"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      Units: <span id="kpiTotalUnits" class="font-semibold text-ink">—</span>
+    </p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Share Price</p>
+        <p id="kpiPrice" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
+        <i class="fa-solid fa-tag"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Per unit</p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Active Shareholders</p>
+        <p id="kpiHolders" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+        <i class="fa-solid fa-users"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      <span id="kpiBelow" class="text-warning font-semibold">0</span> below minimum
+    </p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Purchased (30d)</p>
+        <p id="kpi30dValue" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+        <i class="fa-solid fa-arrow-trend-up"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      Units: <span id="kpi30dUnits" class="font-semibold text-ink">—</span>
+    </p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TABS                                                          -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm mb-5">
+  <div class="flex border-b border-slate-100">
+    <button data-tab="members" class="stab px-5 py-3.5 text-sm font-semibold border-b-2 border-brand text-brand whitespace-nowrap">
+      <i class="fa-solid fa-users mr-2"></i>Shareholders
+    </button>
+    <button data-tab="feed" class="stab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">
+      <i class="fa-solid fa-receipt mr-2"></i>Transactions
+    </button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TAB: SHAREHOLDERS                                             -->
+<!-- ============================================================ -->
+<section id="tab-members">
+  <div class="flex flex-wrap items-center gap-3 mb-5">
+    <div class="relative flex-1 min-w-[220px] max-w-md">
+      <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft text-sm"></i>
+      <input id="searchInput" placeholder="Search member name, ID or phone…"
+             class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-brand bg-white">
+    </div>
+    <select id="statusFilter" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+      <option value="">All statuses</option>
+      <option value="active">Active</option>
+      <option value="dormant">Dormant</option>
+      <option value="suspended">Suspended</option>
+    </select>
+    <button onclick="exportCSV()" class="ml-auto inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-page text-ink-muted hover:text-ink text-sm font-semibold shadow-sm transition">
+      <i class="fa-solid fa-file-csv"></i> Export
+    </button>
+    <button onclick="openBuyModal()"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-dark text-white text-sm font-semibold shadow-sm transition">
+      <i class="fa-solid fa-plus"></i> Buy Shares
+    </button>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+          <tr>
+            <th class="text-left px-5 py-3 font-semibold">Member</th>
+            <th class="text-left px-5 py-3 font-semibold">Member ID</th>
+            <th class="text-right px-5 py-3 font-semibold">Units</th>
+            <th class="text-right px-5 py-3 font-semibold">Share Value</th>
+            <th class="text-left px-5 py-3 font-semibold">Status</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="membersTable" class="divide-y divide-slate-100">
+          <tr><td colspan="6" class="text-center text-ink-muted py-10 text-sm">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+      <span id="pageInfo">—</span>
+      <div class="flex gap-1">
+        <button id="prevBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+        <button id="nextBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- TAB: TRANSACTIONS                                             -->
+<!-- ============================================================ -->
+<section id="tab-feed" class="hidden">
+  <div class="flex flex-wrap items-center gap-3 mb-5">
+    <select id="feedStatus" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+      <option value="">All statuses</option>
+      <option value="completed">Completed</option>
+      <option value="pending">Pending</option>
+      <option value="failed">Failed</option>
+      <option value="reversed">Reversed</option>
+    </select>
+    <select id="feedType" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+      <option value="">All types</option>
+      <option value="purchase">Purchase</option>
+      <option value="redeem">Redeem</option>
+      <option value="bonus">Bonus</option>
+      <option value="adjustment">Adjustment</option>
+    </select>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+          <tr>
+            <th class="text-left px-5 py-3 font-semibold">Txn #</th>
+            <th class="text-left px-5 py-3 font-semibold">Member</th>
+            <th class="text-left px-5 py-3 font-semibold">Type</th>
+            <th class="text-right px-5 py-3 font-semibold">Units</th>
+            <th class="text-right px-5 py-3 font-semibold">Amount</th>
+            <th class="text-left px-5 py-3 font-semibold">Method</th>
+            <th class="text-left px-5 py-3 font-semibold">Status</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="feedTable" class="divide-y divide-slate-100">
+          <tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+      <span id="feedPageInfo">—</span>
+      <div class="flex gap-1">
+        <button id="feedPrev" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+        <button id="feedNext" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- BUY MODAL                                                     -->
+<!-- ============================================================ -->
+<div id="buyModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div>
+        <h3 class="font-bold text-base">Buy Shares</h3>
+        <p class="text-xs text-ink-muted mt-0.5" id="buyMemberLabel">—</p>
+      </div>
+      <button onclick="closeBuyModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form id="buyForm" class="p-6 space-y-5">
+      <div>
+        <label class="lbl">Member *</label>
+        <input type="text" id="memberSearch" placeholder="Type name, ID, or phone…"
+               class="inp" autocomplete="off">
+        <select name="member_id" id="memberPicker" size="4"
+                class="inp mt-2 h-32 hidden"></select>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm space-y-1">
+        <div class="flex justify-between"><span class="text-ink-muted">Share price</span><span id="buyPrice">—</span></div>
+        <div class="flex justify-between"><span class="text-ink-muted">Current units</span><span id="buyCurUnits">—</span></div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Units *</label>
+          <input name="units" id="buyUnits" type="number" min="0.0001" step="0.0001" required class="inp">
+        </div>
+        <div>
+          <label class="lbl">Total amount</label>
+          <input id="buyAmount" class="inp" disabled>
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Method</label>
+        <div class="grid grid-cols-2 gap-3 p-1 bg-slate-100 rounded-xl">
+          <button type="button" data-method="cash" class="bm-btn py-2.5 rounded-lg text-sm font-semibold bg-white shadow-sm text-brand transition">
+            <i class="fa-solid fa-money-bill-wave mr-2"></i>Cash
+          </button>
+          <button type="button" data-method="online" class="bm-btn py-2.5 rounded-lg text-sm font-semibold text-ink-muted transition">
+            <i class="fa-solid fa-mobile-screen-button mr-2"></i>Online
+          </button>
+          <input type="hidden" name="method" id="buyMethod" value="cash">
+        </div>
+      </div>
+
+      <div id="buyOnlineBlock" class="hidden grid grid-cols-2 gap-3">
+        <div>
+          <label class="lbl">Provider</label>
+          <select name="provider" class="inp">
+            <option value="MTN">MTN</option>
+            <option value="AIRTEL">Airtel</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Phone</label>
+          <input name="phone" class="inp" placeholder="+256…">
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Narration (optional)</label>
+        <input name="narration" class="inp">
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeBuyModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" id="buySubmit" class="btn-primary">
+          <i class="fa-solid fa-coins mr-2"></i>Buy Shares
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- MEMBER DETAIL DRAWER                                          -->
+<!-- ============================================================ -->
+<div id="detailModal" class="hidden fixed inset-0 z-[75] flex items-stretch justify-center"
+     style="background:rgba(0,0,0,.5); backdrop-filter: blur(2px);">
+  <div class="bg-white w-full h-full flex flex-col">
+    <div class="flex items-center justify-between px-8 py-5 border-b border-slate-100 bg-white sticky top-0 z-10">
+      <div class="flex items-center gap-4">
+        <button onclick="closeDetailModal()" class="w-10 h-10 rounded-xl hover:bg-page flex items-center justify-center text-ink-muted">
+          <i class="fa-solid fa-arrow-left text-lg"></i>
+        </button>
+        <div>
+          <h3 class="font-bold text-lg" id="dtlTitle">—</h3>
+          <p class="text-xs text-ink-muted mt-0.5" id="dtlSubtitle">—</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="openBuyModal(currentMember)" class="btn-primary text-xs">
+          <i class="fa-solid fa-plus mr-2"></i>Buy more
+        </button>
+      </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-8 bg-page">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1 space-y-5">
+          <div class="rounded-2xl bg-gradient-to-br from-brand to-brand-dark text-white p-6 shadow-md">
+            <p class="text-xs uppercase tracking-wider opacity-80">Shareholding</p>
+            <p id="dtlUnits" class="text-3xl font-extrabold mt-2">—</p>
+            <div class="mt-4 text-xs opacity-90 space-y-1">
+              <div class="flex justify-between"><span>Value</span><span id="dtlValue">—</span></div>
+              <div class="flex justify-between"><span>Price/unit</span><span id="dtlPrice">—</span></div>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 text-sm space-y-2">
+            <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1">Member</p>
+            <p class="font-semibold" id="dtlName">—</p>
+            <p class="font-mono text-xs text-ink-muted" id="dtlId">—</p>
+            <p class="text-xs text-ink-muted" id="dtlPhone">—</p>
+            <p class="text-xs text-ink-muted" id="dtlEmail">—</p>
+          </div>
+        </div>
+        <div class="lg:col-span-2">
+          <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h4 class="text-sm font-bold">Purchase History</h4>
+              <span class="text-xs text-ink-muted" id="dtlCount">—</span>
+            </div>
+            <div class="overflow-x-auto max-h-[520px]">
+              <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider sticky top-0 text-[11px]">
+                  <tr>
+                    <th class="text-left px-5 py-2.5 font-semibold">Date</th>
+                    <th class="text-left px-5 py-2.5 font-semibold">Txn #</th>
+                    <th class="text-right px-5 py-2.5 font-semibold">Units</th>
+                    <th class="text-right px-5 py-2.5 font-semibold">Amount</th>
+                    <th class="text-left px-5 py-2.5 font-semibold">Status</th>
+                    <th class="px-5 py-2.5"></th>
+                  </tr>
+                </thead>
+                <tbody id="dtlTxns" class="divide-y divide-slate-100">
+                  <tr><td colspan="6" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; transition:all .15s; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   transition:.15s; border:none; cursor:pointer; }
+    .btn-primary:hover { filter:brightness(0.92); }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { display:inline-flex; align-items:center; padding:10px 18px; border-radius:10px;
+                 background:#fff; border:1px solid #E2E8F0;
+                 color:#64748B; font-weight:600; font-size:14px; cursor:pointer; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .s-pending    { background:#FEF3C7; color:#92400E; }
+    .s-completed  { background:#E6F4EA; color:#065F46; }
+    .s-failed     { background:#FEE2E2; color:#991B1B; }
+    .s-reversed   { background:#E2E8F0; color:#334155; }
+    .member-avatar  { width:36px; height:36px; border-radius:50%;
+                      background:linear-gradient(135deg,#1A62FF,#003ECC);
+                      color:#fff; display:inline-flex; align-items:center; justify-content:center;
+                      font-weight:700; font-size:13px; flex-shrink:0; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE                                                        */
+/* ============================================================ */
+const state = {
+    page: 1, per_page: 20, q: '', status: '', total: 0,
+    feedPage: 1, feedPerPage: 20, feedStatus: '', feedType: '', feedTotal: 0,
+};
+let currentMember = null;
+let currentMemberId = null;
+let sharePrice = 0;
+let currency = 'UGX';
+
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtUnits(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+}
+function fmtCompact(n) {
+    n = Number(n || 0);
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return String(n);
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString(undefined, {
+        year:'numeric', month:'short', day:'2-digit',
+        hour:'2-digit', minute:'2-digit',
+    });
+}
+function initials(f, l) { return ((f || '?')[0] + (l || '')[0] || '?').toUpperCase(); }
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function debounce(fn, ms = 300) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        ...opts,
+    });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, status: r.status, body };
+}
+
+/* ============================================================ */
+/* TABS                                                         */
+/* ============================================================ */
+document.querySelectorAll('.stab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.stab').forEach(b => {
+            const on = b.dataset.tab === tab;
+            b.classList.toggle('border-brand', on);
+            b.classList.toggle('text-brand', on);
+            b.classList.toggle('border-transparent', !on);
+            b.classList.toggle('text-ink-muted', !on);
+        });
+        document.getElementById('tab-members').classList.toggle('hidden', tab !== 'members');
+        document.getElementById('tab-feed').classList.toggle('hidden', tab !== 'feed');
+        if (tab === 'feed') loadFeed();
+    });
+});
+
+/* ============================================================ */
+/* SETTINGS + STATS                                             */
+/* ============================================================ */
+async function loadSettings() {
+    const { ok, body } = await req('/shares/api/settings');
+    if (!ok || !body.ok) return;
+    sharePrice = Number(body.settings.share_price || 0);
+    currency   = body.settings.currency;
+}
+
+async function loadStats() {
+    const { ok, body } = await req('/shares/api/stats');
+    if (!ok || !body.ok) return;
+    const s = body.stats;
+    document.getElementById('kpiTotalValue').textContent = fmtCompact(s.total_value);
+    document.getElementById('kpiTotalUnits').textContent = fmtCompact(s.total_units);
+    document.getElementById('kpiPrice').textContent      = fmtCompact(s.share_price) + ' ' + s.currency;
+    document.getElementById('kpiHolders').textContent    = s.active_holders;
+    document.getElementById('kpiBelow').textContent      = s.below_minimum;
+    document.getElementById('kpi30dValue').textContent   = fmtCompact(s.purchased_value_30d);
+    document.getElementById('kpi30dUnits').textContent   = fmtCompact(s.purchased_units_30d);
+}
+
+/* ============================================================ */
+/* MEMBER LIST                                                  */
+/* ============================================================ */
+async function loadMembers() {
+    const tbody = document.getElementById('membersTable');
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+    const qs = new URLSearchParams({
+        page: state.page, per_page: state.per_page,
+        q: state.q, status: state.status,
+    });
+    const { ok, body } = await req('/shares/api/list?' + qs.toString());
+    if (!ok || !body.ok) { tbody.innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-10 text-sm">Load failed</td></tr>`; return; }
+    state.total = body.total;
+    if (!body.members.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-ink-muted py-12 text-sm">No members.</td></tr>`;
+    } else {
+        tbody.innerHTML = body.members.map(m => `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-3">
+                  <div class="member-avatar">${initials(m.first_name, m.last_name)}</div>
+                  <div>
+                    <div class="font-semibold text-ink">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</div>
+                    <div class="text-xs text-ink-muted">${escapeHtml(m.phone || '')}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-5 py-3 font-mono text-xs text-ink-muted">${escapeHtml(m.member_id)}</td>
+              <td class="px-5 py-3 text-right font-medium">${fmtUnits(m.shares_units)}</td>
+              <td class="px-5 py-3 text-right">${fmtNum(m.shares_value)} <span class="text-xs text-ink-muted">${currency}</span></td>
+              <td class="px-5 py-3"><span class="pill s-${m.status === 'active' ? 'completed' : 'reversed'}">${escapeHtml(m.status)}</span></td>
+              <td class="px-5 py-3 text-right">
+                <div class="flex justify-end gap-1">
+                  <button onclick="openBuyModalById('${m.id}')" title="Buy"
+                          class="w-8 h-8 rounded-lg hover:bg-page text-ink-muted hover:text-brand transition">
+                    <i class="fa-solid fa-plus"></i>
+                  </button>
+                  <button onclick="openDetail('${m.id}')" title="View"
+                          class="w-8 h-8 rounded-lg hover:bg-page text-ink-muted hover:text-brand transition">
+                    <i class="fa-solid fa-chevron-right"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+        `).join('');
+    }
+    const from = state.total ? (state.page - 1) * state.per_page + 1 : 0;
+    const to   = Math.min(state.page * state.per_page, state.total);
+    document.getElementById('pageInfo').textContent = state.total ? `${from}–${to} of ${state.total}` : '0 results';
+    document.getElementById('prevBtn').disabled = state.page <= 1;
+    document.getElementById('nextBtn').disabled = to >= state.total;
+}
+document.getElementById('prevBtn').onclick = () => { if (state.page > 1) { state.page--; loadMembers(); } };
+document.getElementById('nextBtn').onclick = () => {
+    if (state.page * state.per_page < state.total) { state.page++; loadMembers(); }
+};
+document.getElementById('searchInput').addEventListener('input', debounce(e => {
+    state.q = e.target.value.trim(); state.page = 1; loadMembers();
+}, 350));
+document.getElementById('statusFilter').addEventListener('change', e => {
+    state.status = e.target.value; state.page = 1; loadMembers();
+});
+
+function exportCSV() { window.location.href = '/shares/api/export'; }
+
+/* ============================================================ */
+/* FEED                                                         */
+/* ============================================================ */
+async function loadFeed() {
+    const tbody = document.getElementById('feedTable');
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+    const qs = new URLSearchParams({
+        page: state.feedPage, per_page: state.feedPerPage,
+        status: state.feedStatus, type: state.feedType,
+    });
+    const { ok, body } = await req('/shares/api/transactions?' + qs.toString());
+    if (!ok || !body.ok) { tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-500 py-10 text-sm">Load failed</td></tr>`; return; }
+    state.feedTotal = body.total;
+    if (!body.transactions.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-12 text-sm">No transactions.</td></tr>`;
+    } else {
+        tbody.innerHTML = body.transactions.map(t => {
+            const m = t.members || {};
+            return `
+            <tr class="hover:bg-slate-50">
+              <td class="px-5 py-3 font-mono text-xs text-ink-muted">${escapeHtml(t.txn_number)}</td>
+              <td class="px-5 py-3 text-sm">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</td>
+              <td class="px-5 py-3 text-xs text-ink-muted">${escapeHtml(t.type)}</td>
+              <td class="px-5 py-3 text-right text-sm font-medium">${fmtUnits(t.units)}</td>
+              <td class="px-5 py-3 text-right text-sm">${fmtNum(t.amount)} <span class="text-xs text-ink-muted">${escapeHtml(t.currency)}</span></td>
+              <td class="px-5 py-3 text-xs text-ink-muted">${escapeHtml(t.method || '')}${t.provider ? ' · '+escapeHtml(t.provider) : ''}</td>
+              <td class="px-5 py-3"><span class="pill s-${t.status}">${escapeHtml(t.status)}</span></td>
+              <td class="px-5 py-3 text-right">
+                <a href="/shares/api/transactions/${t.id}/receipt" target="_blank"
+                   class="w-8 h-8 inline-flex items-center justify-center rounded-lg hover:bg-page text-ink-muted hover:text-brand transition">
+                  <i class="fa-solid fa-receipt"></i>
+                </a>
+              </td>
+            </tr>`;
+        }).join('');
+    }
+    const from = state.feedTotal ? (state.feedPage - 1) * state.feedPerPage + 1 : 0;
+    const to   = Math.min(state.feedPage * state.feedPerPage, state.feedTotal);
+    document.getElementById('feedPageInfo').textContent = state.feedTotal ? `${from}–${to} of ${state.feedTotal}` : '0 results';
+    document.getElementById('feedPrev').disabled = state.feedPage <= 1;
+    document.getElementById('feedNext').disabled = to >= state.feedTotal;
+}
+document.getElementById('feedPrev').onclick = () => { if (state.feedPage > 1) { state.feedPage--; loadFeed(); } };
+document.getElementById('feedNext').onclick = () => {
+    if (state.feedPage * state.feedPerPage < state.feedTotal) { state.feedPage++; loadFeed(); }
+};
+document.getElementById('feedStatus').addEventListener('change', e => {
+    state.feedStatus = e.target.value; state.feedPage = 1; loadFeed();
+});
+document.getElementById('feedType').addEventListener('change', e => {
+    state.feedType = e.target.value; state.feedPage = 1; loadFeed();
+});
+
+/* ============================================================ */
+/* BUY MODAL                                                    */
+/* ============================================================ */
+function openBuyModal(member) {
+    document.getElementById('buyForm').reset();
+    document.getElementById('memberPicker').classList.add('hidden');
+    document.getElementById('memberPicker').innerHTML = '';
+    document.getElementById('memberSearch').value = '';
+    document.getElementById('buyPrice').textContent = fmtNum(sharePrice) + ' ' + currency;
+    document.getElementById('buyCurUnits').textContent = member ? fmtUnits(member.shares_units) : '—';
+    document.getElementById('buyMemberLabel').textContent = member
+        ? `${member.first_name || ''} ${member.last_name || ''} · ID ${member.member_id || ''}`
+        : 'Select a member';
+    if (member) {
+        document.getElementById('buyForm').elements['member_id'].value = member.id;
+        document.getElementById('buyMemberLabel').textContent =
+            `${member.first_name} ${member.last_name} · ID ${member.member_id}`;
+    }
+    setBuyMethod('cash');
+    updateBuyAmount();
+    document.getElementById('buyModal').classList.remove('hidden');
+}
+function closeBuyModal() { document.getElementById('buyModal').classList.add('hidden'); }
+
+async function openBuyModalById(memberId) {
+    const { ok, body } = await req(`/shares/api/${memberId}`);
+    if (!ok || !body.ok) { showToast('Could not load member', false); return; }
+    openBuyModal(body.member);
+}
+
+document.getElementById('memberSearch').addEventListener('input', debounce(async e => {
+    const q = e.target.value.trim();
+    const picker = document.getElementById('memberPicker');
+    if (!q) { picker.classList.add('hidden'); return; }
+    const { ok, body } = await req('/shares/api/members/search?q=' + encodeURIComponent(q));
+    if (!ok || !body.ok) return;
+    picker.innerHTML = body.members.map(m =>
+        `<option value="${m.id}">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)} · ID ${escapeHtml(m.member_id)} · ${fmtUnits(m.shares_units)} units</option>`
+    ).join('');
+    picker.classList.toggle('hidden', !body.members.length);
+}, 300));
+
+document.getElementById('memberPicker').addEventListener('change', async e => {
+    const mid = e.target.value;
+    const { ok, body } = await req(`/shares/api/${mid}`);
+    if (!ok || !body.ok) return;
+    const m = body.member;
+    document.getElementById('buyMemberLabel').textContent =
+        `${m.first_name} ${m.last_name} · ID ${m.member_id}`;
+    document.getElementById('buyCurUnits').textContent = fmtUnits(m.shares_units);
+});
+
+function setBuyMethod(m) {
+    document.getElementById('buyMethod').value = m;
+    document.querySelectorAll('.bm-btn').forEach(b => {
+        const on = b.dataset.method === m;
+        b.classList.toggle('bg-white', on);
+        b.classList.toggle('shadow-sm', on);
+        b.classList.toggle('text-brand', on);
+        b.classList.toggle('text-ink-muted', !on);
+    });
+    document.getElementById('buyOnlineBlock').classList.toggle('hidden', m !== 'online');
+}
+document.querySelectorAll('.bm-btn').forEach(b =>
+    b.addEventListener('click', () => setBuyMethod(b.dataset.method)));
+
+function updateBuyAmount() {
+    const u = Number(document.getElementById('buyUnits').value || 0);
+    document.getElementById('buyAmount').value = fmtNum(u * sharePrice) + ' ' + currency;
+}
+document.getElementById('buyUnits').addEventListener('input', updateBuyAmount);
+
+document.getElementById('buyForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.target;
+    const d = Object.fromEntries(new FormData(form).entries());
+    const mid = d.member_id || document.getElementById('memberPicker').value;
+    if (!mid) { showToast('Please select a member', false); return; }
+    if (d.method === 'online' && (!d.phone || !d.phone.trim())) {
+        showToast('Phone required for online', false); return;
+    }
+
+    const payload = {
+        units:      Number(d.units),
+        method:     d.method,
+        narration:  d.narration || null,
+    };
+    if (d.method === 'online') {
+        payload.provider = d.provider;
+        payload.phone    = d.phone;
+    }
+
+    const btn = document.getElementById('buySubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Processing…';
+
+    const { ok, body } = await req(`/shares/api/${mid}/buy`, {
+        method: 'POST', body: JSON.stringify(payload),
+    });
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-coins mr-2"></i>Buy Shares';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Purchase failed', false); return; }
+
+    closeBuyModal();
+    if (body.pending) {
+        showToast('Waiting for approval on phone…', true);
+    } else {
+        showToast(`Bought ${fmtUnits(body.purchase.units)} units`, true);
+    }
+    loadMembers(); loadStats();
+    if (currentMemberId) refreshDetail();
+});
+
+/* ============================================================ */
+/* DETAIL                                                       */
+/* ============================================================ */
+async function openDetail(id) {
+    currentMemberId = id;
+    document.getElementById('detailModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    await refreshDetail();
+}
+function closeDetailModal() {
+    document.getElementById('detailModal').classList.add('hidden');
+    document.body.style.overflow = '';
+    currentMemberId = null; currentMember = null;
+}
+
+async function refreshDetail() {
+    if (!currentMemberId) return;
+    const { ok, body } = await req(`/shares/api/${currentMemberId}`);
+    if (!ok || !body.ok) { showToast('Load failed', false); return; }
+    const m = body.member;
+    currentMember = m;
+    document.getElementById('dtlTitle').textContent    = `${m.first_name} ${m.last_name}`;
+    document.getElementById('dtlSubtitle').textContent = `ID ${m.member_id} · ${m.status}`;
+    document.getElementById('dtlUnits').textContent    = fmtUnits(m.shares_units);
+    document.getElementById('dtlValue').textContent    = fmtNum(m.shares_value) + ' ' + currency;
+    document.getElementById('dtlPrice').textContent    = fmtNum(sharePrice) + ' ' + currency;
+    document.getElementById('dtlName').textContent     = `${m.first_name} ${m.last_name}`;
+    document.getElementById('dtlId').textContent       = m.member_id;
+    document.getElementById('dtlPhone').textContent    = m.phone || '';
+    document.getElementById('dtlEmail').textContent    = m.email || '';
+
+    document.getElementById('dtlCount').textContent = `${(body.transactions || []).length} recent`;
+    document.getElementById('dtlTxns').innerHTML = (body.transactions || []).map(t => `
+        <tr>
+          <td class="px-5 py-2.5 text-xs text-ink-muted">${fmtDate(t.paid_at || t.created_at)}</td>
+          <td class="px-5 py-2.5 text-xs font-mono">${escapeHtml(t.txn_number)}</td>
+          <td class="px-5 py-2.5 text-right text-xs font-medium">${fmtUnits(t.units)}</td>
+          <td class="px-5 py-2.5 text-right text-xs">${fmtNum(t.amount)}</td>
+          <td class="px-5 py-2.5"><span class="pill s-${t.status}">${escapeHtml(t.status)}</span></td>
+          <td class="px-5 py-2.5 text-right">
+            <a href="/shares/api/transactions/${t.id}/receipt" target="_blank"
+               class="w-7 h-7 inline-flex items-center justify-center rounded-lg hover:bg-page text-ink-muted hover:text-brand">
+              <i class="fa-solid fa-receipt text-xs"></i>
+            </a>
+          </td>
+        </tr>
+    `).join('') || `<tr><td colspan="6" class="text-center text-ink-muted py-8 text-xs">No purchases yet.</td></tr>`;
+}
+
+/* ============================================================ */
+/* ESC                                                          */
+/* ============================================================ */
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        if (!document.getElementById('buyModal').classList.contains('hidden')) closeBuyModal();
+        else if (!document.getElementById('detailModal').classList.contains('hidden')) closeDetailModal();
+    }
+});
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    await loadSettings();
+    await Promise.all([loadStats(), loadMembers()]);
+})();
+</script>
+{% endblock %}

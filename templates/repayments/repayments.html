@@ -1,0 +1,840 @@
+{% extends "base.html" %}
+{% block title %}Repayments — SACCO Pro{% endblock %}
+{% block page_title %}Repayments{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- REVENUE / BALANCE CARDS                                       -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Interest Revenue</p>
+        <p id="statInterestRev" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+        <i class="fa-solid fa-percent"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      Penalties: <span id="statPenaltyRev" class="font-semibold text-ink">—</span> ·
+      Fees: <span id="statFeeRev" class="font-semibold text-ink">—</span>
+    </p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Outstanding Principal</p>
+        <p id="statOutPrincipal" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+        <i class="fa-solid fa-hand-holding-dollar"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Accrued interest: <span id="statOutInterest" class="font-semibold text-ink">—</span></p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Active Loans</p>
+        <p id="statActiveLoans" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
+        <i class="fa-solid fa-book"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      <span id="statOverdueLoans" class="text-warning font-semibold">0</span> overdue
+    </p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Collected (30d)</p>
+        <p id="statCollected30d" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+        <i class="fa-solid fa-arrow-trend-up"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">All repayment methods</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TABS                                                          -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm mb-5">
+  <div class="flex border-b border-slate-100">
+    <button data-tab="loans" class="rtab px-5 py-3.5 text-sm font-semibold border-b-2 border-brand text-brand">
+      <i class="fa-solid fa-book mr-2"></i>Loans
+    </button>
+    <button data-tab="feed" class="rtab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink">
+      <i class="fa-solid fa-receipt mr-2"></i>Repayment Feed
+    </button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TAB: LOANS                                                    -->
+<!-- ============================================================ -->
+<section id="tab-loans">
+  <div class="flex flex-wrap items-center gap-3 mb-5">
+    <div class="relative flex-1 min-w-[240px] max-w-md">
+      <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft text-sm"></i>
+      <input id="loanSearch" placeholder="Search loan number, member name, ID or phone…"
+             class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-brand bg-white">
+    </div>
+    <select id="loanStatus" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+      <option value="">All statuses</option>
+      <option value="active">Active</option>
+      <option value="overdue">Overdue</option>
+      <option value="closed">Closed</option>
+      <option value="written_off">Written off</option>
+      <option value="restructured">Restructured</option>
+    </select>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+          <tr>
+            <th class="text-left px-5 py-3 font-semibold">Loan #</th>
+            <th class="text-left px-5 py-3 font-semibold">Member</th>
+            <th class="text-right px-5 py-3 font-semibold">Principal</th>
+            <th class="text-right px-5 py-3 font-semibold">Outstanding</th>
+            <th class="text-right px-5 py-3 font-semibold">Collected Interest</th>
+            <th class="text-left px-5 py-3 font-semibold">Status</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="loansTable" class="divide-y divide-slate-100">
+          <tr><td colspan="7" class="text-center text-ink-muted py-10 text-sm">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+      <span id="loanPageInfo">—</span>
+      <div class="flex gap-1">
+        <button id="loanPrev" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+        <button id="loanNext" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- TAB: FEED                                                     -->
+<!-- ============================================================ -->
+<section id="tab-feed" class="hidden">
+  <div class="flex flex-wrap items-center gap-3 mb-5">
+    <select id="feedStatus" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+      <option value="">All statuses</option>
+      <option value="completed">Completed</option>
+      <option value="pending">Pending</option>
+      <option value="failed">Failed</option>
+      <option value="reversed">Reversed</option>
+    </select>
+    <select id="feedMethod" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-brand">
+      <option value="">All methods</option>
+      <option value="cash">Cash</option>
+      <option value="online">Online</option>
+      <option value="savings_credit">Savings credit</option>
+    </select>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+          <tr>
+            <th class="text-left px-5 py-3 font-semibold">Receipt</th>
+            <th class="text-left px-5 py-3 font-semibold">Member</th>
+            <th class="text-left px-5 py-3 font-semibold">Loan</th>
+            <th class="text-right px-5 py-3 font-semibold">Amount</th>
+            <th class="text-left px-5 py-3 font-semibold">Method</th>
+            <th class="text-left px-5 py-3 font-semibold">Status</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="feedTable" class="divide-y divide-slate-100">
+          <tr><td colspan="7" class="text-center text-ink-muted py-10 text-sm">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+      <span id="feedPageInfo">—</span>
+      <div class="flex gap-1">
+        <button id="feedPrev" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+        <button id="feedNext" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- PAY MODAL (z-90)                                              -->
+<!-- ============================================================ -->
+<div id="payModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div>
+        <h3 class="font-bold text-base">Record Repayment</h3>
+        <p class="text-xs text-ink-muted mt-0.5" id="payLoanLabel">—</p>
+      </div>
+      <button type="button" onclick="closePayModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <form id="payForm" class="p-6 space-y-5">
+      <div id="paySummary" class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm space-y-1">
+        <div class="flex justify-between"><span class="text-ink-muted">Outstanding principal</span><span id="paySummaryPrincipal">—</span></div>
+        <div class="flex justify-between"><span class="text-ink-muted">Outstanding interest</span><span id="paySummaryInterest">—</span></div>
+        <div class="flex justify-between"><span class="text-ink-muted">Penalties</span><span id="paySummaryPenalties">—</span></div>
+        <div class="flex justify-between font-bold pt-1 border-t border-slate-200 mt-1"><span>Total outstanding</span><span id="paySummaryTotal">—</span></div>
+      </div>
+
+      <div>
+        <label class="lbl">Amount *</label>
+        <input name="amount" type="number" min="1" step="1" required class="inp">
+      </div>
+
+      <div>
+        <label class="lbl">Method</label>
+        <div class="grid grid-cols-2 gap-3 p-1 bg-slate-100 rounded-xl">
+          <button type="button" data-method="cash" class="pm-btn py-2.5 rounded-lg text-sm font-semibold bg-white shadow-sm text-brand transition">
+            <i class="fa-solid fa-money-bill-wave mr-2"></i>Cash
+          </button>
+          <button type="button" data-method="online" class="pm-btn py-2.5 rounded-lg text-sm font-semibold text-ink-muted transition">
+            <i class="fa-solid fa-mobile-screen-button mr-2"></i>Online
+          </button>
+          <input type="hidden" name="method" id="payMethod" value="cash">
+        </div>
+      </div>
+
+      <div id="payOnlineBlock" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Provider</label>
+          <select name="provider" class="inp">
+            <option value="MTN">MTN</option>
+            <option value="AIRTEL">Airtel</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Mobile money number</label>
+          <input name="phone" class="inp" placeholder="+256…">
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Narration</label>
+        <input name="narration" class="inp" placeholder="Optional">
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closePayModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" id="paySubmit" class="btn-primary">
+          <i class="fa-solid fa-circle-plus mr-2"></i>Record Payment
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- BIG LOAN DETAIL DRAWER (z-75)                                 -->
+<!-- ============================================================ -->
+<div id="detailModal" class="hidden fixed inset-0 z-[75] flex items-stretch justify-center"
+     style="background:rgba(0,0,0,.5); backdrop-filter: blur(2px);">
+  <div class="bg-white w-full h-full flex flex-col">
+
+    <div class="flex items-center justify-between px-8 py-5 border-b border-slate-100 bg-white sticky top-0 z-10">
+      <div class="flex items-center gap-4">
+        <button onclick="closeDetailModal()"
+                class="w-10 h-10 rounded-xl hover:bg-page flex items-center justify-center text-ink-muted">
+          <i class="fa-solid fa-arrow-left text-lg"></i>
+        </button>
+        <div>
+          <h3 class="font-bold text-lg" id="dtlTitle">—</h3>
+          <p class="text-xs text-ink-muted mt-0.5" id="dtlSubtitle">—</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="downloadStatement()" class="btn-ghost text-xs">
+          <i class="fa-solid fa-file-csv mr-2"></i>Statement
+        </button>
+        <button onclick="openPayModal()" class="btn-primary text-xs">
+          <i class="fa-solid fa-circle-plus mr-2"></i>Record Payment
+        </button>
+      </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-8 bg-page">
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+        <!-- LEFT -->
+        <div class="lg:col-span-1 space-y-5">
+          <div class="rounded-2xl bg-gradient-to-br from-brand to-brand-dark text-white p-6 shadow-md">
+            <p class="text-xs uppercase tracking-wider opacity-80">Outstanding</p>
+            <p id="dtlOutstanding" class="text-4xl font-extrabold mt-2">—</p>
+            <div class="mt-4 text-xs opacity-90 space-y-1">
+              <div class="flex justify-between"><span>Principal</span><span id="dtlOutPrincipal">—</span></div>
+              <div class="flex justify-between"><span>Interest</span><span id="dtlOutInterest">—</span></div>
+              <div class="flex justify-between"><span>Penalties</span><span id="dtlOutPenalties">—</span></div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 text-sm space-y-2">
+            <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1">Collected (Revenue)</p>
+            <div class="flex justify-between"><span class="text-ink-muted text-xs">Interest</span><span id="dtlColInterest" class="font-semibold text-success">—</span></div>
+            <div class="flex justify-between"><span class="text-ink-muted text-xs">Penalties</span><span id="dtlColPenalties" class="font-semibold text-success">—</span></div>
+            <div class="flex justify-between"><span class="text-ink-muted text-xs">Fees</span><span id="dtlColFees" class="font-semibold text-success">—</span></div>
+            <hr class="my-2 border-slate-100">
+            <div class="flex justify-between"><span class="text-ink-muted text-xs">Principal (balance sheet)</span><span id="dtlColPrincipal" class="font-semibold">—</span></div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-100 p-5 text-sm space-y-2">
+            <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1">Terms</p>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Rate</span><span id="dtlRate">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Term</span><span id="dtlTerm">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Frequency</span><span id="dtlFreq">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Disbursed</span><span id="dtlDisbursed">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Maturity</span><span id="dtlMaturity">—</span></div>
+            <div class="flex justify-between text-xs"><span class="text-ink-muted">Status</span><span id="dtlStatus">—</span></div>
+          </div>
+        </div>
+
+        <!-- RIGHT -->
+        <div class="lg:col-span-3 space-y-5">
+          <div class="bg-white rounded-2xl border border-slate-100">
+            <div class="flex border-b border-slate-100 overflow-x-auto">
+              <button data-dtab="repayments" class="dtab px-4 py-3 text-sm font-semibold border-b-2 border-brand text-brand whitespace-nowrap">Repayments</button>
+              <button data-dtab="schedule" class="dtab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap">Schedule</button>
+            </div>
+
+            <div data-dpanel="repayments" class="dpanel p-5">
+              <div class="overflow-x-auto max-h-[520px]">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider sticky top-0 text-[11px]">
+                    <tr>
+                      <th class="text-left px-3 py-2.5 font-semibold">Date</th>
+                      <th class="text-left px-3 py-2.5 font-semibold">Receipt</th>
+                      <th class="text-right px-3 py-2.5 font-semibold">Amount</th>
+                      <th class="text-right px-3 py-2.5 font-semibold">Interest</th>
+                      <th class="text-right px-3 py-2.5 font-semibold">Principal</th>
+                      <th class="text-right px-3 py-2.5 font-semibold">Penalties</th>
+                      <th class="text-left px-3 py-2.5 font-semibold">Status</th>
+                      <th class="px-3 py-2.5"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="dtlRepayments" class="divide-y divide-slate-100">
+                    <tr><td colspan="8" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div data-dpanel="schedule" class="dpanel hidden p-5">
+              <div class="overflow-x-auto max-h-[520px]">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 text-ink-muted uppercase tracking-wider sticky top-0 text-[11px]">
+                    <tr>
+                      <th class="text-left px-3 py-2.5 font-semibold">#</th>
+                      <th class="text-right px-3 py-2.5 font-semibold">Payment</th>
+                      <th class="text-right px-3 py-2.5 font-semibold">Principal</th>
+                      <th class="text-right px-3 py-2.5 font-semibold">Interest</th>
+                      <th class="text-right px-3 py-2.5 font-semibold">Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dtlSchedule" class="divide-y divide-slate-100">
+                    <tr><td colspan="5" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; transition:all .15s;
+           font-family:inherit; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   transition:.15s; border:none; cursor:pointer; }
+    .btn-primary:hover { filter:brightness(0.92); }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { display:inline-flex; align-items:center; padding:10px 18px; border-radius:10px;
+                 background:#fff; border:1px solid #E2E8F0;
+                 color:#64748B; font-weight:600; font-size:14px; cursor:pointer; transition:.15s; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+    .la-pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+               padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .s-active    { background:#E6F4EA; color:#065F46; }
+    .s-overdue   { background:#FEF3C7; color:#92400E; }
+    .s-closed    { background:#DBEAFE; color:#1E40AF; }
+    .s-written_off{ background:#FEE2E2; color:#991B1B; }
+    .s-restructured{ background:#EDE9FE; color:#6D28D9; }
+    .s-completed { background:#E6F4EA; color:#065F46; }
+    .s-pending   { background:#FEF3C7; color:#92400E; }
+    .s-failed    { background:#FEE2E2; color:#991B1B; }
+    .s-reversed  { background:#E2E8F0; color:#334155; }
+    .member-avatar  { width:36px; height:36px; border-radius:50%;
+                      background:linear-gradient(135deg,#1A62FF,#003ECC);
+                      color:#fff; display:inline-flex; align-items:center; justify-content:center;
+                      font-weight:700; font-size:13px; flex-shrink:0; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE                                                        */
+/* ============================================================ */
+const state = {
+    loanPage: 1, loanPerPage: 20, loanQ: '', loanStatus: '', loanTotal: 0,
+    feedPage: 1, feedPerPage: 20, feedStatus: '', feedMethod: '', feedTotal: 0,
+};
+let currentLoanId = null;
+let currentLoan = null;
+
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtCompact(n) {
+    n = Number(n || 0);
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return String(n);
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString(undefined, {
+        year:'numeric', month:'short', day:'2-digit',
+        hour:'2-digit', minute:'2-digit',
+    });
+}
+function initials(f, l) { return ((f || '?')[0] + (l || '')[0] || '?').toUpperCase(); }
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        ...opts,
+    });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, status: r.status, body };
+}
+function debounce(fn, ms = 300) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+/* ============================================================ */
+/* TABS                                                         */
+/* ============================================================ */
+document.querySelectorAll('.rtab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.rtab').forEach(b => {
+            const on = b.dataset.tab === tab;
+            b.classList.toggle('border-brand', on);
+            b.classList.toggle('text-brand', on);
+            b.classList.toggle('border-transparent', !on);
+            b.classList.toggle('text-ink-muted', !on);
+        });
+        document.getElementById('tab-loans').classList.toggle('hidden', tab !== 'loans');
+        document.getElementById('tab-feed').classList.toggle('hidden', tab !== 'feed');
+        if (tab === 'feed') loadFeed();
+    });
+});
+
+/* ============================================================ */
+/* STATS                                                        */
+/* ============================================================ */
+async function loadStats() {
+    const { ok, body } = await req('/repayments/api/stats');
+    if (!ok || !body.ok) return;
+    const s = body.stats;
+    document.getElementById('statInterestRev').textContent  = fmtCompact(s.collected_interest);
+    document.getElementById('statPenaltyRev').textContent   = fmtCompact(s.collected_penalties);
+    document.getElementById('statFeeRev').textContent       = fmtCompact(s.collected_fees);
+    document.getElementById('statOutPrincipal').textContent = fmtCompact(s.outstanding_principal);
+    document.getElementById('statOutInterest').textContent  = fmtCompact(s.outstanding_interest);
+    document.getElementById('statActiveLoans').textContent  = s.active_loans;
+    document.getElementById('statOverdueLoans').textContent = s.overdue_loans;
+    document.getElementById('statCollected30d').textContent = fmtCompact(s.collected_30d);
+}
+
+/* ============================================================ */
+/* LOANS                                                        */
+/* ============================================================ */
+async function loadLoans() {
+    const tbody = document.getElementById('loansTable');
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const qs = new URLSearchParams({
+        page: state.loanPage, per_page: state.loanPerPage,
+        q: state.loanQ, status: state.loanStatus,
+    });
+    const { ok, body } = await req('/repayments/api/loans?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-red-500 py-10 text-sm">
+            ${escapeHtml(body.error || 'Load failed')}</td></tr>`;
+        return;
+    }
+
+    state.loanTotal = body.total;
+    if (!body.loans.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No loans found.
+        </td></tr>`;
+    } else {
+        tbody.innerHTML = body.loans.map(l => {
+            const m = l.members || {};
+            const outstanding = Number(l.outstanding_principal || 0)
+                + Number(l.outstanding_interest || 0)
+                + Number(l.outstanding_penalties || 0);
+            return `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3 font-mono text-xs text-ink-muted">${escapeHtml(l.loan_number)}</td>
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-3">
+                  <div class="member-avatar">${initials(m.first_name, m.last_name)}</div>
+                  <div>
+                    <div class="font-semibold text-ink">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</div>
+                    <div class="text-xs text-ink-muted">ID ${escapeHtml(m.member_id || '')}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-5 py-3 text-right">${fmtNum(l.principal_amount)} <span class="text-xs text-ink-muted">${escapeHtml(l.currency)}</span></td>
+              <td class="px-5 py-3 text-right font-medium">${fmtNum(outstanding)}</td>
+              <td class="px-5 py-3 text-right text-success font-medium">+${fmtNum(l.collected_interest)}</td>
+              <td class="px-5 py-3"><span class="la-pill s-${l.status}">${escapeHtml(l.status)}</span></td>
+              <td class="px-5 py-3 text-right">
+                <button onclick="openDetail('${l.id}')"
+                        class="w-8 h-8 rounded-lg hover:bg-page text-ink-muted hover:text-brand transition">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+              </td>
+            </tr>`;
+        }).join('');
+    }
+
+    const from = state.loanTotal ? (state.loanPage - 1) * state.loanPerPage + 1 : 0;
+    const to   = Math.min(state.loanPage * state.loanPerPage, state.loanTotal);
+    document.getElementById('loanPageInfo').textContent =
+        state.loanTotal ? `${from}–${to} of ${state.loanTotal}` : '0 results';
+    document.getElementById('loanPrev').disabled = state.loanPage <= 1;
+    document.getElementById('loanNext').disabled = to >= state.loanTotal;
+}
+
+document.getElementById('loanPrev').onclick = () => { if (state.loanPage > 1) { state.loanPage--; loadLoans(); } };
+document.getElementById('loanNext').onclick = () => {
+    if (state.loanPage * state.loanPerPage < state.loanTotal) { state.loanPage++; loadLoans(); }
+};
+document.getElementById('loanSearch').addEventListener('input', debounce(e => {
+    state.loanQ = e.target.value.trim(); state.loanPage = 1; loadLoans();
+}, 350));
+document.getElementById('loanStatus').addEventListener('change', e => {
+    state.loanStatus = e.target.value; state.loanPage = 1; loadLoans();
+});
+
+/* ============================================================ */
+/* FEED                                                         */
+/* ============================================================ */
+async function loadFeed() {
+    const tbody = document.getElementById('feedTable');
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const qs = new URLSearchParams({
+        page: state.feedPage, per_page: state.feedPerPage,
+        status: state.feedStatus, method: state.feedMethod,
+    });
+    const { ok, body } = await req('/repayments/api/repayments?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-red-500 py-10 text-sm">
+            ${escapeHtml(body.error || 'Load failed')}</td></tr>`;
+        return;
+    }
+
+    state.feedTotal = body.total;
+    if (!body.repayments.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No repayments yet.
+        </td></tr>`;
+    } else {
+        tbody.innerHTML = body.repayments.map(r => {
+            const m = r.members || {};
+            const l = r.loans || {};
+            return `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3 font-mono text-xs text-ink-muted">${escapeHtml(r.receipt_number)}</td>
+              <td class="px-5 py-3 text-sm">${escapeHtml(m.first_name)} ${escapeHtml(m.last_name)}</td>
+              <td class="px-5 py-3 font-mono text-xs text-ink-muted">${escapeHtml(l.loan_number || '')}</td>
+              <td class="px-5 py-3 text-right font-semibold">${fmtNum(r.amount)} <span class="text-xs text-ink-muted">${escapeHtml(r.currency)}</span></td>
+              <td class="px-5 py-3 text-xs text-ink-muted">${escapeHtml(r.method)}${r.provider ? ' · '+escapeHtml(r.provider) : ''}</td>
+              <td class="px-5 py-3"><span class="la-pill s-${r.status}">${escapeHtml(r.status)}</span></td>
+              <td class="px-5 py-3 text-right">
+                <a href="/repayments/api/repayments/${r.id}/receipt" target="_blank"
+                   class="w-8 h-8 inline-flex items-center justify-center rounded-lg hover:bg-page text-ink-muted hover:text-brand transition">
+                  <i class="fa-solid fa-receipt"></i>
+                </a>
+              </td>
+            </tr>`;
+        }).join('');
+    }
+
+    const from = state.feedTotal ? (state.feedPage - 1) * state.feedPerPage + 1 : 0;
+    const to   = Math.min(state.feedPage * state.feedPerPage, state.feedTotal);
+    document.getElementById('feedPageInfo').textContent =
+        state.feedTotal ? `${from}–${to} of ${state.feedTotal}` : '0 results';
+    document.getElementById('feedPrev').disabled = state.feedPage <= 1;
+    document.getElementById('feedNext').disabled = to >= state.feedTotal;
+}
+
+document.getElementById('feedPrev').onclick = () => { if (state.feedPage > 1) { state.feedPage--; loadFeed(); } };
+document.getElementById('feedNext').onclick = () => {
+    if (state.feedPage * state.feedPerPage < state.feedTotal) { state.feedPage++; loadFeed(); }
+};
+document.getElementById('feedStatus').addEventListener('change', e => {
+    state.feedStatus = e.target.value; state.feedPage = 1; loadFeed();
+});
+document.getElementById('feedMethod').addEventListener('change', e => {
+    state.feedMethod = e.target.value; state.feedPage = 1; loadFeed();
+});
+
+/* ============================================================ */
+/* DETAIL                                                       */
+/* ============================================================ */
+document.querySelectorAll('.dtab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.dtab;
+        document.querySelectorAll('.dtab').forEach(b => {
+            const on = b.dataset.dtab === tab;
+            b.classList.toggle('border-brand', on);
+            b.classList.toggle('text-brand', on);
+            b.classList.toggle('border-transparent', !on);
+            b.classList.toggle('text-ink-muted', !on);
+        });
+        document.querySelectorAll('.dpanel').forEach(p => {
+            p.classList.toggle('hidden', p.dataset.dpanel !== tab);
+        });
+    });
+});
+
+async function openDetail(id) {
+    currentLoanId = id;
+    document.getElementById('detailModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    await loadDetail();
+    loadDetailRepayments();
+    loadDetailSchedule();
+}
+
+function closeDetailModal() {
+    document.getElementById('detailModal').classList.add('hidden');
+    document.body.style.overflow = '';
+    currentLoanId = null;
+    currentLoan = null;
+}
+
+async function loadDetail() {
+    if (!currentLoanId) return;
+    const { ok, body } = await req(`/repayments/api/loans/${currentLoanId}`);
+    if (!ok || !body.ok) { showToast(body.error || 'Load failed', false); return; }
+    currentLoan = body.loan;
+    const l = currentLoan;
+    const m = l.members || {};
+
+    document.getElementById('dtlTitle').textContent = l.loan_number;
+    document.getElementById('dtlSubtitle').textContent =
+        `${m.first_name || ''} ${m.last_name || ''} · ID ${m.member_id || ''}`;
+
+    document.getElementById('dtlOutstanding').textContent = fmtNum(l.total_outstanding);
+    document.getElementById('dtlOutPrincipal').textContent = fmtNum(l.outstanding_principal);
+    document.getElementById('dtlOutInterest').textContent  = fmtNum(l.outstanding_interest);
+    document.getElementById('dtlOutPenalties').textContent = fmtNum(l.outstanding_penalties);
+
+    document.getElementById('dtlColInterest').textContent  = fmtNum(l.collected_interest);
+    document.getElementById('dtlColPenalties').textContent = fmtNum(l.collected_penalties);
+    document.getElementById('dtlColFees').textContent      = fmtNum(l.collected_fees);
+    document.getElementById('dtlColPrincipal').textContent = fmtNum(l.collected_principal);
+
+    document.getElementById('dtlRate').textContent      = `${l.interest_rate_percent}% ${l.interest_method}`;
+    document.getElementById('dtlTerm').textContent      = `${l.term_months} months`;
+    document.getElementById('dtlFreq').textContent      = l.repayment_frequency;
+    document.getElementById('dtlDisbursed').textContent = fmtDate(l.disbursed_at);
+    document.getElementById('dtlMaturity').textContent  = l.maturity_date ? fmtDate(l.maturity_date) : '—';
+    document.getElementById('dtlStatus').textContent    = l.status;
+}
+
+async function loadDetailRepayments() {
+    if (!currentLoanId) return;
+    const tbody = document.getElementById('dtlRepayments');
+    const { ok, body } = await req(`/repayments/api/loans/${currentLoanId}/repayments?per_page=100`);
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-500 py-8 text-xs">Load failed</td></tr>`;
+        return;
+    }
+    if (!body.repayments.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-8 text-xs">No repayments yet.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = body.repayments.map(r => {
+        const a = (r.repayment_allocations || [{}])[0];
+        return `
+        <tr>
+          <td class="px-3 py-2.5 text-xs text-ink-muted whitespace-nowrap">${fmtDate(r.paid_at || r.created_at)}</td>
+          <td class="px-3 py-2.5 text-xs font-mono">${escapeHtml(r.receipt_number)}</td>
+          <td class="px-3 py-2.5 text-right text-xs font-medium">${fmtNum(r.amount)}</td>
+          <td class="px-3 py-2.5 text-right text-xs text-success">${fmtNum(a.to_interest)}</td>
+          <td class="px-3 py-2.5 text-right text-xs">${fmtNum(a.to_principal)}</td>
+          <td class="px-3 py-2.5 text-right text-xs text-warning">${fmtNum(a.to_penalties)}</td>
+          <td class="px-3 py-2.5"><span class="la-pill s-${r.status}">${escapeHtml(r.status)}</span></td>
+          <td class="px-3 py-2.5 text-right">
+            <a href="/repayments/api/repayments/${r.id}/receipt" target="_blank"
+               class="w-7 h-7 inline-flex items-center justify-center rounded-lg hover:bg-page text-ink-muted hover:text-brand">
+              <i class="fa-solid fa-receipt text-xs"></i>
+            </a>
+          </td>
+        </tr>`;
+    }).join('');
+}
+
+async function loadDetailSchedule() {
+    if (!currentLoanId) return;
+    const tbody = document.getElementById('dtlSchedule');
+    const { ok, body } = await req(`/repayments/api/loans/${currentLoanId}/schedule`);
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-red-500 py-8 text-xs">Load failed</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = body.schedule.map(r => `
+        <tr>
+          <td class="px-3 py-2.5 text-xs text-ink-muted">${r.period}</td>
+          <td class="px-3 py-2.5 text-right text-xs">${fmtNum(r.payment)}</td>
+          <td class="px-3 py-2.5 text-right text-xs text-ink-muted">${fmtNum(r.principal)}</td>
+          <td class="px-3 py-2.5 text-right text-xs text-success">${fmtNum(r.interest)}</td>
+          <td class="px-3 py-2.5 text-right text-xs text-ink-muted">${fmtNum(r.balance)}</td>
+        </tr>
+    `).join('');
+}
+
+/* ============================================================ */
+/* PAY MODAL                                                    */
+/* ============================================================ */
+function openPayModal() {
+    const l = currentLoan; if (!l) return;
+    const m = l.members || {};
+    document.getElementById('payLoanLabel').textContent =
+        `${l.loan_number} · ${m.first_name || ''} ${m.last_name || ''}`;
+
+    const total = Number(l.outstanding_principal)
+        + Number(l.outstanding_interest)
+        + Number(l.outstanding_penalties);
+    document.getElementById('paySummaryPrincipal').textContent = fmtNum(l.outstanding_principal);
+    document.getElementById('paySummaryInterest').textContent  = fmtNum(l.outstanding_interest);
+    document.getElementById('paySummaryPenalties').textContent = fmtNum(l.outstanding_penalties);
+    document.getElementById('paySummaryTotal').textContent     = fmtNum(total);
+
+    const form = document.getElementById('payForm');
+    form.reset();
+    form.elements['amount'].value = Math.round(total);
+
+    setPayMethod('cash');
+    document.getElementById('payModal').classList.remove('hidden');
+}
+function closePayModal() { document.getElementById('payModal').classList.add('hidden'); }
+
+function setPayMethod(m) {
+    document.getElementById('payMethod').value = m;
+    document.querySelectorAll('.pm-btn').forEach(b => {
+        const on = b.dataset.method === m;
+        b.classList.toggle('bg-white', on);
+        b.classList.toggle('shadow-sm', on);
+        b.classList.toggle('text-brand', on);
+        b.classList.toggle('text-ink-muted', !on);
+    });
+    document.getElementById('payOnlineBlock').classList.toggle('hidden', m !== 'online');
+}
+document.querySelectorAll('.pm-btn').forEach(b =>
+    b.addEventListener('click', () => setPayMethod(b.dataset.method)));
+
+document.getElementById('payForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    if (d.method === 'online' && (!d.phone || !d.phone.trim())) {
+        showToast('Mobile money number required', false); return;
+    }
+    const payload = { amount: Number(d.amount), method: d.method, narration: d.narration || null };
+    if (d.method === 'online') { payload.provider = d.provider; payload.phone = d.phone; }
+
+    const btn = document.getElementById('paySubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Processing…';
+
+    const { ok, body } = await req(`/repayments/api/loans/${currentLoanId}/pay`, {
+        method: 'POST', body: JSON.stringify(payload),
+    });
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-circle-plus mr-2"></i>Record Payment';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Payment failed', false); return; }
+
+    closePayModal();
+    showToast(body.pending ? 'Waiting for customer approval…' : 'Payment recorded', true);
+    loadStats(); loadLoans(); loadFeed();
+    if (currentLoanId) { loadDetail(); loadDetailRepayments(); }
+});
+
+function downloadStatement() {
+    if (!currentLoan) return;
+    const memberId = currentLoan.members?.id;
+    if (!memberId) { showToast('Member not found', false); return; }
+    window.location.href = `/repayments/api/statement/${memberId}`;
+}
+
+/* ============================================================ */
+/* ESC                                                          */
+/* ============================================================ */
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        if (!document.getElementById('payModal').classList.contains('hidden')) closePayModal();
+        else if (!document.getElementById('detailModal').classList.contains('hidden')) closeDetailModal();
+    }
+});
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    await Promise.all([loadStats(), loadLoans()]);
+})();
+</script>
+{% endblock %}

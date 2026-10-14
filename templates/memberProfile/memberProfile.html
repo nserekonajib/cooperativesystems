@@ -1,0 +1,396 @@
+{% extends "memberBase.html" %}
+{% block title %}My Profile — Member Portal{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+
+{% block content %}
+
+<!-- Default-password banner -->
+<div id="pwdBanner" class="hidden mb-5 rounded-2xl bg-warning-bg border border-warning/30 p-4 flex items-start gap-3">
+  <i class="fa-solid fa-triangle-exclamation text-warning text-lg mt-0.5"></i>
+  <div class="flex-1">
+    <p class="font-semibold text-sm text-ink">You're still on the default password</p>
+    <p class="text-xs text-ink-muted mt-0.5">Please change it now to secure your account.</p>
+  </div>
+  <button onclick="scrollToPassword()"
+          class="px-3 py-1.5 rounded-lg bg-warning text-white text-xs font-semibold">
+    Change now
+  </button>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- LEFT: identity card -->
+  <aside class="lg:col-span-1 space-y-5">
+
+    <div class="bg-gradient-to-br from-navy to-navy-dark rounded-2xl p-6 text-white shadow-sm">
+      <div class="flex items-center gap-4">
+        <div id="avatar" class="w-14 h-14 rounded-full bg-brand flex items-center justify-center font-bold text-lg">?</div>
+        <div class="min-w-0">
+          <p id="fullName" class="font-bold text-lg truncate">—</p>
+          <p id="memberIdLine" class="text-xs text-brand font-mono mt-0.5">—</p>
+        </div>
+      </div>
+      <div class="mt-5 grid grid-cols-2 gap-3 text-xs">
+        <div class="rounded-lg bg-white/5 p-3">
+          <p class="text-slate-400 uppercase tracking-wider text-[10px]">Status</p>
+          <p id="statusLine" class="font-semibold mt-0.5">—</p>
+        </div>
+        <div class="rounded-lg bg-white/5 p-3">
+          <p class="text-slate-400 uppercase tracking-wider text-[10px]">Member since</p>
+          <p id="joinedLine" class="font-semibold mt-0.5">—</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accounts snapshot -->
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-3">My Accounts</p>
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-success/10 text-success flex items-center justify-center">
+              <i class="fa-solid fa-wallet"></i>
+            </div>
+            <div>
+              <p class="text-xs text-ink-muted">Savings</p>
+              <p id="savingsAcct" class="font-mono text-xs text-ink">—</p>
+            </div>
+          </div>
+          <p id="savingsBal" class="font-semibold">—</p>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-warning/10 text-warning flex items-center justify-center">
+              <i class="fa-solid fa-hand-holding-dollar"></i>
+            </div>
+            <div>
+              <p class="text-xs text-ink-muted">Loan</p>
+              <p id="loanAcct" class="font-mono text-xs text-ink">—</p>
+            </div>
+          </div>
+          <p id="loanBal" class="font-semibold">—</p>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
+              <i class="fa-solid fa-chart-pie"></i>
+            </div>
+            <div>
+              <p class="text-xs text-ink-muted">Shares</p>
+              <p id="sharesUnits" class="font-mono text-xs text-ink">—</p>
+            </div>
+          </div>
+          <p id="sharesValue" class="font-semibold">—</p>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- RIGHT: editable profile + password -->
+  <section class="lg:col-span-2 space-y-6">
+
+    <!-- Profile form -->
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <h3 class="font-bold text-base">Profile details</h3>
+          <p class="text-xs text-ink-muted mt-0.5">Update your contact information below.</p>
+        </div>
+      </div>
+
+      <form id="profileForm" class="p-6 space-y-5">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="lbl">First name</label>
+            <input id="f_first" disabled class="inp">
+          </div>
+          <div>
+            <label class="lbl">Last name</label>
+            <input id="f_last" disabled class="inp">
+          </div>
+          <div>
+            <label class="lbl">Other names</label>
+            <input id="f_other" disabled class="inp">
+          </div>
+          <div>
+            <label class="lbl">Member ID</label>
+            <input id="f_memberId" disabled class="inp font-mono">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="lbl">Phone *</label>
+            <input id="f_phone" name="phone" class="inp" placeholder="+256…">
+          </div>
+          <div>
+            <label class="lbl">Email</label>
+            <input id="f_email" name="email" type="email" class="inp">
+          </div>
+          <div>
+            <label class="lbl">Occupation</label>
+            <input id="f_occupation" name="occupation" class="inp">
+          </div>
+          <div>
+            <label class="lbl">City</label>
+            <input id="f_city" name="city" class="inp">
+          </div>
+          <div class="md:col-span-2">
+            <label class="lbl">Address</label>
+            <input id="f_address" name="address_line" class="inp">
+          </div>
+        </div>
+
+        <div class="rounded-xl bg-page p-3 text-xs text-ink-muted flex items-start gap-2">
+          <i class="fa-solid fa-circle-info text-brand mt-0.5"></i>
+          <span>Name and Member ID can only be changed by your SACCO office.</span>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+          <button type="button" onclick="loadProfile()" class="btn-ghost">Reset</button>
+          <button type="submit" id="profileSave" class="btn-primary">
+            <i class="fa-solid fa-floppy-disk mr-2"></i>Save changes
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Password form -->
+    <div id="passwordSection" class="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100">
+        <h3 class="font-bold text-base">Change password</h3>
+        <p class="text-xs text-ink-muted mt-0.5">Use at least 8 characters.</p>
+      </div>
+
+      <form id="passwordForm" class="p-6 space-y-5">
+        <div>
+          <label class="lbl">Current password *</label>
+          <div class="relative">
+            <input id="f_current" name="current_password" type="password" required class="inp pr-10">
+            <button type="button" onclick="togglePwd('f_current', this)"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink-muted">
+              <i class="fa-regular fa-eye text-sm"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="lbl">New password *</label>
+            <div class="relative">
+              <input id="f_new" name="new_password" type="password" required minlength="8" class="inp pr-10">
+              <button type="button" onclick="togglePwd('f_new', this)"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink-muted">
+                <i class="fa-regular fa-eye text-sm"></i>
+              </button>
+            </div>
+          </div>
+          <div>
+            <label class="lbl">Confirm new password *</label>
+            <div class="relative">
+              <input id="f_confirm" name="confirm_password" type="password" required minlength="8" class="inp pr-10">
+              <button type="button" onclick="togglePwd('f_confirm', this)"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink-muted">
+                <i class="fa-regular fa-eye text-sm"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+          <button type="submit" id="pwdSave" class="btn-primary">
+            <i class="fa-solid fa-key mr-2"></i>Change password
+          </button>
+        </div>
+      </form>
+    </div>
+
+  </section>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; transition:all .15s; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .inp:disabled { background:#F8FAFC; color:#94A3B8; cursor:not-allowed; }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   border:none; cursor:pointer; }
+    .btn-primary:hover { filter:brightness(0.92); }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { display:inline-flex; align-items:center; padding:10px 18px; border-radius:10px;
+                 background:#fff; border:1px solid #E2E8F0; color:#64748B; font-weight:600;
+                 font-size:14px; cursor:pointer; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ---------- state ---------- */
+let profile = null;
+
+/* ---------- helpers ---------- */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
+}
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        ...opts,
+    });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, body };
+}
+function togglePwd(id, btn) {
+    const el = document.getElementById(id);
+    const icon = btn.querySelector('i');
+    if (el.type === 'password') {
+        el.type = 'text';
+        icon.className = 'fa-regular fa-eye-slash text-sm';
+    } else {
+        el.type = 'password';
+        icon.className = 'fa-regular fa-eye text-sm';
+    }
+}
+function scrollToPassword() {
+    document.getElementById('passwordSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ---------- load ---------- */
+async function loadProfile() {
+    const { ok, body } = await req('/member/profile/api/me');
+    if (!ok || !body.ok) {
+        showToast(body.error || 'Could not load profile', false);
+        return;
+    }
+    profile = body;
+
+    const m = body.member;
+
+    // identity block
+    document.getElementById('fullName').textContent =
+        `${m.first_name || ''} ${m.last_name || ''}`.trim();
+    document.getElementById('memberIdLine').textContent = `ID ${m.member_id}`;
+    document.getElementById('statusLine').textContent   = m.status || '—';
+    document.getElementById('joinedLine').textContent   = fmtDate(m.joined_at);
+    document.getElementById('avatar').textContent =
+        (m.first_name || '?')[0].toUpperCase();
+
+    // accounts
+    const sav  = (body.accounts || []).find(a => a.account_type === 'savings') || {};
+    const loan = (body.accounts || []).find(a => a.account_type === 'loan') || {};
+
+    document.getElementById('savingsAcct').textContent = sav.account_number || '—';
+    document.getElementById('savingsBal').textContent  = fmtNum(sav.balance || m.savings_balance) + ' ' + (sav.currency || '');
+    document.getElementById('loanAcct').textContent    = loan.account_number || '—';
+    document.getElementById('loanBal').textContent     = fmtNum(loan.balance || m.loan_balance) + ' ' + (loan.currency || '');
+    document.getElementById('sharesUnits').textContent = fmtNum(m.shares_units) + ' units';
+    document.getElementById('sharesValue').textContent = fmtNum(m.shares_value);
+
+    // form fields
+    document.getElementById('f_first').value      = m.first_name || '';
+    document.getElementById('f_last').value       = m.last_name || '';
+    document.getElementById('f_other').value      = m.other_names || '';
+    document.getElementById('f_memberId').value   = m.member_id || '';
+    document.getElementById('f_phone').value      = m.phone || '';
+    document.getElementById('f_email').value      = m.email || '';
+    document.getElementById('f_occupation').value = m.occupation || '';
+    document.getElementById('f_city').value       = m.city || '';
+    document.getElementById('f_address').value    = m.address_line || '';
+
+    // banner
+    if (body.session && body.session.must_change_password) {
+        document.getElementById('pwdBanner').classList.remove('hidden');
+    } else {
+        document.getElementById('pwdBanner').classList.add('hidden');
+    }
+}
+
+/* ---------- save profile ---------- */
+document.getElementById('profileForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    const payload = {
+        phone:        f.f_phone.value.trim()      || null,
+        email:        f.f_email.value.trim()      || null,
+        occupation:   f.f_occupation.value.trim() || null,
+        city:         f.f_city.value.trim()       || null,
+        address_line: f.f_address.value.trim()    || null,
+    };
+    const btn = document.getElementById('profileSave');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Saving…';
+
+    const { ok, body } = await req('/member/profile/api/me', {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i>Save changes';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Save failed', false); return; }
+    showToast('Profile updated', true);
+    loadProfile();
+});
+
+/* ---------- change password ---------- */
+document.getElementById('passwordForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    const cur = f.f_current.value;
+    const npw = f.f_new.value;
+    const cnf = f.f_confirm.value;
+
+    if (npw !== cnf) {
+        showToast('New passwords do not match', false);
+        return;
+    }
+    if (npw.length < 8) {
+        showToast('New password must be at least 8 characters', false);
+        return;
+    }
+
+    const btn = document.getElementById('pwdSave');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Updating…';
+
+    const { ok, body } = await req('/member/profile/api/change-password', {
+        method: 'POST',
+        body: JSON.stringify({
+            current_password: cur,
+            new_password:     npw,
+            confirm_password: cnf,
+        }),
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-key mr-2"></i>Change password';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Change failed', false); return; }
+    showToast(body.message || 'Password changed', true);
+    f.reset();
+    // hide the banner
+    document.getElementById('pwdBanner').classList.add('hidden');
+});
+
+loadProfile();
+</script>
+{% endblock %}

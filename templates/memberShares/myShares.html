@@ -1,0 +1,457 @@
+{% extends "memberBase.html" %}
+{% block title %}My Shares — Member Portal{% endblock %}
+{% block page_title %}My Shares{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- SHAREHOLDING HERO                                             -->
+<!-- ============================================================ -->
+<div class="rounded-2xl bg-gradient-to-br from-navy to-navy-dark text-white p-6 lg:p-8 shadow-sm mb-6">
+  <div class="flex items-start justify-between flex-wrap gap-4">
+    <div>
+      <p class="text-xs uppercase tracking-wider text-brand">My Shareholding</p>
+      <p id="heroUnits" class="text-4xl font-extrabold mt-2">—</p>
+      <p class="text-slate-300 text-sm mt-1">
+        Units · Value <span id="heroValue" class="font-semibold text-white">—</span>
+      </p>
+    </div>
+    <button onclick="openBuyModal()"
+            class="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-brand hover:bg-brand-dark text-white font-semibold text-sm transition shadow-lg">
+      <i class="fa-solid fa-plus"></i> Buy more shares
+    </button>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
+    <div class="rounded-xl bg-white/5 p-3">
+      <p class="text-[10px] uppercase tracking-wider text-slate-400">Share price</p>
+      <p id="heroPrice" class="font-bold text-sm mt-1">—</p>
+    </div>
+    <div class="rounded-xl bg-white/5 p-3">
+      <p class="text-[10px] uppercase tracking-wider text-slate-400">Units bought (total)</p>
+      <p id="heroUnitsBought" class="font-bold text-sm mt-1">—</p>
+    </div>
+    <div class="rounded-xl bg-white/5 p-3">
+      <p class="text-[10px] uppercase tracking-wider text-slate-400">Amount invested</p>
+      <p id="heroAmountPaid" class="font-bold text-sm mt-1">—</p>
+    </div>
+  </div>
+
+  <!-- Minimum-shares prompt (shown only if the member holds fewer than the minimum) -->
+  <div id="minWarn" class="hidden mt-5 rounded-xl bg-warning-bg text-warning p-3 text-xs flex items-start gap-2">
+    <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+    <span>You're below the minimum shareholding. Buying more will make you fully eligible for loans and dividends.</span>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TRANSACTIONS                                                  -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+  <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+    <div>
+      <h3 class="font-bold text-base">Purchase history</h3>
+      <p class="text-xs text-ink-muted mt-0.5">Every share purchase on your account</p>
+    </div>
+    <span id="txCount" class="text-xs text-ink-muted">—</span>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Date</th>
+          <th class="text-left px-5 py-3 font-semibold">Ref</th>
+          <th class="text-right px-5 py-3 font-semibold">Units</th>
+          <th class="text-right px-5 py-3 font-semibold">Price / unit</th>
+          <th class="text-right px-5 py-3 font-semibold">Amount</th>
+          <th class="text-left px-5 py-3 font-semibold">Method</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+          <th class="px-5 py-3"></th>
+        </tr>
+      </thead>
+      <tbody id="txTable" class="divide-y divide-slate-100">
+        <tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">
+          <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+    <span id="pageInfo">—</span>
+    <div class="flex gap-1">
+      <button id="prevBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+      <button id="nextBtn" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- BUY MODAL (ONLINE ONLY)                                       -->
+<!-- ============================================================ -->
+<div id="buyModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div>
+        <h3 class="font-bold text-base">Buy more shares</h3>
+        <p class="text-xs text-ink-muted mt-0.5">
+          Payment is via mobile money. Cash purchases are handled at the SACCO counter.
+        </p>
+      </div>
+      <button onclick="closeBuyModal()"
+              class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <form id="buyForm" class="p-6 space-y-5">
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm space-y-1">
+        <div class="flex justify-between">
+          <span class="text-ink-muted">Share price</span>
+          <span id="buyPrice" class="font-semibold">—</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-ink-muted">Minimum shares</span>
+          <span id="buyMin" class="font-semibold">—</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Number of units *</label>
+        <input name="units" id="buyUnits" type="number" min="0.0001" step="0.0001" required class="inp">
+      </div>
+
+      <div>
+        <label class="lbl">Total to pay</label>
+        <input id="buyAmount" class="inp" disabled>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Provider *</label>
+          <select name="provider" class="inp">
+            <option value="MTN">MTN Mobile Money</option>
+            <option value="AIRTEL">Airtel Money</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Mobile money number *</label>
+          <input name="phone" class="inp" placeholder="+256…">
+        </div>
+      </div>
+
+      <div class="rounded-xl bg-brand/5 border border-brand/10 p-3 text-xs text-brand-dark flex items-start gap-2">
+        <i class="fa-solid fa-mobile-screen-button mt-0.5"></i>
+        <span>You'll receive a prompt on your phone. Approve it to complete the purchase.</span>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeBuyModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" id="buySubmit" class="btn-primary">
+          <i class="fa-solid fa-coins mr-2"></i>Buy Shares
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PAYMENT STATUS MODAL                                          -->
+<!-- ============================================================ -->
+<div id="payModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+    <div id="payIconWrap" class="w-16 h-16 mx-auto rounded-full bg-brand/10 text-brand flex items-center justify-center mb-4">
+      <i id="payIcon" class="fa-solid fa-mobile-screen-button text-2xl"></i>
+    </div>
+    <h3 id="payTitle" class="font-bold text-lg mb-1">Waiting for approval</h3>
+    <p id="payText" class="text-sm text-ink-muted mb-5">Approve the prompt on your phone.</p>
+    <div id="paySpinner" class="hidden mb-4">
+      <i class="fa-solid fa-circle-notch fa-spin text-brand text-xl"></i>
+    </div>
+    <button onclick="closePayModal()" class="btn-ghost w-full">Close</button>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; transition:all .15s; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .inp:disabled { background:#F8FAFC; color:#94A3B8; }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   border:none; cursor:pointer; }
+    .btn-primary:hover { filter:brightness(0.92); }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                 border-radius:10px; background:#fff; border:1px solid #E2E8F0;
+                 color:#64748B; font-weight:600; font-size:14px; cursor:pointer; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .s-completed { background:#E6F4EA; color:#065F46; }
+    .s-pending   { background:#FEF3C7; color:#92400E; }
+    .s-failed    { background:#FEE2E2; color:#991B1B; }
+    .s-reversed  { background:#E2E8F0; color:#334155; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* STATE                                                        */
+/* ============================================================ */
+const state = { page: 1, per_page: 20, total: 0 };
+let sharePrice = 0;
+let minShares  = 0;
+let currency   = 'UGX';
+let _pollTimer = null;
+
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtMoney(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtUnits(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
+}
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+async function req(url, opts = {}) {
+    const r = await fetch(url, {
+        credentials:'same-origin',
+        headers:{'Content-Type':'application/json'},
+        ...opts,
+    });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, body };
+}
+
+/* ============================================================ */
+/* LOAD snapshot                                                */
+/* ============================================================ */
+async function loadSnapshot() {
+    const { ok, body } = await req('/member/shares/api/me');
+    if (!ok || !body.ok) {
+        if (body.reason === 'unauthenticated') {
+            window.location.href = '/member/login';
+        } else {
+            showToast(body.error || 'Could not load shareholding', false);
+        }
+        return;
+    }
+
+    sharePrice = body.settings.share_price;
+    minShares  = body.settings.min_shares;
+    currency   = body.settings.currency;
+
+    document.getElementById('heroUnits').textContent        = fmtUnits(body.member.shares_units);
+    document.getElementById('heroValue').textContent        = fmtMoney(body.member.shares_value) + ' ' + currency;
+    document.getElementById('heroPrice').textContent        = fmtMoney(sharePrice) + ' ' + currency;
+    document.getElementById('heroUnitsBought').textContent  = fmtUnits(body.stats.units_bought);
+    document.getElementById('heroAmountPaid').textContent   = fmtMoney(body.stats.amount_paid) + ' ' + currency;
+
+    if (!body.stats.meets_minimum) {
+        document.getElementById('minWarn').classList.remove('hidden');
+    } else {
+        document.getElementById('minWarn').classList.add('hidden');
+    }
+}
+
+/* ============================================================ */
+/* LOAD transactions                                            */
+/* ============================================================ */
+async function loadTransactions() {
+    const tbody = document.getElementById('txTable');
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+
+    const qs = new URLSearchParams({ page: state.page, per_page: state.per_page });
+    const { ok, body } = await req('/member/shares/api/transactions?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-500 py-10 text-sm">Load failed</td></tr>`;
+        return;
+    }
+    state.total = body.total;
+    document.getElementById('txCount').textContent = `${body.total} entries`;
+
+    if (!body.transactions.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-12 text-sm">
+            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
+            No purchases yet. Click <strong>Buy more shares</strong> to get started.</td></tr>`;
+    } else {
+        tbody.innerHTML = body.transactions.map(t => `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="px-5 py-3 text-xs text-ink-muted whitespace-nowrap">${fmtDate(t.paid_at || t.created_at)}</td>
+              <td class="px-5 py-3 font-mono text-xs">${escapeHtml(t.txn_number)}</td>
+              <td class="px-5 py-3 text-right font-medium">${fmtUnits(t.units)}</td>
+              <td class="px-5 py-3 text-right text-xs text-ink-muted">${fmtMoney(t.unit_price)}</td>
+              <td class="px-5 py-3 text-right font-semibold">${fmtMoney(t.amount)} <span class="text-xs text-ink-muted">${escapeHtml(t.currency)}</span></td>
+              <td class="px-5 py-3 text-xs text-ink-muted">${escapeHtml(t.method || '')}${t.provider ? ' · '+escapeHtml(t.provider) : ''}</td>
+              <td class="px-5 py-3"><span class="pill s-${t.status}">${escapeHtml(t.status)}</span></td>
+              <td class="px-5 py-3 text-right">
+                <a href="/member/shares/api/transactions/${t.id}/receipt" target="_blank"
+                   class="w-8 h-8 inline-flex items-center justify-center rounded-lg hover:bg-page text-ink-muted hover:text-brand transition">
+                  <i class="fa-solid fa-receipt"></i>
+                </a>
+              </td>
+            </tr>
+        `).join('');
+    }
+
+    const from = state.total ? (state.page - 1) * state.per_page + 1 : 0;
+    const to   = Math.min(state.page * state.per_page, state.total);
+    document.getElementById('pageInfo').textContent =
+        state.total ? `${from}–${to} of ${state.total}` : '0 results';
+    document.getElementById('prevBtn').disabled = state.page <= 1;
+    document.getElementById('nextBtn').disabled = to >= state.total;
+}
+document.getElementById('prevBtn').onclick = () => { if (state.page > 1) { state.page--; loadTransactions(); } };
+document.getElementById('nextBtn').onclick = () => {
+    if (state.page * state.per_page < state.total) { state.page++; loadTransactions(); }
+};
+
+/* ============================================================ */
+/* BUY MODAL                                                    */
+/* ============================================================ */
+function openBuyModal() {
+    document.getElementById('buyForm').reset();
+    document.getElementById('buyPrice').textContent = fmtMoney(sharePrice) + ' ' + currency;
+    document.getElementById('buyMin').textContent   = fmtUnits(minShares);
+    document.getElementById('buyAmount').value      = '';
+    document.getElementById('buyModal').classList.remove('hidden');
+}
+function closeBuyModal() { document.getElementById('buyModal').classList.add('hidden'); }
+
+document.getElementById('buyUnits').addEventListener('input', () => {
+    const u = Number(document.getElementById('buyUnits').value || 0);
+    document.getElementById('buyAmount').value =
+        fmtMoney(u * sharePrice) + ' ' + currency;
+});
+
+document.getElementById('buyForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.target;
+    const d = Object.fromEntries(new FormData(form).entries());
+
+    if (!d.phone || !d.phone.trim()) {
+        showToast('Mobile money number is required', false);
+        return;
+    }
+
+    const payload = {
+        units:    Number(d.units),
+        method:   'online',
+        provider: d.provider,
+        phone:    d.phone,
+    };
+
+    const btn = document.getElementById('buySubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Processing…';
+
+    const { ok, body } = await req('/member/shares/api/buy', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-coins mr-2"></i>Buy Shares';
+
+    if (!ok || !body.ok) {
+        showToast(body.error || 'Purchase failed', false);
+        return;
+    }
+
+    closeBuyModal();
+    if (body.pending && body.payment.deposit_id) {
+        showPayModal(body.payment.deposit_id);
+    } else {
+        showToast('Purchase submitted', true);
+        loadSnapshot(); loadTransactions();
+    }
+});
+
+/* ============================================================ */
+/* PAYMENT STATUS MODAL                                         */
+/* ============================================================ */
+function showPayModal(depositId) {
+    document.getElementById('payModal').classList.remove('hidden');
+    document.getElementById('paySpinner').classList.remove('hidden');
+    document.getElementById('payIconWrap').className =
+        'w-16 h-16 mx-auto rounded-full bg-brand/10 text-brand flex items-center justify-center mb-4';
+    document.getElementById('payIcon').className = 'fa-solid fa-mobile-screen-button text-2xl';
+    document.getElementById('payTitle').textContent = 'Waiting for approval';
+    document.getElementById('payText').textContent  = 'Approve the prompt on your phone.';
+    startPolling(depositId);
+}
+function closePayModal() {
+    document.getElementById('payModal').classList.add('hidden');
+    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+    loadSnapshot(); loadTransactions();
+}
+function startPolling(depositId) {
+    if (_pollTimer) clearInterval(_pollTimer);
+    let attempts = 0;
+    _pollTimer = setInterval(async () => {
+        attempts++;
+        const { ok, body } = await req(`/member/shares/api/payment/${depositId}/verify`, { method: 'POST' });
+        if (!ok || !body.ok) {
+            if (attempts >= 30) { clearInterval(_pollTimer); _pollTimer = null; }
+            return;
+        }
+        if (body.status === 'completed') {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('paySpinner').classList.add('hidden');
+            document.getElementById('payIconWrap').className =
+                'w-16 h-16 mx-auto rounded-full bg-success-bg text-success flex items-center justify-center mb-4';
+            document.getElementById('payIcon').className = 'fa-solid fa-circle-check text-2xl';
+            document.getElementById('payTitle').textContent = 'Purchase complete';
+            document.getElementById('payText').textContent  =
+                `You now hold ${fmtUnits(body.purchase.units_after)} units.`;
+            setTimeout(closePayModal, 2000);
+        } else if (body.status === 'failed') {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('paySpinner').classList.add('hidden');
+            document.getElementById('payIconWrap').className =
+                'w-16 h-16 mx-auto rounded-full bg-danger-bg text-danger flex items-center justify-center mb-4';
+            document.getElementById('payIcon').className = 'fa-solid fa-circle-xmark text-2xl';
+            document.getElementById('payTitle').textContent = 'Payment failed';
+            document.getElementById('payText').textContent  = body.reason || 'The payment was not completed.';
+        } else if (attempts >= 30) {
+            clearInterval(_pollTimer); _pollTimer = null;
+            document.getElementById('paySpinner').classList.add('hidden');
+            document.getElementById('payTitle').textContent = 'Still pending';
+            document.getElementById('payText').textContent  = 'Timed out. Check your shares later.';
+        }
+    }, 4000);
+}
+
+/* ============================================================ */
+/* KEYBOARD                                                     */
+/* ============================================================ */
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        if (!document.getElementById('payModal').classList.contains('hidden')) closePayModal();
+        else if (!document.getElementById('buyModal').classList.contains('hidden')) closeBuyModal();
+    }
+});
+
+/* ============================================================ */
+/* INIT                                                         */
+/* ============================================================ */
+(async function init() {
+    await Promise.all([loadSnapshot(), loadTransactions()]);
+})();
+</script>
+{% endblock %}
