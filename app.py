@@ -26,6 +26,7 @@ from routes.memberSubscriptions.memberSubscriptions import member_subscriptions_
 from routes.memberLoans.memberLoans import member_loans_bp
 from routes.memberAccounts.memberAccounts import member_accounts_bp
 from routes.memberFixed.memberFixed import member_fixed_bp
+from routes.memberDashboard.memberDashboard import member_dashboard_bp
 
 
 def create_app():
@@ -55,6 +56,7 @@ def create_app():
     app.register_blueprint(member_loans_bp)
     app.register_blueprint(member_accounts_bp)
     app.register_blueprint(member_fixed_bp)
+    app.register_blueprint(member_dashboard_bp)
     
     @app.route("/")
     def index():

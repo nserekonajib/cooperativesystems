@@ -98,8 +98,8 @@ tailwind.config = {
                 </div>
                 <div class="nav-group-items space-y-0.5">
 
-                    <a href="{{ url_for('member_auth.dashboard') }}"
-                       class="nav-item {% if request.endpoint == 'member_auth.dashboard' %}active{% endif %}">
+                    <a href="{{ url_for('member_dashboard.page') }}"
+                    class="nav-item {% if request.endpoint == 'member_dashboard.page' %}active{% endif %}">
                         <i class="fa-solid fa-house"></i>
                         <span>Dashboard</span>
                     </a>

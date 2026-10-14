@@ -1,0 +1,591 @@
+{% extends "memberBase.html" %}
+{% block title %}Dashboard — Member Portal{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- ============================================================ -->
+<!-- WELCOME BANNER                                                -->
+<!-- ============================================================ -->
+<div class="rounded-2xl overflow-hidden shadow-sm mb-6"
+     style="background:linear-gradient(135deg,#0A192F 0%,#0F2A4D 60%,#14532D 100%);">
+  <div class="flex items-center gap-5 p-6 lg:p-8 flex-wrap text-white">
+    <div id="welcomeAvatar" class="w-16 h-16 rounded-full bg-brand flex items-center justify-center font-bold text-2xl flex-shrink-0">?</div>
+    <div class="flex-1 min-w-[240px]">
+      <p class="text-xs uppercase tracking-wider text-brand">Welcome back,</p>
+      <h2 id="welcomeName" class="text-2xl font-bold">—</h2>
+      <p class="text-sm text-slate-300 mt-1">
+        Member <span id="welcomeMemberId" class="font-mono">#—</span>
+        · Joined <span id="welcomeJoined">—</span>
+        · <span id="welcomeStatus" class="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold bg-success-bg text-success">—</span>
+      </p>
+      <p class="text-xs italic text-slate-400 mt-2">"Together we grow, together we prosper."</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- QUICK ACTIONS                                                 -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm p-5 mb-6">
+  <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-3">Quick Actions</p>
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <a href="/member/accounts" class="rounded-xl border border-slate-200 p-4 hover:border-brand transition text-center">
+      <div class="w-11 h-11 mx-auto rounded-xl bg-success/10 text-success flex items-center justify-center mb-2">
+        <i class="fa-solid fa-circle-plus"></i>
+      </div>
+      <p class="text-sm font-semibold">Make a Deposit</p>
+    </a>
+    <a href="/member/loans" class="rounded-xl border border-slate-200 p-4 hover:border-brand transition text-center">
+      <div class="w-11 h-11 mx-auto rounded-xl bg-brand/10 text-brand flex items-center justify-center mb-2">
+        <i class="fa-solid fa-file-invoice-dollar"></i>
+      </div>
+      <p class="text-sm font-semibold">Apply for Loan</p>
+    </a>
+    <a href="/member/shares" class="rounded-xl border border-slate-200 p-4 hover:border-brand transition text-center">
+      <div class="w-11 h-11 mx-auto rounded-xl bg-accent/10 text-accent flex items-center justify-center mb-2">
+        <i class="fa-solid fa-users"></i>
+      </div>
+      <p class="text-sm font-semibold">Buy Shares</p>
+    </a>
+    <a href="/member/accounts" class="rounded-xl border border-slate-200 p-4 hover:border-brand transition text-center">
+      <div class="w-11 h-11 mx-auto rounded-xl bg-warning/10 text-warning flex items-center justify-center mb-2">
+        <i class="fa-solid fa-file-invoice"></i>
+      </div>
+      <p class="text-sm font-semibold">View Statement</p>
+    </a>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- KPI CARDS                                                     -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Shares</p>
+        <p id="kpiSharesValue" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
+        <i class="fa-solid fa-coins"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      <span id="kpiSharesUnits">—</span> units ·
+      Min: <span id="kpiSharesMin">—</span>
+    </p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Savings</p>
+        <p id="kpiSavings" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+        <i class="fa-solid fa-wallet"></i>
+      </div>
+    </div>
+    <p id="kpiSavingsChange" class="text-xs text-success mt-2 flex items-center gap-1">—</p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Outstanding Loans</p>
+        <p id="kpiLoans" class="text-2xl font-bold mt-1">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+        <i class="fa-solid fa-hand-holding-dollar"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      <span id="kpiLoansCount">0</span> active loan(s)
+    </p>
+  </div>
+
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Dividends Earned</p>
+        <p id="kpiDividends" class="text-2xl font-bold mt-1 text-brand">—</p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+        <i class="fa-solid fa-circle-dollar-to-slot"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">
+      Last payout: <span id="kpiDividendsLast">—</span>
+    </p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- MAIN GRID                                                     -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+  <!-- Savings & Shares Trend -->
+  <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h3 class="font-bold text-base">Savings &amp; Shares Trend</h3>
+        <p class="text-xs text-ink-muted mt-0.5">Last 12 months</p>
+      </div>
+      <div class="flex items-center gap-3 text-xs">
+        <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-success"></span> Savings</span>
+        <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-brand"></span> Shares</span>
+      </div>
+    </div>
+    <div class="h-64">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Loan Summary -->
+  <div class="bg-white rounded-2xl shadow-sm p-6">
+    <h3 class="font-bold text-base mb-5">Loan Summary</h3>
+    <div class="h-40 mb-4">
+      <canvas id="loanChart"></canvas>
+    </div>
+    <div id="loanBreakdown" class="space-y-2 mb-4"></div>
+    <div id="loanEligibility" class="hidden rounded-xl bg-success-bg text-success p-3 text-xs flex items-start gap-2">
+      <i class="fa-solid fa-circle-check mt-0.5"></i>
+      <div>
+        <p class="font-semibold">You are eligible for another loan</p>
+        <p class="opacity-90" id="loanEligibilityNote">Based on your savings and shares</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECOND ROW: Transactions / Progress / Dues / Announcements   -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+  <!-- Recent Transactions -->
+  <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-base">Recent Transactions</h3>
+      <a href="/member/accounts" class="text-xs text-brand font-semibold hover:underline">View All</a>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Date</th>
+          <th class="text-left px-5 py-3 font-semibold">Description</th>
+          <th class="text-right px-5 py-3 font-semibold">Amount</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+        </tr>
+      </thead>
+      <tbody id="recentTx" class="divide-y divide-slate-100">
+        <tr><td colspan="4" class="text-center text-ink-muted py-8 text-xs">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Shareholding Progress -->
+  <div class="bg-white rounded-2xl shadow-sm p-6">
+    <h3 class="font-bold text-base mb-5">Shareholding Progress</h3>
+    <div class="relative w-40 h-40 mx-auto mb-4">
+      <svg viewBox="0 0 100 100" class="transform -rotate-90">
+        <circle cx="50" cy="50" r="40" stroke="#E2E8F0" stroke-width="10" fill="none" />
+        <circle id="shareProgressRing" cx="50" cy="50" r="40" stroke="#10B981" stroke-width="10"
+                fill="none" stroke-linecap="round"
+                stroke-dasharray="0 251.2" />
+      </svg>
+      <div class="absolute inset-0 flex flex-col items-center justify-center">
+        <p id="shareProgressText" class="text-xl font-bold">—</p>
+        <p class="text-[10px] text-ink-muted uppercase tracking-wider">Minimum Required</p>
+      </div>
+    </div>
+    <div class="flex justify-between text-xs mb-3">
+      <div><p class="text-ink-muted">Your Shares</p><p id="shareCurrent" class="font-bold">—</p></div>
+      <div class="text-right"><p class="text-ink-muted">Required</p><p id="shareMin" class="font-bold">—</p></div>
+    </div>
+    <p id="shareMessage" class="text-xs text-ink-muted mb-4">—</p>
+    <a href="/member/shares" class="block w-full text-center py-2.5 rounded-lg bg-brand hover:bg-brand-dark text-white text-sm font-semibold">
+      Buy More Shares
+    </a>
+  </div>
+
+  <!-- Upcoming Dues -->
+  <div class="bg-white rounded-2xl shadow-sm p-6">
+    <h3 class="font-bold text-base mb-4">Upcoming Dues</h3>
+    <div id="upcomingDues" class="space-y-3">
+      <p class="text-xs text-ink-muted">Loading…</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- THIRD ROW: Announcements + Promo                              -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">
+
+  <div class="lg:col-span-3 bg-white rounded-2xl shadow-sm p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-bold text-base">Recent Announcements</h3>
+      <a href="#" class="text-xs text-brand font-semibold hover:underline">View All</a>
+    </div>
+    <div id="announcements" class="space-y-4">
+      <p class="text-xs text-ink-muted">Loading…</p>
+    </div>
+  </div>
+
+  <div class="rounded-2xl overflow-hidden shadow-sm"
+       style="background:linear-gradient(135deg,#14532D,#065F46);">
+    <div class="p-6 text-white">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center">
+          <i class="fa-solid fa-seedling text-emerald-300"></i>
+        </div>
+        <div>
+          <p class="font-bold text-base leading-tight">Save More,<br>Achieve More</p>
+        </div>
+      </div>
+      <p class="text-emerald-100/90 text-xs leading-relaxed">
+        Increase your shares and savings to unlock bigger loans and higher dividends.
+      </p>
+      <button class="mt-4 w-full py-2.5 rounded-xl bg-emerald-300 text-emerald-950 text-xs font-bold hover:bg-emerald-200 transition">
+        Learn How <i class="fa-solid fa-arrow-right text-[10px] ml-1"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- NEED HELP                                                     -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm p-6 mt-6 flex items-center gap-4">
+  <div class="w-12 h-12 rounded-xl bg-brand/10 text-brand flex items-center justify-center flex-shrink-0">
+    <i class="fa-solid fa-headset text-lg"></i>
+  </div>
+  <div class="flex-1">
+    <p class="font-bold text-sm">Need Help?</p>
+    <p class="text-xs text-ink-muted mt-0.5">Contact our support team. We're here to help.</p>
+  </div>
+  <a href="mailto:support@saccopro.local"
+     class="px-4 py-2 rounded-lg bg-brand text-white text-xs font-semibold hover:bg-brand-dark transition">
+    Get Support <i class="fa-solid fa-arrow-right text-[10px] ml-1"></i>
+  </a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ============================================================ */
+/* HELPERS                                                      */
+/* ============================================================ */
+function fmtNum(n) {
+    return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
+}
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+async function req(url, opts = {}) {
+    const r = await fetch(url, { credentials:'same-origin',
+        headers:{'Content-Type':'application/json'}, ...opts });
+    return r.json();
+}
+
+/* ============================================================ */
+/* 1. WELCOME HEADER                                             */
+/* ============================================================ */
+async function loadHeader() {
+    const d = await req('/member/profile/api/me');
+    if (!d.ok) return;
+    const m = d.member;
+    document.getElementById('welcomeName').textContent = `${m.first_name} ${m.last_name}`;
+    document.getElementById('welcomeMemberId').textContent = '#' + m.member_id;
+    document.getElementById('welcomeJoined').textContent = fmtDate(m.joined_at);
+    document.getElementById('welcomeStatus').textContent = m.status || 'active';
+    document.getElementById('welcomeAvatar').textContent = (m.first_name || '?')[0].toUpperCase();
+}
+
+/* ============================================================ */
+/* 2. KPIs                                                      */
+/* ============================================================ */
+async function loadKpis() {
+    const d = await req('/member/dashboard/api/kpis');
+    if (!d.ok) return;
+    const k = d.kpis;
+
+    document.getElementById('kpiSharesValue').textContent = fmtNum(k.shares.value) + ' ' + k.shares.currency;
+    document.getElementById('kpiSharesUnits').textContent = fmtNum(k.shares.units);
+    document.getElementById('kpiSharesMin').textContent   = fmtNum(k.shares.min_units);
+
+    document.getElementById('kpiSavings').textContent = fmtNum(k.savings.balance) + ' ' + k.savings.currency;
+    const change = document.getElementById('kpiSavingsChange');
+    if (k.savings.change_pct > 0) {
+        change.innerHTML = `<i class="fa-solid fa-arrow-up"></i> +${k.savings.change_pct}% from last month`;
+        change.className = 'text-xs text-success mt-2 flex items-center gap-1';
+    } else if (k.savings.change_pct < 0) {
+        change.innerHTML = `<i class="fa-solid fa-arrow-down"></i> ${k.savings.change_pct}% from last month`;
+        change.className = 'text-xs text-danger mt-2 flex items-center gap-1';
+    } else {
+        change.textContent = 'No change this month';
+        change.className = 'text-xs text-ink-muted mt-2';
+    }
+
+    document.getElementById('kpiLoans').textContent = fmtNum(k.loans.outstanding) + ' ' + k.loans.currency;
+    document.getElementById('kpiLoansCount').textContent = k.loans.active_count;
+
+    document.getElementById('kpiDividends').textContent = fmtNum(k.dividends.total_earned) + ' ' + k.dividends.currency;
+    document.getElementById('kpiDividendsLast').textContent = k.dividends.last_payout
+        ? fmtDate(k.dividends.last_payout) : 'None yet';
+}
+
+/* ============================================================ */
+/* 3. TRENDS                                                    */
+/* ============================================================ */
+async function loadTrends() {
+    const d = await req('/member/dashboard/api/trends?months=12');
+    if (!d.ok) return;
+    const t = d.trend;
+
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: t.months.map(m => {
+                const [y, mo] = m.split('-');
+                return new Date(Number(y), Number(mo) - 1, 1)
+                    .toLocaleString(undefined, { month: 'short' });
+            }),
+            datasets: [
+                {
+                    label: 'Savings',
+                    data: t.savings,
+                    borderColor: '#10B981',
+                    backgroundColor: 'rgba(16,185,129,0.08)',
+                    fill: true, tension: 0.35, pointRadius: 0,
+                    borderWidth: 2,
+                },
+                {
+                    label: 'Shares',
+                    data: t.shares,
+                    borderColor: '#1A62FF',
+                    backgroundColor: 'rgba(26,98,255,0.08)',
+                    fill: true, tension: 0.35, pointRadius: 0,
+                    borderWidth: 2,
+                },
+            ],
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: c => `${c.dataset.label}: ${fmtNum(c.parsed.y)}`,
+                    },
+                },
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#94A3B8', font: { size: 11 } } },
+                y: {
+                    grid: { color: '#F1F5F9' },
+                    ticks: {
+                        color: '#94A3B8', font: { size: 11 },
+                        callback: v => v >= 1e6 ? (v / 1e6).toFixed(1) + 'M'
+                                     : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K'
+                                     : v,
+                    },
+                },
+            },
+        },
+    });
+}
+
+/* ============================================================ */
+/* 4. LOAN SUMMARY                                              */
+/* ============================================================ */
+const DONUT_COLORS = ['#10B981', '#1A62FF', '#F59E0B', '#8B5CF6', '#EF4444', '#06B6D4'];
+
+async function loadLoanSummary() {
+    const d = await req('/member/dashboard/api/loan-summary');
+    if (!d.ok) return;
+
+    const total = d.outstanding_total;
+    document.getElementById('loanBreakdown').innerHTML = d.breakdown.map((b, i) => `
+        <div class="flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${DONUT_COLORS[i % DONUT_COLORS.length]}"></span>
+            <span class="truncate">${escapeHtml(b.product)}</span>
+          </div>
+          <div class="text-right">
+            <span class="font-semibold">${fmtNum(b.outstanding)}</span>
+            <span class="text-ink-muted ml-2">${b.percent}%</span>
+          </div>
+        </div>
+    `).join('') || `<p class="text-xs text-ink-muted">No active loans.</p>`;
+
+    // donut
+    const ctx = document.getElementById('loanChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: d.breakdown.length ? d.breakdown.map(b => b.product) : ['No loans'],
+            datasets: [{
+                data: d.breakdown.length ? d.breakdown.map(b => b.outstanding) : [1],
+                backgroundColor: d.breakdown.length
+                    ? d.breakdown.map((_, i) => DONUT_COLORS[i % DONUT_COLORS.length])
+                    : ['#E2E8F0'],
+                borderWidth: 0,
+            }],
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '70%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: { label: c => `${c.label}: ${fmtNum(c.parsed)}` },
+                },
+            },
+        },
+    });
+
+    if (d.eligible_for_new_loan) {
+        document.getElementById('loanEligibility').classList.remove('hidden');
+        document.getElementById('loanEligibilityNote').textContent = d.eligibility_note;
+    }
+}
+
+/* ============================================================ */
+/* 5. RECENT TRANSACTIONS                                       */
+/* ============================================================ */
+async function loadRecentTx() {
+    const d = await req('/member/dashboard/api/recent-transactions?limit=10');
+    const tbody = document.getElementById('recentTx');
+    if (!d.ok) { tbody.innerHTML = `<tr><td colspan="4" class="text-center text-red-500 py-6 text-xs">Load failed</td></tr>`; return; }
+    if (!d.transactions.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-ink-muted py-8 text-xs">No transactions yet.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = d.transactions.map(t => {
+        const isOut = t.direction === 'out';
+        return `
+            <tr class="hover:bg-slate-50">
+              <td class="px-5 py-2.5 text-xs text-ink-muted whitespace-nowrap">${fmtDate(t.created_at)}</td>
+              <td class="px-5 py-2.5 text-sm">${escapeHtml(t.label)}</td>
+              <td class="px-5 py-2.5 text-right text-sm font-medium ${isOut ? 'text-danger' : 'text-success'}">
+                ${isOut ? '-' : '+'}${fmtNum(t.amount)}
+              </td>
+              <td class="px-5 py-2.5">
+                <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-success-bg text-success capitalize">${escapeHtml(t.status)}</span>
+              </td>
+            </tr>`;
+    }).join('');
+}
+
+/* ============================================================ */
+/* 6. SHARE PROGRESS                                            */
+/* ============================================================ */
+async function loadShareProgress() {
+    const d = await req('/member/dashboard/api/share-progress');
+    if (!d.ok) return;
+
+    document.getElementById('shareProgressText').textContent = `${d.current_units}/${d.target_units}`;
+    document.getElementById('shareCurrent').textContent = d.current_units;
+    document.getElementById('shareMin').textContent = d.minimum_units;
+    document.getElementById('shareMessage').textContent = d.message;
+
+    // ring
+    const circumference = 2 * Math.PI * 40; // ≈ 251.2
+    const dash = (d.progress_percent / 100) * circumference;
+    const ring = document.getElementById('shareProgressRing');
+    ring.setAttribute('stroke-dasharray', `${dash} ${circumference - dash}`);
+    ring.setAttribute('stroke', d.meets_minimum ? '#10B981' : '#F59E0B');
+}
+
+/* ============================================================ */
+/* 7. UPCOMING DUES                                             */
+/* ============================================================ */
+async function loadUpcomingDues() {
+    const d = await req('/member/dashboard/api/upcoming-dues');
+    const wrap = document.getElementById('upcomingDues');
+    if (!d.ok) { wrap.innerHTML = `<p class="text-xs text-red-500">Load failed</p>`; return; }
+    if (!d.dues.length) {
+        wrap.innerHTML = `<p class="text-xs text-ink-muted">Nothing due. You're all caught up!</p>`;
+        return;
+    }
+    wrap.innerHTML = d.dues.map(u => `
+        <div class="flex items-center gap-3 pb-3 border-b border-slate-100 last:border-0">
+          <div class="w-9 h-9 rounded-lg bg-brand/10 text-brand flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-calendar-check"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-semibold">${escapeHtml(u.label)}</p>
+            <p class="text-[11px] text-ink-muted">Due: ${fmtDate(u.due_date)}</p>
+            <p class="text-sm font-bold mt-0.5">${fmtNum(u.amount)} <span class="text-[10px] text-ink-muted">${escapeHtml(u.currency)}</span></p>
+          </div>
+          <a href="${u.action_url}" class="px-3 py-1.5 rounded-lg bg-brand hover:bg-brand-dark text-white text-xs font-semibold whitespace-nowrap">
+            ${escapeHtml(u.action_label)}
+          </a>
+        </div>
+    `).join('');
+}
+
+/* ============================================================ */
+/* 8. ANNOUNCEMENTS                                             */
+/* ============================================================ */
+async function loadAnnouncements() {
+    const d = await req('/member/dashboard/api/announcements?limit=5');
+    const wrap = document.getElementById('announcements');
+    if (!d.ok) { wrap.innerHTML = `<p class="text-xs text-red-500">Load failed</p>`; return; }
+    if (!d.announcements.length) {
+        wrap.innerHTML = `<p class="text-xs text-ink-muted">No announcements.</p>`;
+        return;
+    }
+    const ICON_COLORS = {
+        dividend: 'bg-success-bg text-success',
+        agm:      'bg-warning-bg text-warning',
+        product:  'bg-brand/10 text-brand',
+        kyc:      'bg-danger-bg text-danger',
+        general:  'bg-accent/10 text-accent',
+    };
+    wrap.innerHTML = d.announcements.map(a => {
+        const cls = ICON_COLORS[a.category] || ICON_COLORS.general;
+        return `
+            <div class="flex gap-3 pb-4 border-b border-slate-100 last:border-0">
+              <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${cls}">
+                <i class="fa-solid ${escapeHtml(a.icon || 'fa-bullhorn')}"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold">${escapeHtml(a.title)}</p>
+                <p class="text-xs text-ink-muted mt-0.5">${escapeHtml(a.body)}</p>
+                <p class="text-[10px] text-ink-soft mt-1">${fmtDate(a.published_at)}</p>
+              </div>
+            </div>`;
+    }).join('');
+}
+
+/* ============================================================ */
+/* BOOT                                                         */
+/* ============================================================ */
+(async function init() {
+    // parallel — all independent
+    await Promise.all([
+        loadHeader(),
+        loadKpis(),
+        loadTrends(),
+        loadLoanSummary(),
+        loadRecentTx(),
+        loadShareProgress(),
+        loadUpcomingDues(),
+        loadAnnouncements(),
+    ]);
+})();
+</script>
+{% endblock %}
