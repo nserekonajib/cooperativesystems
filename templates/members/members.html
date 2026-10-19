@@ -764,10 +764,11 @@ function startPolling(depositId) {
 /* ============================================================ */
 /* DETAIL (placeholder)                                         */
 /* ============================================================ */
-function viewMember(id) {
-    showToast('Member detail page coming soon', true);
-}
+const MEMBER_DETAIL_PREFIX = "/member_details_page";
 
+function viewMember(id) {
+    window.location.href = `${MEMBER_DETAIL_PREFIX}/${id}/`;
+}
 /* ============================================================ */
 /* INIT                                                         */
 /* ============================================================ */

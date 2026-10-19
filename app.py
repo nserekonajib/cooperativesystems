@@ -27,6 +27,7 @@ from routes.memberLoans.memberLoans import member_loans_bp
 from routes.memberAccounts.memberAccounts import member_accounts_bp
 from routes.memberFixed.memberFixed import member_fixed_bp
 from routes.memberDashboard.memberDashboard import member_dashboard_bp
+from routes.memberDetail.memberDetail import member_detail_bp
 
 
 def create_app():
@@ -57,6 +58,7 @@ def create_app():
     app.register_blueprint(member_accounts_bp)
     app.register_blueprint(member_fixed_bp)
     app.register_blueprint(member_dashboard_bp)
+    app.register_blueprint(member_detail_bp)
     
     @app.route("/")
     def index():
@@ -74,6 +76,6 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    # app.run(debug=os.getenv("FLASK_ENV") == "development", port=4000)
-    from waitress import serve
-    serve(app, host="0.0.0.0", port=4000)
+    app.run(debug=os.getenv("FLASK_ENV") == "development", port=4000)
+    # from waitress import serve
+    # serve(app, host="0.0.0.0", port=40000)

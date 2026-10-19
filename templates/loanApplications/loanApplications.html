@@ -4,6 +4,10 @@
 
 {% block content %}
 
+<!-- GLOBAL BUSY BAR + TOAST HOST -->
+<div id="busyBar" class="hidden-bar"></div>
+<div id="toastHost"></div>
+
 <!-- ============================================================ -->
 <!-- STAT CARDS                                                    -->
 <!-- ============================================================ -->
@@ -275,7 +279,7 @@
             <div data-dpanel="schedule" class="dpanel hidden p-5">
               <div class="flex items-center justify-between mb-3">
                 <p class="text-sm font-bold">Repayment Schedule</p>
-                <button onclick="refreshSimulation()" class="text-xs text-brand font-semibold hover:underline">
+                <button onclick="refreshSimulation(this)" class="text-xs text-brand font-semibold hover:underline">
                   <i class="fa-solid fa-rotate mr-1"></i>Recalculate
                 </button>
               </div>
@@ -554,6 +558,105 @@
     .action-disburse:hover { background:#047857; }
     .action-ghost { background:#fff; border-color:#E2E8F0; color:#64748B; }
     .action-ghost:hover { background:#F4F6F9; color:#1E293B; }
+
+    /* ---------- SKELETON ---------- */
+    @keyframes sk-shimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+    .sk {
+      background: linear-gradient(90deg, #eef2f7 0px, #f8fafc 40px, #eef2f7 80px);
+      background-size: 800px 100%;
+      animation: sk-shimmer 1.2s linear infinite;
+      border-radius: 6px;
+      display: inline-block;
+    }
+    .sk-line   { height: 12px; width: 100%; }
+    .sk-line-sm{ height: 9px;  width: 60%; }
+    .sk-circle { width: 36px; height: 36px; border-radius: 50%; }
+    .sk-row td { padding: 14px 20px; }
+
+    /* ---------- BUTTON SPINNER ---------- */
+    .btn-loading {
+      position: relative;
+      pointer-events: none;
+      color: transparent !important;
+    }
+    .btn-loading::after {
+      content: "";
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 16px; height: 16px;
+      margin: -8px 0 0 -8px;
+      border: 2px solid #fff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: btn-spin .7s linear infinite;
+    }
+    .btn-loading.btn-ghost::after,
+    .btn-loading.action-ghost::after { border-color: #64748B; border-top-color: transparent; }
+    .btn-loading.action-reject::after { border-color: #991B1B; border-top-color: transparent; }
+    .btn-loading.action-approve::after,
+    .btn-loading.action-disburse::after,
+    .btn-loading.btn-primary::after { border-color: #fff; border-top-color: transparent; }
+    @keyframes btn-spin { to { transform: rotate(360deg); } }
+
+    /* small inline spinner */
+    .spin {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid #cbd5e1;
+      border-top-color: #1A62FF;
+      border-radius: 50%;
+      animation: btn-spin .7s linear infinite;
+      vertical-align: middle;
+    }
+
+    /* ---------- GLOBAL BUSY BAR ---------- */
+    #busyBar {
+      position: fixed; top: 0; left: 0; right: 0; height: 3px;
+      z-index: 99999;
+      background: transparent;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    #busyBar::before {
+      content: "";
+      position: absolute; left: -40%; top: 0; height: 100%; width: 40%;
+      background: linear-gradient(90deg, transparent, #1A62FF, transparent);
+      animation: busy-slide 1s linear infinite;
+    }
+    #busyBar.hidden-bar { display: none; }
+    @keyframes busy-slide {
+      0%   { left: -40%; }
+      100% { left: 100%; }
+    }
+
+    /* ---------- TOAST ---------- */
+    #toastHost {
+      position: fixed; bottom: 24px; right: 24px; z-index: 99999;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .toast {
+      min-width: 240px; max-width: 380px;
+      padding: 12px 16px; border-radius: 12px;
+      background: #1E293B; color: #fff;
+      font-size: 13px; font-weight: 500;
+      box-shadow: 0 10px 25px rgba(0,0,0,.15);
+      display: flex; align-items: center; gap: 10px;
+      animation: toast-in .2s ease-out;
+    }
+    .toast.ok  { background: #065F46; }
+    .toast.bad { background: #991B1B; }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .empty-state {
+      text-align: center; padding: 40px 0; color: #64748B; font-size: 13px;
+    }
+    .empty-state i { font-size: 28px; display:block; margin-bottom: 8px; opacity:.4; }
 </style>
 {% endblock %}
 
@@ -609,6 +712,103 @@ function debounce(fn, ms = 300) {
     let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }
 
+/* -------- busy indicator -------- */
+let busyCount = 0;
+function busy(on) {
+    const bar = document.getElementById('busyBar');
+    busyCount += on ? 1 : -1;
+    if (busyCount < 0) busyCount = 0;
+    bar.classList.toggle('hidden-bar', busyCount === 0);
+}
+
+/* -------- per-button spinner -------- */
+function setBtnLoading(btn, on) {
+    if (!btn) return;
+    if (on) {
+        if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
+        btn.classList.add('btn-loading');
+        btn.disabled = true;
+    } else {
+        btn.classList.remove('btn-loading');
+        btn.disabled = false;
+        if (btn.dataset.origHtml) {
+            btn.innerHTML = btn.dataset.origHtml;
+            delete btn.dataset.origHtml;
+        }
+    }
+}
+
+/* -------- toast -------- */
+function showToast(msg, ok = true, ms = 2800) {
+    const host = document.getElementById('toastHost');
+    const el = document.createElement('div');
+    el.className = 'toast ' + (ok ? 'ok' : 'bad');
+    el.innerHTML = `<i class="fa-solid ${ok ? 'fa-circle-check' : 'fa-circle-exclamation'}"></i><span>${escapeHtml(msg)}</span>`;
+    host.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .25s'; }, ms - 250);
+    setTimeout(() => el.remove(), ms);
+}
+
+/* ============================================================ */
+/* SKELETONS                                                    */
+/* ============================================================ */
+function skeletonStats() {
+    ['statPending','statApproved','statDisbursed','statApprovedValue'].forEach(id => {
+        document.getElementById(id).innerHTML =
+            `<span class="sk" style="height:26px;width:70px;"></span>`;
+    });
+}
+function skeletonTable() {
+    const tbody = document.getElementById('appsTable');
+    tbody.innerHTML = Array.from({length: 6}).map(() => `
+        <tr class="sk-row">
+          <td><span class="sk sk-line" style="width:80px"></span></td>
+          <td>
+            <div style="display:flex;gap:12px;align-items:center">
+              <span class="sk sk-circle"></span>
+              <div>
+                <div class="sk sk-line" style="width:120px;margin-bottom:6px"></div>
+                <div class="sk sk-line-sm"></div>
+              </div>
+            </div>
+          </td>
+          <td><span class="sk sk-line" style="width:100px"></span></td>
+          <td><span class="sk sk-line" style="width:70px;margin-left:auto;display:block"></span></td>
+          <td><span class="sk sk-line" style="width:70px;margin-left:auto;display:block"></span></td>
+          <td><span class="sk sk-line" style="width:50px"></span></td>
+          <td><span class="sk" style="height:20px;width:80px;border-radius:999px;display:inline-block"></span></td>
+          <td></td>
+        </tr>
+    `).join('');
+}
+function skeletonGuarantors() {
+    return Array.from({length: 2}).map(() => `
+        <div class="border border-slate-100 rounded-xl p-3">
+          <div class="sk sk-line" style="width:140px;margin-bottom:6px"></div>
+          <div class="sk sk-line-sm"></div>
+        </div>`).join('');
+}
+function skeletonEvents() {
+    return Array.from({length: 3}).map(() => `
+        <div class="flex gap-3">
+          <div class="sk sk-circle" style="width:8px;height:8px;margin-top:8px"></div>
+          <div style="flex:1">
+            <div class="sk sk-line" style="width:140px;margin-bottom:4px"></div>
+            <div class="sk sk-line-sm"></div>
+          </div>
+        </div>`).join('');
+}
+function skeletonSchedule() {
+    return Array.from({length: 5}).map(() => `
+        <tr>
+          <td class="px-3 py-2"><span class="sk sk-line" style="width:20px"></span></td>
+          <td class="px-3 py-2"><span class="sk sk-line" style="width:60px;margin-left:auto;display:block"></span></td>
+          <td class="px-3 py-2"><span class="sk sk-line" style="width:60px;margin-left:auto;display:block"></span></td>
+          <td class="px-3 py-2"><span class="sk sk-line" style="width:60px;margin-left:auto;display:block"></span></td>
+          <td class="px-3 py-2"><span class="sk sk-line" style="width:60px;margin-left:auto;display:block"></span></td>
+        </tr>`).join('');
+}
+
 /* ============================================================ */
 /* LOOKUPS                                                      */
 /* ============================================================ */
@@ -625,6 +825,7 @@ async function loadLookups() {
 /* STATS                                                        */
 /* ============================================================ */
 async function loadStats() {
+    skeletonStats();
     const { ok, body } = await req('/loan-applications/api/stats');
     if (!ok || !body.ok) return;
     const s = body.stats;
@@ -638,28 +839,24 @@ async function loadStats() {
 /* LIST                                                         */
 /* ============================================================ */
 async function loadApps() {
-    const tbody = document.getElementById('appsTable');
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-10 text-sm">
-        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
-
+    skeletonTable();
     const qs = new URLSearchParams({
         page: state.page, per_page: state.per_page,
         q: state.q, status: state.status, source: state.source,
     });
     const { ok, body } = await req('/loan-applications/api/list?' + qs.toString());
+    const tbody = document.getElementById('appsTable');
+
     if (!ok || !body.ok) {
         tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-500 py-10 text-sm">
             ${escapeHtml(body.error || 'Load failed')}</td></tr>`;
         return;
     }
-
     state.total = body.total;
 
     if (!body.applications.length) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-ink-muted py-12 text-sm">
-            <i class="fa-regular fa-folder-open text-2xl block mb-2 opacity-40"></i>
-            No applications found.
-        </td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-state">
+            <i class="fa-regular fa-folder-open"></i>No applications found.</td></tr>`;
     } else {
         tbody.innerHTML = body.applications.map(a => {
             const m = a.members || {};
@@ -741,8 +938,11 @@ function openCreateModal() {
     document.getElementById('createForm').reset();
     document.getElementById('eligibilityBox').classList.add('hidden');
 
-    // hook live eligibility check
     mp.onchange = pp.onchange = () => tryEligibilityCheck();
+    const amtEl  = document.getElementById('createForm').elements['requested_amount'];
+    const termEl = document.getElementById('createForm').elements['requested_term_months'];
+    amtEl.oninput  = debounce(() => tryEligibilityCheck(), 400);
+    termEl.oninput = debounce(() => tryEligibilityCheck(), 400);
 
     document.getElementById('createModal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
@@ -754,14 +954,18 @@ function closeCreateModal() {
 
 async function tryEligibilityCheck() {
     const form = document.getElementById('createForm');
-    const mid = form.elements['member_id'].value;
-    const pid = form.elements['product_id'].value;
-    const amt = form.elements['requested_amount'].value;
-    const term= form.elements['requested_term_months'].value;
-    if (!mid || !pid || !amt || !term) {
-        document.getElementById('eligibilityBox').classList.add('hidden');
-        return;
-    }
+    const mid  = form.elements['member_id'].value;
+    const pid  = form.elements['product_id'].value;
+    const amt  = form.elements['requested_amount'].value;
+    const term = form.elements['requested_term_months'].value;
+    const box  = document.getElementById('eligibilityBox');
+    const list = document.getElementById('eligibilityList');
+
+    if (!mid || !pid || !amt || !term) { box.classList.add('hidden'); return; }
+
+    box.classList.remove('hidden');
+    list.innerHTML = `<li class="text-ink-muted"><span class="spin"></span> Checking eligibility…</li>`;
+
     const { ok, body } = await req('/loan-applications/api/eligibility-check', {
         method: 'POST',
         body: JSON.stringify({
@@ -769,41 +973,35 @@ async function tryEligibilityCheck() {
             requested_amount: amt, requested_term_months: Number(term),
         }),
     });
-    if (!ok || !body.ok) return;
-    const list = document.getElementById('eligibilityList');
+    if (!ok || !body.ok) {
+        list.innerHTML = `<li class="elig-bad">Could not check eligibility.</li>`;
+        return;
+    }
     list.innerHTML = (body.eligibility || []).map(r => {
-        if (r.ok) return `<li class="elig-ok">${escapeHtml(r.message || r.rule)}</li>`;
-        return `<li class="elig-bad">${escapeHtml(r.message || r.rule)}</li>`;
+        const cls = r.ok ? 'elig-ok' : 'elig-bad';
+        return `<li class="${cls}">${escapeHtml(r.message || r.rule)}</li>`;
     }).join('');
-    document.getElementById('eligibilityBox').classList.remove('hidden');
 }
 
 document.getElementById('createForm').addEventListener('submit', async e => {
     e.preventDefault();
+    const btn = document.getElementById('createSubmit');
     const d = Object.fromEntries(new FormData(e.target).entries());
     const payload = {
-        member_id: d.member_id,
-        product_id: d.product_id,
+        member_id: d.member_id, product_id: d.product_id,
         requested_amount: Number(d.requested_amount),
         requested_term_months: Number(d.requested_term_months),
-        purpose: d.purpose || null,
-        source: d.source,
+        purpose: d.purpose || null, source: d.source,
         submit: e.target.elements['submit_now'].checked,
     };
 
-    const btn = document.getElementById('createSubmit');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Creating…';
-
+    setBtnLoading(btn, true); busy(true);
     const { ok, body } = await req('/loan-applications/api/create', {
         method: 'POST', body: JSON.stringify(payload),
     });
-
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Create Application';
+    busy(false); setBtnLoading(btn, false);
 
     if (!ok || !body.ok) { showToast(body.error || 'Create failed', false); return; }
-
     closeCreateModal();
     showToast(`Application ${body.application.app_number} created`, true);
     loadApps(); loadStats();
@@ -832,6 +1030,19 @@ async function openDetail(id) {
     currentAppId = id;
     document.getElementById('detailModal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+
+    // fill with skeletons
+    document.getElementById('dtlTitle').innerHTML = `<span class="sk sk-line" style="width:140px"></span>`;
+    document.getElementById('dtlSubtitle').innerHTML = `<span class="sk sk-line-sm"></span>`;
+    document.getElementById('dtlRequested').innerHTML = `<span class="sk" style="height:28px;width:120px"></span>`;
+    document.getElementById('dtlMemberName').innerHTML = `<span class="sk sk-line" style="width:120px"></span>`;
+    document.getElementById('dtlMemberId').innerHTML = `<span class="sk sk-line-sm"></span>`;
+    document.getElementById('dtlMemberPhone').innerHTML = `<span class="sk sk-line-sm"></span>`;
+    document.getElementById('dtlGuarantors').innerHTML = skeletonGuarantors();
+    document.getElementById('dtlEvents').innerHTML     = skeletonEvents();
+    document.getElementById('dtlSimSchedule').innerHTML = skeletonSchedule();
+    document.getElementById('dtlActions').innerHTML = '';
+
     await refreshDetail();
 }
 
@@ -881,16 +1092,10 @@ async function refreshDetail() {
 
     document.getElementById('dtlPurpose').textContent = a.purpose || '—';
 
-    // Actions
     renderActions(a);
-
-    // Guarantors
     renderGuarantors(body.guarantors || []);
-
-    // Events
     renderEvents(body.events || []);
 
-    // Auto simulation on open
     refreshSimulation();
 }
 
@@ -900,10 +1105,10 @@ function renderActions(a) {
     const parts = [];
 
     if (a.status === 'draft') {
-        parts.push(`<button class="action-btn action-approve" onclick="transitionSubmit('${id}')"><i class="fa-solid fa-paper-plane"></i>Submit</button>`);
-        parts.push(`<button class="action-btn action-ghost" onclick="transitionCancel('${id}')"><i class="fa-solid fa-xmark"></i>Cancel</button>`);
+        parts.push(`<button class="action-btn action-approve" onclick="transitionSubmit(this,'${id}')"><i class="fa-solid fa-paper-plane"></i>Submit</button>`);
+        parts.push(`<button class="action-btn action-ghost" onclick="transitionCancel(this,'${id}')"><i class="fa-solid fa-xmark"></i>Cancel</button>`);
     } else if (a.status === 'submitted') {
-        parts.push(`<button class="action-btn action-ghost" onclick="transitionReview('${id}')"><i class="fa-solid fa-eye"></i>Mark reviewing</button>`);
+        parts.push(`<button class="action-btn action-ghost" onclick="transitionReview(this,'${id}')"><i class="fa-solid fa-eye"></i>Mark reviewing</button>`);
         parts.push(`<button class="action-btn action-approve" onclick="openApproveModal()"><i class="fa-solid fa-check"></i>Approve</button>`);
         parts.push(`<button class="action-btn action-reject" onclick="openRejectModal()"><i class="fa-solid fa-xmark"></i>Reject</button>`);
     } else if (a.status === 'under_review') {
@@ -935,7 +1140,7 @@ function renderGuarantors(list) {
               </div>
               <div class="flex items-center gap-2">
                 <span class="la-pill ${cls}">${escapeHtml(g.status)}</span>
-                <button onclick="removeGuarantor('${g.id}')" class="w-7 h-7 rounded-lg hover:bg-page text-ink-muted hover:text-danger">
+                <button onclick="removeGuarantor(this,'${g.id}')" class="w-7 h-7 rounded-lg hover:bg-page text-ink-muted hover:text-danger">
                   <i class="fa-solid fa-trash text-xs"></i>
                 </button>
               </div>
@@ -962,12 +1167,19 @@ function renderEvents(list) {
 }
 
 /* ============================================================ */
-/* SIMULATION (for the detail drawer)                           */
+/* SIMULATION                                                   */
 /* ============================================================ */
-async function refreshSimulation() {
+async function refreshSimulation(btn) {
     if (!currentAppId) return;
+    if (btn) setBtnLoading(btn, true);
+    document.getElementById('dtlSimSchedule').innerHTML = skeletonSchedule();
     const { ok, body } = await req(`/loan-applications/api/${currentAppId}/simulate`);
-    if (!ok || !body.ok) return;
+    if (btn) setBtnLoading(btn, false);
+    if (!ok || !body.ok) {
+        document.getElementById('dtlSimSchedule').innerHTML =
+            `<tr><td colspan="5" class="text-center text-ink-muted py-4 text-xs">Simulation unavailable</td></tr>`;
+        return;
+    }
     const s = body.simulation;
     document.getElementById('dtlSimInterest').textContent = fmtNum(s.total_interest);
     document.getElementById('dtlSimTotal').textContent    = fmtNum(s.total_payable);
@@ -986,25 +1198,34 @@ async function refreshSimulation() {
 /* ============================================================ */
 /* TRANSITIONS                                                  */
 /* ============================================================ */
-async function transitionSubmit(id) {
+async function transitionSubmit(btn, id) {
+    setBtnLoading(btn, true); busy(true);
     const { ok, body } = await req(`/loan-applications/api/${id}/submit`, { method: 'POST' });
+    busy(false); setBtnLoading(btn, false);
     if (!ok || !body.ok) { showToast(body.error || 'Failed', false); return; }
-    showToast('Submitted', true); refreshDetail(); loadApps(); loadStats();
+    showToast('Submitted', true);
+    refreshDetail(); loadApps(); loadStats();
 }
-async function transitionReview(id) {
+async function transitionReview(btn, id) {
+    setBtnLoading(btn, true); busy(true);
     const { ok, body } = await req(`/loan-applications/api/${id}/review`, {
         method: 'POST', body: JSON.stringify({}),
     });
+    busy(false); setBtnLoading(btn, false);
     if (!ok || !body.ok) { showToast(body.error || 'Failed', false); return; }
-    showToast('Marked under review', true); refreshDetail(); loadApps(); loadStats();
+    showToast('Marked under review', true);
+    refreshDetail(); loadApps(); loadStats();
 }
-async function transitionCancel(id) {
+async function transitionCancel(btn, id) {
     if (!confirm('Cancel this application?')) return;
+    setBtnLoading(btn, true); busy(true);
     const { ok, body } = await req(`/loan-applications/api/${id}/cancel`, {
         method: 'POST', body: JSON.stringify({}),
     });
+    busy(false); setBtnLoading(btn, false);
     if (!ok || !body.ok) { showToast(body.error || 'Failed', false); return; }
-    showToast('Cancelled', true); refreshDetail(); loadApps(); loadStats();
+    showToast('Cancelled', true);
+    refreshDetail(); loadApps(); loadStats();
 }
 
 /* ============================================================ */
@@ -1048,6 +1269,7 @@ function updateApproveFeesPreview() {
 
 document.getElementById('approveForm').addEventListener('submit', async e => {
     e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
     const d = Object.fromEntries(new FormData(e.target).entries());
     const payload = {
         approved_amount: Number(d.approved_amount),
@@ -1058,9 +1280,13 @@ document.getElementById('approveForm').addEventListener('submit', async e => {
         approved_repayment_type: d.approved_repayment_type,
         notes: d.notes || null,
     };
+
+    setBtnLoading(btn, true); busy(true);
     const { ok, body } = await req(`/loan-applications/api/${currentAppId}/approve`, {
         method: 'POST', body: JSON.stringify(payload),
     });
+    busy(false); setBtnLoading(btn, false);
+
     if (!ok || !body.ok) { showToast(body.error || 'Approve failed', false); return; }
     closeApproveModal();
     showToast('Approved', true);
@@ -1072,12 +1298,18 @@ document.getElementById('approveForm').addEventListener('submit', async e => {
 /* ============================================================ */
 function openRejectModal() { document.getElementById('rejectModal').classList.remove('hidden'); }
 function closeRejectModal() { document.getElementById('rejectModal').classList.add('hidden'); }
+
 document.getElementById('rejectForm').addEventListener('submit', async e => {
     e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
     const d = Object.fromEntries(new FormData(e.target).entries());
+
+    setBtnLoading(btn, true); busy(true);
     const { ok, body } = await req(`/loan-applications/api/${currentAppId}/reject`, {
         method: 'POST', body: JSON.stringify({ reason: d.reason }),
     });
+    busy(false); setBtnLoading(btn, false);
+
     if (!ok || !body.ok) { showToast(body.error || 'Reject failed', false); return; }
     closeRejectModal();
     showToast('Rejected', true);
@@ -1089,12 +1321,18 @@ document.getElementById('rejectForm').addEventListener('submit', async e => {
 /* ============================================================ */
 function openDisburseModal() { document.getElementById('disburseModal').classList.remove('hidden'); }
 function closeDisburseModal() { document.getElementById('disburseModal').classList.add('hidden'); }
+
 document.getElementById('disburseForm').addEventListener('submit', async e => {
     e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
     const d = Object.fromEntries(new FormData(e.target).entries());
+
+    setBtnLoading(btn, true); busy(true);
     const { ok, body } = await req(`/loan-applications/api/${currentAppId}/disburse`, {
         method: 'POST', body: JSON.stringify({ method: d.method, notes: d.notes || null }),
     });
+    busy(false); setBtnLoading(btn, false);
+
     if (!ok || !body.ok) { showToast(body.error || 'Disburse failed', false); return; }
     closeDisburseModal();
     showToast('Disbursed', true);
@@ -1118,7 +1356,10 @@ function closeGuarantorModal() { document.getElementById('guarantorModal').class
 
 document.getElementById('guarantorForm').addEventListener('submit', async e => {
     e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
     const d = Object.fromEntries(new FormData(e.target).entries());
+
+    setBtnLoading(btn, true); busy(true);
     const { ok, body } = await req(`/loan-applications/api/${currentAppId}/guarantors`, {
         method: 'POST',
         body: JSON.stringify({
@@ -1127,15 +1368,19 @@ document.getElementById('guarantorForm').addEventListener('submit', async e => {
             note: d.note || null,
         }),
     });
+    busy(false); setBtnLoading(btn, false);
+
     if (!ok || !body.ok) { showToast(body.error || 'Failed', false); return; }
     closeGuarantorModal();
     showToast('Guarantor added', true);
     refreshDetail();
 });
 
-async function removeGuarantor(gid) {
+async function removeGuarantor(btn, gid) {
     if (!confirm('Remove this guarantor?')) return;
+    setBtnLoading(btn, true); busy(true);
     const { ok, body } = await req(`/loan-applications/api/guarantors/${gid}`, { method: 'DELETE' });
+    busy(false); setBtnLoading(btn, false);
     if (!ok || !body.ok) { showToast(body.error || 'Failed', false); return; }
     showToast('Removed', true);
     refreshDetail();

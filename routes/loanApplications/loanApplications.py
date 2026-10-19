@@ -1132,7 +1132,9 @@ def api_disburse(app_uuid):
     Steps:
       1. Flip the application to 'disbursed' (idempotent on retry).
       2. Update member + account balances.
-      3. Write a `member_transactions` ledger entry.
+      3. Write a `member_transactions` ledger entry (loan side).
+         For savings_credit: also write a savings_deposit entry on the
+         member's savings account.
       4. Create a `loans` row for the repayments engine (idempotent).
       5. Post to the chart of accounts:
            cash          : Dr 1100 Loans receivable   Cr 1000 Cash on hand
@@ -1220,7 +1222,7 @@ def api_disburse(app_uuid):
                 "updated_at": _now_iso(),
             }).eq("id", loan_acc["id"]).execute()
 
-        # --- 3c. savings_credit: also credit savings ---
+        # --- 3c. savings_credit: credit savings AND write a savings_deposit tx ---
         if method == "savings_credit" and savings_acc:
             sav_row = (
                 _admin().table("member_accounts")
@@ -1229,17 +1231,34 @@ def api_disburse(app_uuid):
             ).data or [{"balance": 0}]
             new_sav = _q(_to_decimal(sav_row[0].get("balance")) + net)
 
+            # 3c-i: update member_accounts.balance
             _admin().table("member_accounts").update({
                 "balance":    float(new_sav),
                 "updated_at": _now_iso(),
             }).eq("id", savings_acc["id"]).execute()
 
+            # 3c-ii: mirror on members.savings_balance
             _admin().table("members").update({
                 "savings_balance": float(new_sav),
                 "updated_at":      _now_iso(),
             }).eq("id", app["member_id"]).execute()
 
-        # --- 3d. member_transactions ledger row (keeps the original method) ---
+            # 3c-iii: write the savings-side ledger row (the missing piece)
+            _admin().table("member_transactions").insert({
+                "org_id":        org_id,
+                "member_id":     app["member_id"],
+                "account_id":    savings_acc["id"],         # → savings account
+                "type":          "savings_deposit",
+                "method":        "savings_credit",
+                "amount":        float(_q(net)),
+                "currency":      currency,
+                "status":        "completed",
+                "narration":     f"Loan disbursement to savings · {app['app_number']}",
+                "balance_after": float(new_sav),
+                "created_by":    _user_id(),
+            }).execute()
+
+        # --- 3d. member_transactions ledger row (loan side) ---
         _admin().table("member_transactions").insert({
             "org_id":     org_id,
             "member_id":  app["member_id"],

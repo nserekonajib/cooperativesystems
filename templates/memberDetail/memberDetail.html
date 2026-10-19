@@ -1,0 +1,875 @@
+{% extends "base.html" %}
+{% block title %}Member Detail — SACCO Pro{% endblock %}
+{% block page_title %}Member Detail{% endblock %}
+
+{% block content %}
+{% set MU = member_uuid %}
+{% set P  = url_prefix %}
+
+<!-- ============================================================ -->
+<!-- HEADER                                                       -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm p-5 mb-6">
+  <div class="flex items-start justify-between flex-wrap gap-4">
+    <div class="flex items-center gap-4">
+      <a href="{{ url_for('members.page') }}"
+         class="w-10 h-10 rounded-xl hover:bg-page flex items-center justify-center text-ink-muted">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+      <div id="heroAvatar"
+           class="w-14 h-14 rounded-full bg-brand text-white flex items-center justify-center font-bold text-lg">
+        <i class="fa-solid fa-circle-notch fa-spin"></i>
+      </div>
+      <div>
+        <h2 id="heroName" class="text-xl font-bold leading-tight">
+          <span class="inline-block w-40 h-5 bg-slate-100 rounded animate-pulse"></span>
+        </h2>
+        <p class="text-xs text-ink-muted mt-1">
+          Member <span id="heroMemberId" class="font-mono">—</span>
+          ·
+          Joined <span id="heroJoined">—</span>
+          ·
+          <span id="heroStatus" class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">—</span>
+        </p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="{{ P }}/{{ MU }}/api/statement" class="btn-ghost text-xs">
+        <i class="fa-solid fa-file-csv mr-2"></i>Full Statement
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- KPI CARDS (skeletons until loaded)                            -->
+<!-- ============================================================ -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div class="flex-1">
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Savings Balance</p>
+        <p id="kpiSavings" class="text-2xl font-bold mt-1">
+          <span class="inline-block w-24 h-7 bg-slate-100 rounded animate-pulse"></span>
+        </p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+        <i class="fa-solid fa-wallet"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Account <span id="kpiSavingsAcct" class="font-mono">—</span></p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div class="flex-1">
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Shares</p>
+        <p id="kpiShares" class="text-2xl font-bold mt-1">
+          <span class="inline-block w-24 h-7 bg-slate-100 rounded animate-pulse"></span>
+        </p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
+        <i class="fa-solid fa-chart-pie"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Value <span id="kpiSharesValue" class="font-semibold">—</span></p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div class="flex-1">
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Loans Outstanding</p>
+        <p id="kpiLoans" class="text-2xl font-bold mt-1">
+          <span class="inline-block w-24 h-7 bg-slate-100 rounded animate-pulse"></span>
+        </p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+        <i class="fa-solid fa-hand-holding-dollar"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2"><span id="kpiLoansCount">—</span> active</p>
+  </div>
+  <div class="bg-white rounded-2xl p-5 shadow-sm">
+    <div class="flex items-start justify-between">
+      <div class="flex-1">
+        <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Dividends</p>
+        <p id="kpiDividends" class="text-2xl font-bold mt-1 text-brand">
+          <span class="inline-block w-24 h-7 bg-slate-100 rounded animate-pulse"></span>
+        </p>
+      </div>
+      <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
+        <i class="fa-solid fa-circle-dollar-to-slot"></i>
+      </div>
+    </div>
+    <p class="text-xs text-ink-muted mt-2">Total earned · <span id="kpiDivCount">—</span> payouts</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TABS                                                         -->
+<!-- ============================================================ -->
+<div class="bg-white rounded-2xl shadow-sm mb-5">
+  <div class="flex border-b border-slate-100 overflow-x-auto">
+    <button data-tab="profile"       class="dt-tab px-5 py-3.5 text-sm font-semibold border-b-2 border-brand text-brand whitespace-nowrap"><i class="fa-regular fa-user mr-2"></i>Profile</button>
+    <button data-tab="savings"       class="dt-tab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap"><i class="fa-solid fa-wallet mr-2"></i>Savings</button>
+    <button data-tab="shares"        class="dt-tab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap"><i class="fa-solid fa-chart-pie mr-2"></i>Shares</button>
+    <button data-tab="subscriptions" class="dt-tab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap"><i class="fa-regular fa-calendar mr-2"></i>Subscriptions</button>
+    <button data-tab="loans"         class="dt-tab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap"><i class="fa-solid fa-hand-holding-dollar mr-2"></i>Loans</button>
+    <button data-tab="fixed"         class="dt-tab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap"><i class="fa-regular fa-square-check mr-2"></i>Fixed Deposits</button>
+    <button data-tab="dividends"     class="dt-tab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap"><i class="fa-solid fa-coins mr-2"></i>Dividends</button>
+    <button data-tab="transactions"  class="dt-tab px-5 py-3.5 text-sm font-semibold border-b-2 border-transparent text-ink-muted hover:text-ink whitespace-nowrap"><i class="fa-solid fa-receipt mr-2"></i>Transactions</button>
+  </div>
+</div>
+
+<!-- PROFILE -->
+<section id="tab-profile" class="dt-panel">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div class="bg-white rounded-2xl shadow-sm p-6 lg:col-span-2">
+      <h3 class="font-bold text-base mb-4">Identity</h3>
+      <div id="profIdentity" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="animate-pulse space-y-2">
+          <div class="h-3 w-20 bg-slate-100 rounded"></div><div class="h-4 w-40 bg-slate-100 rounded"></div>
+          <div class="h-3 w-20 bg-slate-100 rounded mt-4"></div><div class="h-4 w-40 bg-slate-100 rounded"></div>
+        </div>
+        <div class="animate-pulse space-y-2">
+          <div class="h-3 w-20 bg-slate-100 rounded"></div><div class="h-4 w-40 bg-slate-100 rounded"></div>
+          <div class="h-3 w-20 bg-slate-100 rounded mt-4"></div><div class="h-4 w-40 bg-slate-100 rounded"></div>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm p-6">
+      <h3 class="font-bold text-base mb-2">Accounts</h3>
+      <div id="profAccounts" class="space-y-3">
+        <div class="animate-pulse rounded-xl border border-slate-100 p-3 h-20"></div>
+        <div class="animate-pulse rounded-xl border border-slate-100 p-3 h-20"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SAVINGS -->
+<section id="tab-savings" class="dt-panel hidden">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+    <div class="bg-white rounded-2xl shadow-sm p-5 lg:col-span-2">
+      <h3 class="font-bold text-base mb-4">Savings Account</h3>
+      <div id="savAccountInfo" class="text-sm space-y-2">
+        <div class="animate-pulse space-y-2">
+          <div class="h-4 w-full bg-slate-100 rounded"></div>
+          <div class="h-4 w-2/3 bg-slate-100 rounded"></div>
+          <div class="h-4 w-1/2 bg-slate-100 rounded"></div>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <h3 class="font-bold text-base mb-4">Summary</h3>
+      <div id="savStats" class="text-sm space-y-2">
+        <div class="animate-pulse space-y-2">
+          <div class="h-4 w-full bg-slate-100 rounded"></div>
+          <div class="h-4 w-full bg-slate-100 rounded"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-5">
+    <div class="px-5 py-3 border-b border-slate-100">
+      <h3 class="font-bold text-base">Deposits &amp; Withdrawals</h3>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Date</th>
+          <th class="text-left px-5 py-3 font-semibold">Type</th>
+          <th class="text-left px-5 py-3 font-semibold">Method</th>
+          <th class="text-right px-5 py-3 font-semibold">Amount</th>
+          <th class="text-right px-5 py-3 font-semibold">Balance</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+        </tr>
+      </thead>
+      <tbody id="savTx" class="divide-y divide-slate-100">
+        <tr><td colspan="6" class="text-center text-ink-muted py-8 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-100">
+      <h3 class="font-bold text-base">Withdrawal Requests</h3>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Requested</th>
+          <th class="text-right px-5 py-3 font-semibold">Amount</th>
+          <th class="text-left px-5 py-3 font-semibold">Source</th>
+          <th class="text-left px-5 py-3 font-semibold">Method</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+          <th class="text-left px-5 py-3 font-semibold">Paid</th>
+        </tr>
+      </thead>
+      <tbody id="savWr" class="divide-y divide-slate-100">
+        <tr><td colspan="6" class="text-center text-ink-muted py-8 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- SHARES -->
+<section id="tab-shares" class="dt-panel hidden">
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-5 mb-5">
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Units Held</p>
+      <p id="shrUnits" class="text-2xl font-bold mt-1"><span class="inline-block w-16 h-7 bg-slate-100 rounded animate-pulse"></span></p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Value</p>
+      <p id="shrValue" class="text-2xl font-bold mt-1"><span class="inline-block w-24 h-7 bg-slate-100 rounded animate-pulse"></span></p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Min Required</p>
+      <p id="shrMin" class="text-2xl font-bold mt-1"><span class="inline-block w-12 h-7 bg-slate-100 rounded animate-pulse"></span></p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Bought</p>
+      <p id="shrTotal" class="text-2xl font-bold mt-1"><span class="inline-block w-16 h-7 bg-slate-100 rounded animate-pulse"></span></p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-100">
+      <h3 class="font-bold text-base">Share Transactions</h3>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Date</th>
+          <th class="text-left px-5 py-3 font-semibold">Txn #</th>
+          <th class="text-right px-5 py-3 font-semibold">Units</th>
+          <th class="text-right px-5 py-3 font-semibold">Unit price</th>
+          <th class="text-right px-5 py-3 font-semibold">Amount</th>
+          <th class="text-left px-5 py-3 font-semibold">Method</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+        </tr>
+      </thead>
+      <tbody id="shrTx" class="divide-y divide-slate-100">
+        <tr><td colspan="7" class="text-center text-ink-muted py-8 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- SUBSCRIPTIONS -->
+<section id="tab-subscriptions" class="dt-panel hidden">
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-100">
+      <h3 class="font-bold text-base">Yearly Subscriptions</h3>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Year</th>
+          <th class="text-right px-5 py-3 font-semibold">Due</th>
+          <th class="text-right px-5 py-3 font-semibold">Paid</th>
+          <th class="text-right px-5 py-3 font-semibold">Balance</th>
+          <th class="text-left px-5 py-3 font-semibold">Source</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+          <th class="text-left px-5 py-3 font-semibold">Paid at</th>
+        </tr>
+      </thead>
+      <tbody id="subsTable" class="divide-y divide-slate-100">
+        <tr><td colspan="7" class="text-center text-ink-muted py-8 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- LOANS -->
+<section id="tab-loans" class="dt-panel hidden">
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-5">
+    <div class="px-5 py-3 border-b border-slate-100">
+      <h3 class="font-bold text-base">Loan Applications</h3>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">App #</th>
+          <th class="text-left px-5 py-3 font-semibold">Product</th>
+          <th class="text-right px-5 py-3 font-semibold">Requested</th>
+          <th class="text-right px-5 py-3 font-semibold">Approved</th>
+          <th class="text-left px-5 py-3 font-semibold">Source</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+          <th class="text-left px-5 py-3 font-semibold">Created</th>
+        </tr>
+      </thead>
+      <tbody id="loanApps" class="divide-y divide-slate-100">
+        <tr><td colspan="7" class="text-center text-ink-muted py-8 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-5">
+    <div class="px-5 py-3 border-b border-slate-100">
+      <h3 class="font-bold text-base">Active Loans</h3>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Loan #</th>
+          <th class="text-right px-5 py-3 font-semibold">Principal</th>
+          <th class="text-right px-5 py-3 font-semibold">Outstanding</th>
+          <th class="text-right px-5 py-3 font-semibold">Interest</th>
+          <th class="text-left px-5 py-3 font-semibold">Disbursed</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+        </tr>
+      </thead>
+      <tbody id="loansTable" class="divide-y divide-slate-100">
+        <tr><td colspan="6" class="text-center text-ink-muted py-8 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-100">
+      <h3 class="font-bold text-base">Repayments</h3>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Date</th>
+          <th class="text-left px-5 py-3 font-semibold">Receipt</th>
+          <th class="text-right px-5 py-3 font-semibold">Amount</th>
+          <th class="text-right px-5 py-3 font-semibold">Interest</th>
+          <th class="text-right px-5 py-3 font-semibold">Principal</th>
+          <th class="text-left px-5 py-3 font-semibold">Method</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+        </tr>
+      </thead>
+      <tbody id="repsTable" class="divide-y divide-slate-100">
+        <tr><td colspan="7" class="text-center text-ink-muted py-8 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- FIXED -->
+<section id="tab-fixed" class="dt-panel hidden">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-5">
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Principal</p>
+      <p id="fdPrincipal" class="text-2xl font-bold mt-1"><span class="inline-block w-24 h-7 bg-slate-100 rounded animate-pulse"></span></p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Accrued Interest</p>
+      <p id="fdInterest" class="text-2xl font-bold mt-1 text-success"><span class="inline-block w-24 h-7 bg-slate-100 rounded animate-pulse"></span></p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <p class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Total Value</p>
+      <p id="fdValue" class="text-2xl font-bold mt-1"><span class="inline-block w-24 h-7 bg-slate-100 rounded animate-pulse"></span></p>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-100">
+      <h3 class="font-bold text-base">Fixed Deposit Accounts</h3>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">FD #</th>
+          <th class="text-right px-5 py-3 font-semibold">Principal</th>
+          <th class="text-right px-5 py-3 font-semibold">Interest</th>
+          <th class="text-right px-5 py-3 font-semibold">Total</th>
+          <th class="text-left px-5 py-3 font-semibold">Start</th>
+          <th class="text-left px-5 py-3 font-semibold">Maturity</th>
+          <th class="text-left px-5 py-3 font-semibold">Rate</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+        </tr>
+      </thead>
+      <tbody id="fdTable" class="divide-y divide-slate-100">
+        <tr><td colspan="8" class="text-center text-ink-muted py-8 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- DIVIDENDS -->
+<section id="tab-dividends" class="dt-panel hidden">
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-100">
+      <h3 class="font-bold text-base">Dividend Payments</h3>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Run #</th>
+          <th class="text-left px-5 py-3 font-semibold">Year</th>
+          <th class="text-right px-5 py-3 font-semibold">Amount</th>
+          <th class="text-right px-5 py-3 font-semibold">Shares at run</th>
+          <th class="text-left px-5 py-3 font-semibold">Payout mode</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+          <th class="text-left px-5 py-3 font-semibold">Posted</th>
+        </tr>
+      </thead>
+      <tbody id="divTable" class="divide-y divide-slate-100">
+        <tr><td colspan="7" class="text-center text-ink-muted py-8 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- TRANSACTIONS -->
+<section id="tab-transactions" class="dt-panel hidden">
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+      <h3 class="font-bold text-base">Unified Member Ledger</h3>
+      <span id="txCount" class="text-xs text-ink-muted">—</span>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+        <tr>
+          <th class="text-left px-5 py-3 font-semibold">Date</th>
+          <th class="text-left px-5 py-3 font-semibold">Label</th>
+          <th class="text-left px-5 py-3 font-semibold">Type</th>
+          <th class="text-left px-5 py-3 font-semibold">Method</th>
+          <th class="text-right px-5 py-3 font-semibold">Amount</th>
+          <th class="text-right px-5 py-3 font-semibold">Balance</th>
+          <th class="text-left px-5 py-3 font-semibold">Status</th>
+        </tr>
+      </thead>
+      <tbody id="txTable" class="divide-y divide-slate-100">
+        <tr><td colspan="7" class="text-center text-ink-muted py-8 text-xs"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+      </tbody>
+    </table>
+    <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+      <span id="txPageInfo">—</span>
+      <div class="flex gap-1">
+        <button id="txPrev" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+        <button id="txNext" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+    .btn-ghost { display:inline-flex; align-items:center; padding:9px 14px; border-radius:10px;
+                 background:#fff; border:1px solid #E2E8F0; color:#64748B; font-weight:600; font-size:13px;
+                 cursor:pointer; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .s-active     { background:#E6F4EA; color:#065F46; }
+    .s-dormant    { background:#FEF3C7; color:#92400E; }
+    .s-suspended  { background:#FEE2E2; color:#991B1B; }
+    .s-exited     { background:#E2E8F0; color:#334155; }
+    .s-completed  { background:#E6F4EA; color:#065F46; }
+    .s-pending    { background:#FEF3C7; color:#92400E; }
+    .s-failed     { background:#FEE2E2; color:#991B1B; }
+    .s-approved   { background:#DBEAFE; color:#1E40AF; }
+    .s-paid       { background:#E6F4EA; color:#065F46; }
+    .s-rejected   { background:#FEE2E2; color:#991B1B; }
+    .s-partial    { background:#DBEAFE; color:#1E40AF; }
+    .s-waived     { background:#EDE9FE; color:#6D28D9; }
+    .s-cancelled  { background:#E2E8F0; color:#334155; }
+    .s-overdue    { background:#FEE2E2; color:#991B1B; }
+    .s-draft      { background:#F1F5F9; color:#475569; }
+    .s-submitted  { background:#DBEAFE; color:#1E40AF; }
+    .s-under_review { background:#EDE9FE; color:#6D28D9; }
+    .s-disbursed  { background:#D1FAE5; color:#065F46; }
+    .s-closed     { background:#E2E8F0; color:#334155; }
+    .s-reversed   { background:#E2E8F0; color:#334155; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    // -------- hardcoded from backend to avoid any template glitch --------
+    const MU     = {{ member_uuid|tojson }};
+    const PREFIX = {{ url_prefix|tojson }};
+
+    // -------- state --------
+    const st = { tab: 'profile', txPage: 1, txPerPage: 50, txTotal: 0, loaded: {} };
+
+    // -------- helpers (all defined BEFORE use) --------
+    function fmtNum(n) {
+        return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    }
+    function fmtDate(iso) {
+        if (!iso) return '—';
+        try { return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' }); }
+        catch (_) { return '—'; }
+    }
+    function fmtDateTime(iso) {
+        if (!iso) return '—';
+        try { return new Date(iso).toLocaleString(undefined, { year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit' }); }
+        catch (_) { return '—'; }
+    }
+    function escapeHtml(s) {
+        return (s == null ? '' : String(s))
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function setText(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    }
+    function setHtml(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = val;
+    }
+    async function req(url, opts) {
+        try {
+            const r = await fetch(url, Object.assign({
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+            }, opts || {}));
+            const body = await r.json().catch(() => ({}));
+            return { ok: r.ok, body };
+        } catch (e) {
+            console.error('[req] fetch error', url, e);
+            return { ok: false, body: { ok: false, error: String(e) } };
+        }
+    }
+    function loadingRow(cols) {
+        return `<tr><td colspan="${cols}" class="text-center text-ink-muted py-8 text-xs">
+            <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+    }
+    function emptyRow(cols, msg) {
+        return `<tr><td colspan="${cols}" class="text-center text-ink-muted py-8 text-xs">${msg || 'Nothing to show.'}</td></tr>`;
+    }
+
+    // -------- tab plumbing --------
+    document.querySelectorAll('.dt-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            st.tab = tab;
+            document.querySelectorAll('.dt-tab').forEach(x => {
+                const on = x.dataset.tab === tab;
+                x.classList.toggle('border-brand', on);
+                x.classList.toggle('text-brand', on);
+                x.classList.toggle('border-transparent', !on);
+                x.classList.toggle('text-ink-muted', !on);
+            });
+            document.querySelectorAll('.dt-panel').forEach(p =>
+                p.classList.toggle('hidden', p.id !== 'tab-' + tab));
+            ensureLoaded(tab);
+        });
+    });
+
+    // -------- loaders --------
+    async function loadProfile() {
+        const { ok, body } = await req(`${PREFIX}/${MU}/api/profile`);
+        if (!ok || !body.ok) {
+            setText('heroName', 'Could not load');
+            setHtml('profIdentity', `<p class="text-red-500 text-sm col-span-2">${escapeHtml(body.error || 'Load failed')}</p>`);
+            setHtml('profAccounts', `<p class="text-red-500 text-sm">Load failed</p>`);
+            return;
+        }
+        const m = body.member;
+        setText('heroName', `${m.first_name || ''} ${m.last_name || ''}`.trim());
+        setText('heroMemberId', m.member_id || '—');
+        setText('heroJoined', fmtDate(m.joined_at));
+        const stEl = document.getElementById('heroStatus');
+        if (stEl) {
+            stEl.textContent = m.status || '—';
+            stEl.className = `inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold s-${m.status || 'exited'}`;
+        }
+        const av = document.getElementById('heroAvatar');
+        if (av) av.textContent = (m.first_name || '?')[0].toUpperCase();
+
+        const fields = [
+            ['Full name',    `${m.first_name || ''} ${m.last_name || ''} ${m.other_names || ''}`.trim()],
+            ['Member ID',    m.member_id],
+            ['Phone',        m.phone],
+            ['Email',        m.email],
+            ['Gender',       m.gender],
+            ['Date of birth',fmtDate(m.date_of_birth)],
+            ['National ID',  m.national_id],
+            ['Member type',  m.member_type],
+            ['Category',     m.category],
+            ['Address',      m.address_line],
+            ['City',         m.city],
+            ['Occupation',   m.occupation],
+            ['Notes',        m.notes],
+        ];
+        setHtml('profIdentity', fields.map(([l, v]) => `
+            <div>
+              <dt class="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">${l}</dt>
+              <dd class="text-sm mt-0.5">${escapeHtml(v || '—')}</dd>
+            </div>
+        `).join(''));
+
+        setHtml('profAccounts', (body.accounts || []).map(a => `
+            <div class="rounded-xl border border-slate-200 p-3 text-xs">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold capitalize">${escapeHtml(a.account_type)}</span>
+                <span class="pill s-${a.status}">${escapeHtml(a.status)}</span>
+              </div>
+              <div class="font-mono text-ink-muted mt-1">${escapeHtml(a.account_number)}</div>
+              <div class="mt-1 font-semibold">${fmtNum(a.balance)} ${escapeHtml(a.currency || '')}</div>
+            </div>
+        `).join('') || `<p class="text-xs text-ink-muted">No accounts.</p>`);
+
+        const sav = (body.accounts || []).find(a => a.account_type === 'savings');
+        if (sav) {
+            setText('kpiSavings', fmtNum(sav.balance) + ' ' + (sav.currency || ''));
+            setText('kpiSavingsAcct', sav.account_number || '—');
+        }
+        setText('kpiShares', fmtNum(m.shares_units) + ' units');
+        setText('kpiSharesValue', fmtNum(m.shares_value));
+        setText('kpiLoans', fmtNum(m.loan_balance));
+    }
+
+    async function loadSavings() {
+        const { ok, body } = await req(`${PREFIX}/${MU}/api/savings`);
+        if (!ok || !body.ok) {
+            setHtml('savTx', `<tr><td colspan="6" class="text-center text-red-500 py-6 text-xs">${escapeHtml(body.error || 'Load failed')}</td></tr>`);
+            return;
+        }
+        if (!body.account) {
+            setHtml('savAccountInfo', `<p class="text-xs text-ink-muted">No savings account yet.</p>`);
+            setHtml('savStats', '');
+            setHtml('savTx', emptyRow(6, 'No transactions.'));
+            setHtml('savWr', emptyRow(6, 'No requests.'));
+            return;
+        }
+        setHtml('savAccountInfo', `
+            <div class="flex justify-between"><span class="text-ink-muted">Account number</span><span class="font-mono">${escapeHtml(body.account.account_number)}</span></div>
+            <div class="flex justify-between"><span class="text-ink-muted">Balance</span><span class="font-bold">${fmtNum(body.account.balance)} ${escapeHtml(body.account.currency)}</span></div>
+            <div class="flex justify-between"><span class="text-ink-muted">Opened</span><span>${fmtDate(body.account.opened_at)}</span></div>
+            <div class="flex justify-between"><span class="text-ink-muted">Status</span><span class="pill s-${body.account.status}">${escapeHtml(body.account.status)}</span></div>
+        `);
+        setHtml('savStats', `
+            <div class="flex justify-between"><span class="text-ink-muted">Total deposits</span><span class="font-semibold text-success">${fmtNum(body.stats.deposits_total)}</span></div>
+            <div class="flex justify-between"><span class="text-ink-muted">Total withdrawals</span><span class="font-semibold text-danger">${fmtNum(body.stats.withdrawals_total)}</span></div>
+            <div class="flex justify-between"><span class="text-ink-muted">Pending requests</span><span class="font-semibold">${body.stats.pending_withdrawals}</span></div>
+        `);
+        setHtml('savTx', (body.transactions || []).map(t => {
+            const isOut = (t.type || '').includes('withdrawal');
+            return `<tr>
+              <td class="px-5 py-2.5 text-xs text-ink-muted whitespace-nowrap">${fmtDateTime(t.created_at)}</td>
+              <td class="px-5 py-2.5 text-xs">${escapeHtml(t.type)}</td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${escapeHtml(t.method || '')}</td>
+              <td class="px-5 py-2.5 text-right text-xs font-medium ${isOut ? 'text-danger' : 'text-success'}">${isOut ? '-' : '+'}${fmtNum(t.amount)}</td>
+              <td class="px-5 py-2.5 text-right text-xs text-ink-muted">${t.balance_after != null ? fmtNum(t.balance_after) : '—'}</td>
+              <td class="px-5 py-2.5"><span class="pill s-${t.status}">${escapeHtml(t.status)}</span></td>
+            </tr>`;
+        }).join('') || emptyRow(6, 'No transactions.'));
+        setHtml('savWr', (body.withdrawals || []).map(w => `
+            <tr>
+              <td class="px-5 py-2.5 text-xs text-ink-muted whitespace-nowrap">${fmtDateTime(w.created_at)}</td>
+              <td class="px-5 py-2.5 text-right text-xs font-medium">${fmtNum(w.amount)} ${escapeHtml(w.currency)}</td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${escapeHtml(w.source || '')}</td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${escapeHtml(w.method || '')}</td>
+              <td class="px-5 py-2.5"><span class="pill s-${w.status}">${escapeHtml(w.status)}</span></td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${fmtDate(w.paid_at)}</td>
+            </tr>
+        `).join('') || emptyRow(6, 'No withdrawal requests.'));
+    }
+
+    async function loadShares() {
+        const { ok, body } = await req(`${PREFIX}/${MU}/api/shares`);
+        if (!ok || !body.ok) {
+            setHtml('shrTx', `<tr><td colspan="7" class="text-center text-red-500 py-6 text-xs">${escapeHtml(body.error || 'Load failed')}</td></tr>`);
+            return;
+        }
+        const h = body.holding;
+        setText('shrUnits', fmtNum(h.units));
+        setText('shrValue', fmtNum(h.value) + ' ' + h.currency);
+        setText('shrMin',   fmtNum(h.min_units));
+        setText('shrTotal', fmtNum(h.units_bought));
+        setHtml('shrTx', (body.transactions || []).map(t => `
+            <tr>
+              <td class="px-5 py-2.5 text-xs text-ink-muted whitespace-nowrap">${fmtDate(t.created_at)}</td>
+              <td class="px-5 py-2.5 text-xs font-mono">${escapeHtml(t.txn_number)}</td>
+              <td class="px-5 py-2.5 text-right text-xs font-medium">${fmtNum(t.units)}</td>
+              <td class="px-5 py-2.5 text-right text-xs text-ink-muted">${fmtNum(t.unit_price)}</td>
+              <td class="px-5 py-2.5 text-right text-xs font-semibold">${fmtNum(t.amount)} ${escapeHtml(t.currency)}</td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${escapeHtml(t.method || '')}${t.provider ? ' · '+escapeHtml(t.provider) : ''}</td>
+              <td class="px-5 py-2.5"><span class="pill s-${t.status}">${escapeHtml(t.status)}</span></td>
+            </tr>
+        `).join('') || emptyRow(7, 'No share transactions.'));
+    }
+
+    async function loadSubscriptions() {
+        const { ok, body } = await req(`${PREFIX}/${MU}/api/subscriptions`);
+        if (!ok || !body.ok) {
+            setHtml('subsTable', `<tr><td colspan="7" class="text-center text-red-500 py-6 text-xs">${escapeHtml(body.error || 'Load failed')}</td></tr>`);
+            return;
+        }
+        setHtml('subsTable', (body.subscriptions || []).map(s => {
+            const due  = Number(s.amount_due || 0);
+            const paid = Number(s.amount_paid || 0);
+            return `<tr>
+              <td class="px-5 py-2.5 text-xs font-semibold">${s.subscription_year}</td>
+              <td class="px-5 py-2.5 text-right text-xs">${fmtNum(due)}</td>
+              <td class="px-5 py-2.5 text-right text-xs text-success">${fmtNum(paid)}</td>
+              <td class="px-5 py-2.5 text-right text-xs font-medium">${fmtNum(due - paid)}</td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${escapeHtml(s.source || '')}</td>
+              <td class="px-5 py-2.5"><span class="pill s-${s.status}">${escapeHtml(s.status)}</span></td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${fmtDate(s.paid_at)}</td>
+            </tr>`;
+        }).join('') || emptyRow(7, 'No subscriptions.'));
+    }
+
+    async function loadLoans() {
+        const { ok, body } = await req(`${PREFIX}/${MU}/api/loans`);
+        if (!ok || !body.ok) {
+            setHtml('loanApps', `<tr><td colspan="7" class="text-center text-red-500 py-6 text-xs">${escapeHtml(body.error || 'Load failed')}</td></tr>`);
+            return;
+        }
+        setText('kpiLoansCount', body.stats.active_loans);
+        setText('kpiLoans', fmtNum(body.stats.total_outstanding));
+        setHtml('loanApps', (body.applications || []).map(a => {
+            const prod = a.loan_products || {};
+            return `<tr>
+              <td class="px-5 py-2.5 text-xs font-mono">${escapeHtml(a.app_number)}</td>
+              <td class="px-5 py-2.5 text-xs">${escapeHtml(prod.name || '')}</td>
+              <td class="px-5 py-2.5 text-right text-xs">${fmtNum(a.requested_amount)}</td>
+              <td class="px-5 py-2.5 text-right text-xs">${a.approved_amount ? fmtNum(a.approved_amount) : '—'}</td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${escapeHtml(a.source || '')}</td>
+              <td class="px-5 py-2.5"><span class="pill s-${a.status}">${escapeHtml(a.status)}</span></td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${fmtDate(a.created_at)}</td>
+            </tr>`;
+        }).join('') || emptyRow(7, 'No applications.'));
+        setHtml('loansTable', (body.loans || []).map(l => {
+            const outstanding = Number(l.outstanding_principal || 0)
+                + Number(l.outstanding_interest || 0)
+                + Number(l.outstanding_penalties || 0);
+            return `<tr>
+              <td class="px-5 py-2.5 text-xs font-mono">${escapeHtml(l.loan_number)}</td>
+              <td class="px-5 py-2.5 text-right text-xs">${fmtNum(l.principal_amount)}</td>
+              <td class="px-5 py-2.5 text-right text-xs font-semibold">${fmtNum(outstanding)}</td>
+              <td class="px-5 py-2.5 text-right text-xs text-success">+${fmtNum(l.collected_interest)}</td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${fmtDate(l.disbursed_at)}</td>
+              <td class="px-5 py-2.5"><span class="pill s-${l.status}">${escapeHtml(l.status)}</span></td>
+            </tr>`;
+        }).join('') || emptyRow(6, 'No loans.'));
+        setHtml('repsTable', (body.repayments || []).map(r => {
+            const a = (r.repayment_allocations || [{}])[0];
+            return `<tr>
+              <td class="px-5 py-2.5 text-xs text-ink-muted whitespace-nowrap">${fmtDate(r.paid_at || r.created_at)}</td>
+              <td class="px-5 py-2.5 text-xs font-mono">${escapeHtml(r.receipt_number)}</td>
+              <td class="px-5 py-2.5 text-right text-xs font-medium">${fmtNum(r.amount)}</td>
+              <td class="px-5 py-2.5 text-right text-xs text-success">${fmtNum(a.to_interest)}</td>
+              <td class="px-5 py-2.5 text-right text-xs">${fmtNum(a.to_principal)}</td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${escapeHtml(r.method || '')}</td>
+              <td class="px-5 py-2.5"><span class="pill s-${r.status}">${escapeHtml(r.status)}</span></td>
+            </tr>`;
+        }).join('') || emptyRow(7, 'No repayments.'));
+    }
+
+    async function loadFixed() {
+        const { ok, body } = await req(`${PREFIX}/${MU}/api/fixed`);
+        if (!ok || !body.ok) {
+            setHtml('fdTable', `<tr><td colspan="8" class="text-center text-red-500 py-6 text-xs">${escapeHtml(body.error || 'Load failed')}</td></tr>`);
+            return;
+        }
+        setText('fdPrincipal', fmtNum(body.stats.total_principal));
+        setText('fdInterest',  fmtNum(body.stats.total_interest));
+        setText('fdValue',     fmtNum(body.stats.total_value));
+        setHtml('fdTable', (body.deposits || []).map(d => {
+            const principal = Number(d.principal || 0);
+            const interest  = Number(d.accrued_interest || 0);
+            return `<tr>
+              <td class="px-5 py-2.5 text-xs font-mono">${escapeHtml(d.fd_number)}</td>
+              <td class="px-5 py-2.5 text-right text-xs">${fmtNum(principal)}</td>
+              <td class="px-5 py-2.5 text-right text-xs text-success">+${fmtNum(interest)}</td>
+              <td class="px-5 py-2.5 text-right text-xs font-semibold">${fmtNum(principal + interest)}</td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${fmtDate(d.start_date)}</td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${fmtDate(d.maturity_date)}</td>
+              <td class="px-5 py-2.5 text-xs">${d.interest_rate_percent}%</td>
+              <td class="px-5 py-2.5"><span class="pill s-${d.status}">${escapeHtml(d.status)}</span></td>
+            </tr>`;
+        }).join('') || emptyRow(8, 'No fixed deposits.'));
+    }
+
+    async function loadDividends() {
+        const { ok, body } = await req(`${PREFIX}/${MU}/api/dividends`);
+        if (!ok || !body.ok) {
+            setHtml('divTable', `<tr><td colspan="7" class="text-center text-red-500 py-6 text-xs">${escapeHtml(body.error || 'Load failed')}</td></tr>`);
+            return;
+        }
+        setText('kpiDividends', fmtNum(body.stats.total_earned));
+        setText('kpiDivCount',  body.stats.count);
+        setHtml('divTable', (body.payments || []).map(p => {
+            const r = p.dividend_runs || {};
+            return `<tr>
+              <td class="px-5 py-2.5 text-xs font-mono">${escapeHtml(r.run_number || '—')}</td>
+              <td class="px-5 py-2.5 text-xs">${r.financial_year || '—'}</td>
+              <td class="px-5 py-2.5 text-right text-xs font-semibold">${fmtNum(p.dividend_amount)} ${escapeHtml(p.currency)}</td>
+              <td class="px-5 py-2.5 text-right text-xs">${fmtNum(p.shares_units_at_run)}</td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${escapeHtml(p.payout_mode)}</td>
+              <td class="px-5 py-2.5"><span class="pill s-${p.status}">${escapeHtml(p.status)}</span></td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${fmtDate(p.posted_at)}</td>
+            </tr>`;
+        }).join('') || emptyRow(7, 'No dividends yet.'));
+    }
+
+    async function loadTransactions() {
+        setHtml('txTable', loadingRow(7));
+        const qs = new URLSearchParams({ page: st.txPage, per_page: st.txPerPage });
+        const { ok, body } = await req(`${PREFIX}/${MU}/api/transactions?${qs}`);
+        if (!ok || !body.ok) {
+            setHtml('txTable', `<tr><td colspan="7" class="text-center text-red-500 py-6 text-xs">${escapeHtml(body.error || 'Load failed')}</td></tr>`);
+            return;
+        }
+        st.txTotal = body.total;
+        setText('txCount', `${body.total} entries`);
+        setHtml('txTable', (body.transactions || []).map(t => `
+            <tr>
+              <td class="px-5 py-2.5 text-xs text-ink-muted whitespace-nowrap">${fmtDateTime(t.created_at)}</td>
+              <td class="px-5 py-2.5 text-xs font-medium">${escapeHtml(t.label)}</td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${escapeHtml(t.type)}</td>
+              <td class="px-5 py-2.5 text-xs text-ink-muted">${escapeHtml(t.method || '')}</td>
+              <td class="px-5 py-2.5 text-right text-xs font-medium ${t.direction === 'out' ? 'text-danger' : 'text-success'}">${t.direction === 'out' ? '-' : '+'}${fmtNum(t.amount)}</td>
+              <td class="px-5 py-2.5 text-right text-xs text-ink-muted">${t.balance_after != null ? fmtNum(t.balance_after) : '—'}</td>
+              <td class="px-5 py-2.5"><span class="pill s-${t.status}">${escapeHtml(t.status)}</span></td>
+            </tr>
+        `).join('') || emptyRow(7, 'No transactions.'));
+        const from = st.txTotal ? (st.txPage - 1) * st.txPerPage + 1 : 0;
+        const to   = Math.min(st.txPage * st.txPerPage, st.txTotal);
+        setText('txPageInfo', st.txTotal ? `${from}–${to} of ${st.txTotal}` : '0 results');
+        const prev = document.getElementById('txPrev');
+        const next = document.getElementById('txNext');
+        if (prev) prev.disabled = st.txPage <= 1;
+        if (next) next.disabled = to >= st.txTotal;
+    }
+
+    // -------- dispatch map + guard --------
+    const loaders = {
+        profile:       loadProfile,
+        savings:       loadSavings,
+        shares:        loadShares,
+        subscriptions: loadSubscriptions,
+        loans:         loadLoans,
+        fixed:         loadFixed,
+        dividends:     loadDividends,
+        transactions:  loadTransactions,
+    };
+
+    async function ensureLoaded(tab) {
+        if (st.loaded[tab]) return;
+        st.loaded[tab] = true;
+        const fn = loaders[tab];
+        if (!fn) return;
+        try { await fn(); }
+        catch (e) { console.error('[load ' + tab + ']', e); }
+    }
+
+    // -------- pagination buttons (must exist before handlers) --------
+    const prevBtn = document.getElementById('txPrev');
+    const nextBtn = document.getElementById('txNext');
+    if (prevBtn) prevBtn.addEventListener('click', () => {
+        if (st.txPage > 1) { st.txPage--; loadTransactions(); }
+    });
+    if (nextBtn) nextBtn.addEventListener('click', () => {
+        if (st.txPage * st.txPerPage < st.txTotal) { st.txPage++; loadTransactions(); }
+    });
+
+    // -------- boot --------
+    (async function init() {
+        await ensureLoaded('profile');
+        // preload KPIs concurrently; each guarded so one failure doesn't kill the others
+        Promise.allSettled([
+            loadSavings().then(() => st.loaded.savings = true).catch(e => console.error('[savings]', e)),
+            loadShares().then(() => st.loaded.shares = true).catch(e => console.error('[shares]', e)),
+            loadLoans().then(() => st.loaded.loans = true).catch(e => console.error('[loans]', e)),
+            loadDividends().then(() => st.loaded.dividends = true).catch(e => console.error('[dividends]', e)),
+        ]);
+    })();
+})();
+</script>
+{% endblock %}
