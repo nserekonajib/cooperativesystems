@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+{% block title %}SMS Settings — SACCO Pro{% endblock %}
+{% block page_title %}SMS Settings{% endblock %}
+
+{% block content %}
+
+<div class="max-w-4xl">
+
+  <!-- Current status card -->
+  <div id="statusCard" class="bg-white rounded-2xl shadow-sm p-5 mb-6 flex items-center gap-4">
+    <div id="statusDot" class="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center">
+      <i class="fa-solid fa-comment-slash text-lg"></i>
+    </div>
+    <div class="flex-1">
+      <p class="text-sm font-bold" id="statusTitle">SMS is off</p>
+      <p class="text-xs text-ink-muted mt-0.5" id="statusSubtitle">
+        No SMS will be sent to members until you enable SMS and add an API key.
+      </p>
+    </div>
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" id="enabledToggle" class="sr-only peer">
+      <div class="w-11 h-6 bg-slate-200 peer-checked:bg-brand rounded-full transition relative
+                  after:content-[''] after:absolute after:top-0.5 after:left-0.5
+                  after:bg-white after:w-5 after:h-5 after:rounded-full after:transition
+                  peer-checked:after:translate-x-5"></div>
+    </label>
+  </div>
+
+  <!-- Provider config -->
+  <div class="bg-white rounded-2xl shadow-sm mb-6">
+    <div class="px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-base">Provider Configuration</h3>
+      <p class="text-xs text-ink-muted mt-0.5">SMS is delivered through Yoola SMS.</p>
+    </div>
+    <form id="providerForm" class="p-6 space-y-4">
+
+      <div>
+        <label class="lbl">Provider</label>
+        <select name="provider" class="inp">
+          <option value="yoola">Yoola SMS</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="lbl">API Key</label>
+        <div class="relative">
+          <input name="api_key" id="apiKeyInput" type="password" autocomplete="off"
+                 class="inp pr-24" placeholder="Paste your Yoola SMS API key">
+          <button type="button" onclick="togglePwd()"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-brand px-2 py-1 rounded hover:bg-brand/5">
+            Show
+          </button>
+        </div>
+        <p class="text-[11px] text-ink-muted mt-1" id="keyHint">—</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="lbl">Base URL</label>
+          <input name="base_url" class="inp" placeholder="https://yoolasms.com/api/v1">
+        </div>
+        <div>
+          <label class="lbl">Sender ID (optional)</label>
+          <input name="sender_id" class="inp" placeholder="e.g. SACCO">
+        </div>
+      </div>
+
+      <!-- Per-event notifications -->
+      <div class="pt-4 border-t border-slate-100">
+        <p class="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-3">
+          Notify members about
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" name="notify_deposit" class="w-4 h-4 text-brand">
+            Savings deposits
+          </label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" name="notify_withdrawal" class="w-4 h-4 text-brand">
+            Savings withdrawals
+          </label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" name="notify_repayment" class="w-4 h-4 text-brand">
+            Loan repayments
+          </label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" name="notify_dividend" class="w-4 h-4 text-brand">
+            Dividends paid
+          </label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" name="notify_subscription" class="w-4 h-4 text-brand">
+            Subscriptions received
+          </label>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+        <button type="button" onclick="openTestModal()" class="btn-ghost">
+          <i class="fa-solid fa-paper-plane mr-2"></i>Send Test SMS
+        </button>
+        <button type="submit" id="saveBtn" class="btn-primary">
+          <i class="fa-solid fa-floppy-disk mr-2"></i>Save Settings
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- SMS log -->
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div>
+        <h3 class="font-bold text-base">Recent SMS</h3>
+        <p class="text-xs text-ink-muted mt-0.5">Audit trail of every send attempt.</p>
+      </div>
+      <span id="logCount" class="text-xs text-ink-muted">—</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-ink-muted uppercase text-[11px] tracking-wider">
+          <tr>
+            <th class="text-left px-5 py-3 font-semibold">Date</th>
+            <th class="text-left px-5 py-3 font-semibold">Phone</th>
+            <th class="text-left px-5 py-3 font-semibold">Message</th>
+            <th class="text-left px-5 py-3 font-semibold">Status</th>
+            <th class="text-left px-5 py-3 font-semibold">Error</th>
+          </tr>
+        </thead>
+        <tbody id="logTable" class="divide-y divide-slate-100">
+          <tr><td colspan="5" class="text-center text-ink-muted py-8 text-sm">
+            <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-ink-muted">
+      <span id="logPageInfo">—</span>
+      <div class="flex gap-1">
+        <button id="logPrev" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Prev</button>
+        <button id="logNext" class="px-3 py-1.5 rounded-lg border border-slate-200 disabled:opacity-40">Next</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TEST SMS MODAL -->
+<div id="testModal" class="hidden fixed inset-0 z-[90] flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.55); backdrop-filter: blur(2px);">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-base">Send Test SMS</h3>
+      <button onclick="closeTestModal()" class="text-ink-muted hover:text-ink w-8 h-8 rounded-lg hover:bg-page flex items-center justify-center">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form id="testForm" class="p-6 space-y-4">
+      <div>
+        <label class="lbl">Phone number *</label>
+        <input name="phone" class="inp" placeholder="+256…" required>
+      </div>
+      <p class="text-xs text-ink-muted">
+        Test SMS uses your saved API key. Save settings first if you've changed the key.
+      </p>
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeTestModal()" class="btn-ghost">Cancel</button>
+        <button type="submit" id="testBtn" class="btn-primary">
+          <i class="fa-solid fa-paper-plane mr-2"></i>Send
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+    .lbl { display:block; font-size:11px; font-weight:600; letter-spacing:.04em;
+           text-transform:uppercase; color:#64748B; margin-bottom:6px; }
+    .inp { width:100%; padding:9px 12px; border:1px solid #E2E8F0; border-radius:10px;
+           font-size:13px; outline:none; background:#fff; transition:all .15s; }
+    .inp:focus { border-color:#1A62FF; box-shadow:0 0 0 3px rgba(26,98,255,.15); }
+    .btn-primary { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px;
+                   border-radius:10px; background:#1A62FF; color:#fff; font-weight:600; font-size:14px;
+                   border:none; cursor:pointer; }
+    .btn-primary:hover { filter:brightness(0.92); }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-ghost { display:inline-flex; align-items:center; padding:10px 18px; border-radius:10px;
+                 background:#fff; border:1px solid #E2E8F0; color:#64748B; font-weight:600;
+                 font-size:14px; cursor:pointer; }
+    .btn-ghost:hover { background:#F4F6F9; color:#1E293B; }
+    .pill { display:inline-flex; align-items:center; font-size:11px; font-weight:600;
+            padding:3px 10px; border-radius:999px; text-transform:capitalize; }
+    .s-sent    { background:#E6F4EA; color:#065F46; }
+    .s-pending { background:#FEF3C7; color:#92400E; }
+    .s-failed  { background:#FEE2E2; color:#991B1B; }
+    .s-skipped { background:#E2E8F0; color:#334155; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const state = { page: 1, per_page: 20, total: 0, settings: null };
+
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString(undefined, { year:'numeric', month:'short', day:'2-digit',
+                                                     hour:'2-digit', minute:'2-digit' });
+}
+function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+async function req(url, opts = {}) {
+    const r = await fetch(url, { credentials:'same-origin', headers:{'Content-Type':'application/json'}, ...opts });
+    const body = await r.json().catch(() => ({}));
+    return { ok: r.ok, body };
+}
+
+/* ---------- status card ---------- */
+function paintStatus(s) {
+    const dot = document.getElementById('statusDot');
+    const title = document.getElementById('statusTitle');
+    const sub = document.getElementById('statusSubtitle');
+    const toggle = document.getElementById('enabledToggle');
+
+    toggle.checked = !!s.enabled;
+
+    if (s.enabled && s.api_key_present) {
+        dot.className = 'w-12 h-12 rounded-xl bg-success/10 text-success flex items-center justify-center';
+        dot.innerHTML = '<i class="fa-solid fa-comment-dots text-lg"></i>';
+        title.textContent = 'SMS is on';
+        sub.textContent = 'Members will receive SMS for enabled events.';
+    } else if (s.enabled && !s.api_key_present) {
+        dot.className = 'w-12 h-12 rounded-xl bg-warning/10 text-warning flex items-center justify-center';
+        dot.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-lg"></i>';
+        title.textContent = 'SMS is on but no API key';
+        sub.textContent = 'Add an API key below — otherwise SMS will be skipped.';
+    } else {
+        dot.className = 'w-12 h-12 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center';
+        dot.innerHTML = '<i class="fa-solid fa-comment-slash text-lg"></i>';
+        title.textContent = 'SMS is off';
+        sub.textContent = 'No SMS will be sent to members until you enable SMS.';
+    }
+}
+
+/* ---------- load settings ---------- */
+async function loadSettings() {
+    const { ok, body } = await req('/sms-settings/api/settings');
+    if (!ok || !body.ok) { showToast(body.error || 'Could not load settings', false); return; }
+    const s = body.settings;
+    state.settings = s;
+
+    const form = document.getElementById('providerForm');
+    form.elements['provider'].value = s.provider || 'yoola';
+    form.elements['base_url'].value = s.base_url || '';
+    form.elements['sender_id'].value = s.sender_id || '';
+    form.elements['api_key'].value = '';
+    form.elements['notify_deposit'].checked = !!s.notify_deposit;
+    form.elements['notify_withdrawal'].checked = !!s.notify_withdrawal;
+    form.elements['notify_repayment'].checked = !!s.notify_repayment;
+    form.elements['notify_dividend'].checked = !!s.notify_dividend;
+    form.elements['notify_subscription'].checked = !!s.notify_subscription;
+
+    document.getElementById('keyHint').textContent =
+        s.api_key_present ? `Saved key: ${s.api_key_masked} — leave blank to keep it` :
+                            'No API key saved yet.';
+
+    paintStatus(s);
+}
+
+/* ---------- save settings ---------- */
+document.getElementById('providerForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    const d = Object.fromEntries(new FormData(f).entries());
+
+    const payload = {
+        enabled:             document.getElementById('enabledToggle').checked,
+        provider:            d.provider,
+        base_url:            d.base_url || null,
+        sender_id:           d.sender_id || null,
+        notify_deposit:      !!d.notify_deposit,
+        notify_withdrawal:   !!d.notify_withdrawal,
+        notify_repayment:    !!d.notify_repayment,
+        notify_dividend:     !!d.notify_dividend,
+        notify_subscription: !!d.notify_subscription,
+    };
+    // Only send the key if the user typed something new.
+    if (d.api_key && d.api_key.trim()) payload.api_key = d.api_key.trim();
+
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Saving…';
+
+    const { ok, body } = await req('/sms-settings/api/settings', {
+        method: 'PATCH', body: JSON.stringify(payload),
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i>Save Settings';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Save failed', false); return; }
+    showToast('Settings saved', true);
+    paintStatus(body.settings);
+    loadSettings();
+});
+
+/* ---------- toggle enabled alone ---------- */
+document.getElementById('enabledToggle').addEventListener('change', async e => {
+    const enabled = e.target.checked;
+    const { ok, body } = await req('/sms-settings/api/settings', {
+        method: 'PATCH', body: JSON.stringify({ enabled }),
+    });
+    if (!ok || !body.ok) {
+        e.target.checked = !enabled;
+        showToast(body.error || 'Could not update toggle', false);
+        return;
+    }
+    showToast(enabled ? 'SMS enabled' : 'SMS disabled', true);
+    paintStatus(body.settings);
+});
+
+/* ---------- password toggle ---------- */
+function togglePwd() {
+    const inp = document.getElementById('apiKeyInput');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+/* ---------- test modal ---------- */
+function openTestModal() {
+    document.getElementById('testForm').reset();
+    document.getElementById('testModal').classList.remove('hidden');
+}
+function closeTestModal() { document.getElementById('testModal').classList.add('hidden'); }
+
+document.getElementById('testForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    const d = Object.fromEntries(new FormData(f).entries());
+    const btn = document.getElementById('testBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Sending…';
+
+    const { ok, body } = await req('/sms-settings/api/test', {
+        method:'POST', body: JSON.stringify({ phone: d.phone }),
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Send';
+
+    if (!ok || !body.ok) { showToast(body.error || 'Test failed', false); return; }
+    closeTestModal();
+    showToast(body.message || 'Test SMS sent', true);
+    loadLog();
+});
+
+/* ---------- log ---------- */
+async function loadLog() {
+    const tbody = document.getElementById('logTable');
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-ink-muted py-8 text-sm">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Loading…</td></tr>`;
+    const qs = new URLSearchParams({ page: state.page, per_page: state.per_page });
+    const { ok, body } = await req('/sms-settings/api/log?' + qs.toString());
+    if (!ok || !body.ok) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-red-500 py-8 text-sm">Load failed</td></tr>`;
+        return;
+    }
+    state.total = body.total;
+    document.getElementById('logCount').textContent = `${body.total} entries`;
+    if (!body.log.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-ink-muted py-8 text-sm">No SMS sent yet.</td></tr>`;
+    } else {
+        tbody.innerHTML = body.log.map(r => `
+            <tr>
+              <td class="px-5 py-2.5 text-xs text-ink-muted whitespace-nowrap">${fmtDate(r.created_at)}</td>
+              <td class="px-5 py-2.5 font-mono text-xs">${escapeHtml(r.phone)}</td>
+              <td class="px-5 py-2.5 text-xs truncate max-w-xs">${escapeHtml(r.message)}</td>
+              <td class="px-5 py-2.5"><span class="pill s-${r.status}">${escapeHtml(r.status)}</span></td>
+              <td class="px-5 py-2.5 text-xs text-danger">${escapeHtml(r.error || '')}</td>
+            </tr>
+        `).join('');
+    }
+    const from = state.total ? (state.page - 1) * state.per_page + 1 : 0;
+    const to = Math.min(state.page * state.per_page, state.total);
+    document.getElementById('logPageInfo').textContent = state.total ? `${from}–${to} of ${state.total}` : '0 results';
+    document.getElementById('logPrev').disabled = state.page <= 1;
+    document.getElementById('logNext').disabled = to >= state.total;
+}
+document.getElementById('logPrev').onclick = () => { if (state.page > 1) { state.page--; loadLog(); } };
+document.getElementById('logNext').onclick = () => {
+    if (state.page * state.per_page < state.total) { state.page++; loadLog(); }
+};
+
+/* ---------- boot ---------- */
+loadSettings();
+loadLog();
+</script>
+{% endblock %}

@@ -830,13 +830,10 @@ def _apply_repayment(org_id: str, loan_id: str, spec: dict) -> dict:
         loan_upd["closed_at"] = _now_iso()
 
     admin.table("loans").update(loan_upd).eq("id", loan["id"]).execute()
-    
+
     try:
         from routes.accounts.accounts import record_asset_movement
 
-        # Which income account does interest roll into? Use 4010.
-        # Penalties -> 4020. Fees -> 4030.
-        # Each component posts separately so P&L shows the split correctly.
         ref = f"Repayment {receipt}"
         method_key = "cash" if spec["method"] == "cash" else "online"
 
@@ -875,10 +872,6 @@ def _apply_repayment(org_id: str, loan_id: str, spec: dict) -> dict:
                 created_by=spec.get("created_by"),
                 meta={"source": "repayment", "repayment_id": repayment["id"]},
             )
-
-        # Principal isn't revenue — it reduces the loan asset, but for the
-        # SACCO's operating chart we don't post it (it would double-count
-        # with the loan-disbursement entry that already reduced cash).
     except Exception:
         log.exception("chart-of-accounts post for repayment failed (non-fatal)")
 
@@ -910,6 +903,55 @@ def _apply_repayment(org_id: str, loan_id: str, spec: dict) -> dict:
     except Exception:
         log.exception("member loan_balance sync failed (non-fatal)")
 
+    # 7. SMS notification (fire-and-forget) — NEW
+    try:
+        member_row = (
+            admin.table("members")
+            .select("phone, first_name")
+            .eq("id", loan["member_id"]).limit(1).execute()
+        ).data or [{}]
+        member_row = member_row[0]
+        member_phone = (member_row.get("phone") or "").strip()
+        member_first = (member_row.get("first_name") or "").strip() or "Member"
+
+        if member_phone:
+            from routes.sms.sms import send_sms, clamp_sms
+
+            total_outstanding_after = _q(
+                new_out["principal"] + new_out["interest"]
+                + new_out["penalties"] + new_out["fees"]
+            )
+            currency = row["currency"]
+
+            if closes_loan:
+                msg = (
+                    f"Hi {member_first}, loan {loan['loan_number']} is now fully paid. "
+                    f"Thank you. Receipt: {receipt}."
+                )
+            else:
+                msg = (
+                    f"Hi {member_first}, repayment of {amount:.0f} {currency} received "
+                    f"for loan {loan['loan_number']}. "
+                    f"Outstanding: {total_outstanding_after:.0f} {currency}. "
+                    f"Receipt: {receipt}."
+                )
+
+            send_sms(
+                org_id=org_id,
+                phone=member_phone,
+                message=clamp_sms(msg),
+                member_id=loan["member_id"],
+                triggered_by=spec.get("created_by") or _user_id(),
+                meta={
+                    "kind":        "loan_repayment",
+                    "loan_id":     loan["id"],
+                    "repayment_id": repayment["id"],
+                    "receipt":     receipt,
+                },
+            )
+    except Exception:
+        log.exception("SMS for repayment failed (non-fatal)")
+
     return {
         "id":             repayment["id"],
         "receipt_number": receipt,
@@ -925,7 +967,6 @@ def _apply_repayment(org_id: str, loan_id: str, spec: dict) -> dict:
         "new_outstanding": {k: float(_q(v)) for k, v in new_out.items()},
         "loan_closed":     closes_loan,
     }
-
 
 # ---------------------------------------------------------------------------
 # API: pay (cash / online)

@@ -414,6 +414,9 @@ def api_transactions(account_uuid):
 # ---------------------------------------------------------------------------
 # Internal: apply a completed deposit to the account
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Internal: apply a completed deposit to the account
+# ---------------------------------------------------------------------------
 def _apply_deposit(org_id: str, spec: dict) -> dict:
     """
     Records a completed savings deposit:
@@ -421,8 +424,12 @@ def _apply_deposit(org_id: str, spec: dict) -> dict:
       2. updates member_accounts.balance
       3. mirrors members.savings_balance
       4. posts to the chart of accounts:
-           Dr  1000 Cash on hand       (or 1010 Bank for online)
+           Dr  1000 Cash on hand  (or 1010 Bank for online)
            Cr  2000 Member savings payable
+      5. sends a short SMS to the member's phone (if enabled)
+
+    The member's phone is read from members.phone and normalized to
+    256XXXXXXXXX before being handed to send_sms().
     """
     admin = _admin()
     amount = _to_decimal(spec["amount"])
@@ -432,6 +439,18 @@ def _apply_deposit(org_id: str, spec: dict) -> dict:
     acc_row = _fetch_savings_account(org_id, spec["account_id"])
     if not acc_row:
         raise RuntimeError("Account not found")
+
+    currency = spec.get("currency") or acc_row["currency"]
+
+    # Fetch phone + first name in one shot (used later for SMS)
+    member_row = (
+        admin.table("members")
+        .select("phone, first_name")
+        .eq("id", acc_row["member_id"]).limit(1).execute()
+    ).data or [{}]
+    member_row = member_row[0]
+    member_phone = (member_row.get("phone") or "").strip()
+    member_first = (member_row.get("first_name") or "").strip() or "Member"
 
     current_balance = _to_decimal(acc_row["balance"])
     new_balance = (current_balance + amount).quantize(Decimal("0.01"))
@@ -444,7 +463,7 @@ def _apply_deposit(org_id: str, spec: dict) -> dict:
         "type":          "savings_deposit",
         "method":        spec["method"],
         "amount":        float(amount),
-        "currency":      spec.get("currency") or acc_row["currency"],
+        "currency":      currency,
         "status":        "completed",
         "narration":     spec.get("narration") or "Savings deposit",
         "balance_after": float(new_balance),
@@ -472,16 +491,15 @@ def _apply_deposit(org_id: str, spec: dict) -> dict:
     }).eq("id", acc_row["member_id"]).execute()
 
     # --- 4. post to chart of accounts ---
-    # Savings is a LIABILITY to the SACCO (we owe it back to the member).
-    # Money in:  Dr asset (cash/bank),  Cr liability (member savings payable)
+    # Savings is a LIABILITY.  Money in:  Dr asset, Cr liability.
     try:
         from routes.accounts.accounts import record_liability_movement
         record_liability_movement(
             org_id=org_id,
             direction="in",
             amount=amount,
-            method=spec["method"],              # 'cash' -> 1000, 'online' -> 1010
-            counterpart_account_code="2000",    # Member savings payable
+            method=spec["method"],
+            counterpart_account_code="2000",
             category="other_adjustment",
             narration=f"Savings deposit · {acc_row['account_number']}",
             reference=spec.get("deposit_id") or None,
@@ -494,6 +512,30 @@ def _apply_deposit(org_id: str, spec: dict) -> dict:
         )
     except Exception:
         log.exception("chart post for deposit failed (non-fatal)")
+
+    # --- 5. SMS notification (fire-and-forget) ---
+    if member_phone:
+        try:
+            from routes.sms.sms import send_sms, clamp_sms
+            msg = (
+                f"Hi {member_first}, deposit of "
+                f"{amount:.0f} {currency} received. "
+                f"Balance: {new_balance:.0f} {currency}."
+            )
+            send_sms(
+                org_id=org_id,
+                phone=member_phone,
+                message=clamp_sms(msg),
+                member_id=acc_row["member_id"],
+                triggered_by=spec.get("created_by") or _user_id(),
+                meta={
+                    "kind":       "savings_deposit",
+                    "account_id": acc_row["id"],
+                    "amount":     float(amount),
+                },
+            )
+        except Exception:
+            log.exception("SMS for deposit failed (non-fatal)")
 
     log.info("deposit applied: account=%s amount=%s new_balance=%s",
              acc_row["account_number"], amount, new_balance)
@@ -511,6 +553,9 @@ def _apply_deposit(org_id: str, spec: dict) -> dict:
 # ---------------------------------------------------------------------------
 # Internal: apply a completed withdrawal to the account
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Internal: apply a completed withdrawal to the account
+# ---------------------------------------------------------------------------
 def _apply_withdrawal(org_id: str, req_row: dict) -> dict:
     """
     Records a completed savings withdrawal (called only when a withdrawal
@@ -521,6 +566,9 @@ def _apply_withdrawal(org_id: str, req_row: dict) -> dict:
       4. posts to the chart of accounts:
            Dr  2000 Member savings payable
            Cr  1000 Cash on hand  (or 1010 Bank for online)
+      5. sends a short SMS to the member's phone (if enabled)
+
+    Phone is normalized to 256XXXXXXXXX before being handed to send_sms().
     """
     admin = _admin()
     amount = _to_decimal(req_row["amount"])
@@ -530,6 +578,17 @@ def _apply_withdrawal(org_id: str, req_row: dict) -> dict:
     acc_row = _fetch_savings_account(org_id, req_row["account_id"])
     if not acc_row:
         raise RuntimeError("Account not found")
+
+    currency = req_row.get("currency") or acc_row["currency"]
+
+    member_row = (
+        admin.table("members")
+        .select("phone, first_name")
+        .eq("id", acc_row["member_id"]).limit(1).execute()
+    ).data or [{}]
+    member_row = member_row[0]
+    member_phone = (member_row.get("phone") or "").strip()
+    member_first = (member_row.get("first_name") or "").strip() or "Member"
 
     current_balance = _to_decimal(acc_row["balance"])
     if amount > current_balance:
@@ -544,7 +603,7 @@ def _apply_withdrawal(org_id: str, req_row: dict) -> dict:
         "type":          "savings_withdrawal",
         "method":        req_row.get("method") or "cash",
         "amount":        float(amount),
-        "currency":      req_row.get("currency") or acc_row["currency"],
+        "currency":      currency,
         "status":        "completed",
         "narration":     req_row.get("reason") or "Savings withdrawal",
         "balance_after": float(new_balance),
@@ -568,7 +627,6 @@ def _apply_withdrawal(org_id: str, req_row: dict) -> dict:
     }).eq("id", acc_row["member_id"]).execute()
 
     # --- 4. post to chart of accounts ---
-    # Money out:  Dr liability (member savings payable),  Cr asset (cash/bank)
     try:
         from routes.accounts.accounts import record_liability_movement
         record_liability_movement(
@@ -576,7 +634,7 @@ def _apply_withdrawal(org_id: str, req_row: dict) -> dict:
             direction="out",
             amount=amount,
             method=req_row.get("method") or "cash",
-            counterpart_account_code="2000",    # Member savings payable
+            counterpart_account_code="2000",
             category="other_adjustment",
             narration=f"Savings withdrawal · {acc_row['account_number']}",
             reference=None,
@@ -590,6 +648,31 @@ def _apply_withdrawal(org_id: str, req_row: dict) -> dict:
         )
     except Exception:
         log.exception("chart post for withdrawal failed (non-fatal)")
+
+    # --- 5. SMS notification ---
+    if member_phone:
+        try:
+            from routes.sms.sms import send_sms, clamp_sms
+            msg = (
+                f"Hi {member_first}, withdrawal of "
+                f"{amount:.0f} {currency} processed. "
+                f"Balance: {new_balance:.0f} {currency}."
+            )
+            send_sms(
+                org_id=org_id,
+                phone=member_phone,
+                message=clamp_sms(msg),
+                member_id=acc_row["member_id"],
+                triggered_by=_user_id(),
+                meta={
+                    "kind":       "savings_withdrawal",
+                    "account_id": acc_row["id"],
+                    "request_id": req_row.get("id"),
+                    "amount":     float(amount),
+                },
+            )
+        except Exception:
+            log.exception("SMS for withdrawal failed (non-fatal)")
 
     log.info("withdrawal applied: account=%s amount=%s new_balance=%s",
              acc_row["account_number"], amount, new_balance)

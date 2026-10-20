@@ -1108,7 +1108,7 @@ def _apply_topup(org_id: str, dep: dict, amount: Decimal) -> dict:
 @role_required("admin")
 def api_withdraw(fd_uuid):
     """
-    Body: { amount?, early? (bool), reason? }
+    Body: { amount?, early? (bool), reason?, method? ('cash'|'online') }
     Full withdrawal by default. Partial allowed if amount < total.
     Early withdrawal requires {early: true} AND the deposit allows it;
     a penalty is deducted from accrued interest.
@@ -1118,6 +1118,8 @@ def api_withdraw(fd_uuid):
                                      Cr 1000 Cash on hand / 1010 Bank
       Penalty (income to SACCO):     Dr 1000 / 1010
                                      Cr 4020 Penalty income
+
+    SMS is sent to the member on success (if enabled).
     """
     org_id = _org_id()
     data   = request.get_json(silent=True) or {}
@@ -1244,13 +1246,12 @@ def api_withdraw(fd_uuid):
                 record_asset_movement,
             )
 
-            # 3a. Principal + net interest out: reduce liability, reduce cash/bank
             record_liability_movement(
                 org_id=org_id,
                 direction="out",
                 amount=amount,
                 method=method,
-                counterpart_account_code="2010",       # FD payable
+                counterpart_account_code="2010",
                 category="other_adjustment",
                 narration=f"FD withdrawal · {dep['fd_number']}",
                 created_by=_user_id(),
@@ -1262,16 +1263,6 @@ def api_withdraw(fd_uuid):
                 },
             )
 
-            # 3b. Penalty income (if any): penalty is SACCO revenue.
-            #     Accountant convention: it reduces the amount paid out,
-            #     so we post Dr cash / Cr penalty income — exactly like
-            #     income. But since the money never left, we post it as
-            #     a "virtual" income movement:
-            #         Dr  2010 (liability was reduced by penalty too)
-            #         Cr  4020 Penalty income
-            #     Effect: FD payable goes down by penalty (member's
-            #     accrued interest is forfeited), and the SACCO books
-            #     the penalty as revenue.
             if penalty > 0:
                 record_liability_movement(
                     org_id=org_id,
@@ -1287,14 +1278,12 @@ def api_withdraw(fd_uuid):
                         "deposit_id": dep["id"],
                     },
                 )
-                # And post the penalty as income (Dr counterpart / Cr 4020).
-                # Use record_asset_movement in "in" mode pointing at penalty income.
                 record_asset_movement(
                     org_id=org_id,
                     direction="in",
                     amount=penalty,
                     method="internal",
-                    counterpart_account_code="4020",   # Penalty income
+                    counterpart_account_code="4020",
                     category="membership_penalty",
                     narration=f"FD early penalty income · {dep['fd_number']}",
                     created_by=_user_id(),
@@ -1305,6 +1294,58 @@ def api_withdraw(fd_uuid):
                 )
         except Exception:
             log.exception("chart posts for FD withdrawal failed (non-fatal)")
+
+        # 4. SMS notification (fire-and-forget) — NEW
+        try:
+            member_row = (
+                admin.table("members")
+                .select("phone, first_name")
+                .eq("id", dep["member_id"]).limit(1).execute()
+            ).data or [{}]
+            member_row = member_row[0]
+            member_phone = (member_row.get("phone") or "").strip()
+            member_first = (member_row.get("first_name") or "").strip() or "Member"
+
+            if member_phone:
+                from routes.sms.sms import send_sms, clamp_sms
+
+                currency = dep["currency"]
+
+                if is_full:
+                    msg = (
+                        f"Hi {member_first}, fixed deposit {dep['fd_number']} "
+                        f"has been closed. {amount:.0f} {currency} paid out."
+                    )
+                else:
+                    msg = (
+                        f"Hi {member_first}, withdrawal of {amount:.0f} {currency} "
+                        f"from FD {dep['fd_number']} processed. "
+                        f"Remaining: {new_principal:.0f} {currency}."
+                    )
+
+                if penalty > 0:
+                    msg = (
+                        f"Hi {member_first}, early withdrawal of {amount:.0f} {currency} "
+                        f"from FD {dep['fd_number']} processed "
+                        f"(penalty {penalty:.0f} {currency})."
+                    )
+
+                send_sms(
+                    org_id=org_id,
+                    phone=member_phone,
+                    message=clamp_sms(msg),
+                    member_id=dep["member_id"],
+                    triggered_by=_user_id(),
+                    meta={
+                        "kind":       "fixed_withdrawal",
+                        "deposit_id": dep["id"],
+                        "early":      not matured,
+                        "amount":     float(amount),
+                        "penalty":    float(penalty),
+                    },
+                )
+        except Exception:
+            log.exception("SMS for FD withdrawal failed (non-fatal)")
 
     except Exception as e:
         log.exception("withdraw apply failed")
@@ -1318,7 +1359,6 @@ def api_withdraw(fd_uuid):
         "new_principal": float(new_principal),
         "status": status_new,
     })
-
 # ---------------------------------------------------------------------------
 # ACCRUE INTEREST (manual trigger; can also be a scheduled job)
 # ---------------------------------------------------------------------------

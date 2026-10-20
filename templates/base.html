@@ -272,6 +272,12 @@ tailwind.config = {
                             <i class="fa-solid fa-gear"></i>
                             <span class="sidebar-label">Institution Settings</span>
                         </a>
+
+                        <a href="{{ url_for('sms_settings.page') }}"
+                        class="nav-item {% if request.endpoint == 'sms_settings.page' %}active{% endif %}">
+                            <i class="fa-solid fa-comment-sms"></i>
+                            <span class="sidebar-label">SMS Settings</span>
+                        </a>
                                            
                     <a href="#" onclick="logout(event)" class="nav-item text-red-300 hover:text-red-200 hover:bg-red-500/10">
                         <i class="fa-solid fa-right-from-bracket"></i>
