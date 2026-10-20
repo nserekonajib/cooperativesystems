@@ -79,6 +79,6 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=os.getenv("FLASK_ENV") == "development", port=4000)
-    # from waitress import serve
-    # serve(app, host="0.0.0.0", port=4000)
+    # app.run(debug=os.getenv("FLASK_ENV") == "development", port=4000)
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=4000)
